@@ -1,0 +1,143 @@
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useAccount } from 'wagmi'
+import { useEffect } from 'react'
+import { toast } from 'sonner'
+import { PositionManagerABI } from '../lib/abis'
+import { CONTRACTS } from '../lib/config'
+
+export type Position = {
+  id: bigint
+  trader: `0x${string}`
+  marketId: bigint
+  side: number // 0 = LONG, 1 = SHORT
+  entryPrice: bigint
+  size: bigint
+  collateral: bigint
+  timestamp: bigint
+  isOpen: boolean
+}
+
+export function useUserPositions() {
+  const { address } = useAccount()
+  return useReadContract({
+    address: CONTRACTS.PositionManager,
+    abi: PositionManagerABI,
+    functionName: 'getUserPositions',
+    args: [address!],
+    query: { enabled: !!address, refetchInterval: 5000 },
+  })
+}
+
+export function useUserOpenPositions() {
+  const { address } = useAccount()
+  return useReadContract({
+    address: CONTRACTS.PositionManager,
+    abi: PositionManagerABI,
+    functionName: 'getUserOpenPositions',
+    args: [address!],
+    query: { enabled: !!address, refetchInterval: 5000 },
+  })
+}
+
+export function usePosition(positionId: bigint) {
+  return useReadContract({
+    address: CONTRACTS.PositionManager,
+    abi: PositionManagerABI,
+    functionName: 'getPosition',
+    args: [positionId],
+  })
+}
+
+export function useHealthFactor(positionId: bigint) {
+  return useReadContract({
+    address: CONTRACTS.PositionManager,
+    abi: PositionManagerABI,
+    functionName: 'getHealthFactor',
+    args: [positionId],
+    query: { refetchInterval: 5000 },
+  })
+}
+
+export function useAddCollateral() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+
+  useEffect(() => {
+    if (hash) toast.loading('Adding collateral...', { id: 'add-collateral' })
+  }, [hash])
+
+  useEffect(() => {
+    if (isSuccess) toast.success('Collateral added!', { id: 'add-collateral' })
+  }, [isSuccess])
+
+  useEffect(() => {
+    if (error) toast.error(`Failed: ${error.message.slice(0, 80)}`, { id: 'add-collateral' })
+  }, [error])
+
+  const addCollateral = (positionId: bigint, amount: bigint) => {
+    writeContract({
+      address: CONTRACTS.PositionManager,
+      abi: PositionManagerABI,
+      functionName: 'addCollateral',
+      args: [positionId, amount],
+    })
+  }
+
+  return { addCollateral, isPending, isConfirming, isSuccess, hash }
+}
+
+export function useSettlePosition() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+
+  useEffect(() => {
+    if (hash) toast.loading('Settling position...', { id: 'settle-position' })
+  }, [hash])
+
+  useEffect(() => {
+    if (isSuccess) toast.success('Position settled!', { id: 'settle-position' })
+  }, [isSuccess])
+
+  useEffect(() => {
+    if (error) toast.error(`Settlement failed: ${error.message.slice(0, 80)}`, { id: 'settle-position' })
+  }, [error])
+
+  const settlePosition = (positionId: bigint) => {
+    writeContract({
+      address: CONTRACTS.PositionManager,
+      abi: PositionManagerABI,
+      functionName: 'settlePosition',
+      args: [positionId],
+    })
+  }
+
+  return { settlePosition, isPending, isConfirming, isSuccess, hash }
+}
+
+export function useLiquidate() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+
+  useEffect(() => {
+    if (hash) toast.loading('Liquidating position...', { id: 'liquidate' })
+  }, [hash])
+
+  useEffect(() => {
+    if (isSuccess) toast.success('Position liquidated!', { id: 'liquidate' })
+  }, [isSuccess])
+
+  useEffect(() => {
+    if (error) toast.error(`Liquidation failed: ${error.message.slice(0, 80)}`, { id: 'liquidate' })
+  }, [error])
+
+  const liquidate = (positionId: bigint) => {
+    writeContract({
+      address: CONTRACTS.PositionManager,
+      abi: PositionManagerABI,
+      functionName: 'liquidate',
+      args: [positionId],
+    })
+  }
+
+  return { liquidate, isPending, isConfirming, isSuccess, hash }
+}

@@ -1,0 +1,224 @@
+import { useAccount } from 'wagmi'
+import { useUserPositions } from '../hooks/usePositions'
+import { useUserOrders } from '../hooks/useOrderBook'
+import { useUSDCBalance } from '../hooks/useOrderBook'
+import { formatPrice, formatUSDC, cn } from '../lib/utils'
+import { useSettlePosition } from '../hooks/usePositions'
+import { useCancelOrder } from '../hooks/useOrderBook'
+import { useState } from 'react'
+
+export function Portfolio() {
+  const { isConnected } = useAccount()
+  const { data: positions } = useUserPositions()
+  const { data: orders } = useUserOrders()
+  const { data: balance } = useUSDCBalance()
+  const [activeTab, setActiveTab] = useState<'positions' | 'orders'>('positions')
+
+  if (!isConnected) {
+    return (
+      <div className="max-w-6xl mx-auto px-6 py-20 text-center">
+        <h2 className="text-xl font-semibold text-text mb-2">Connect Your Wallet</h2>
+        <p className="text-text-secondary">Connect your wallet to view your portfolio</p>
+      </div>
+    )
+  }
+
+  const openPositions = positions?.filter((p: any) => p.isOpen) || []
+  const openOrders = orders?.filter(
+    (o: any) => o.status === 0 || o.status === 2
+  ) || []
+
+  return (
+    <div className="max-w-6xl mx-auto px-6 py-8">
+      <h1 className="text-2xl font-bold text-text mb-6">Portfolio</h1>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="bg-surface border border-border rounded-xl p-5">
+          <p className="text-text-secondary text-xs mb-1">USDC Balance</p>
+          <p className="text-xl font-bold text-text">
+            ${balance ? formatUSDC(balance as bigint) : '0.00'}
+          </p>
+        </div>
+        <div className="bg-surface border border-border rounded-xl p-5">
+          <p className="text-text-secondary text-xs mb-1">Open Positions</p>
+          <p className="text-xl font-bold text-text">{openPositions.length}</p>
+        </div>
+        <div className="bg-surface border border-border rounded-xl p-5">
+          <p className="text-text-secondary text-xs mb-1">Open Orders</p>
+          <p className="text-xl font-bold text-text">{openOrders.length}</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 border-b border-border">
+        {(['positions', 'orders'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+              activeTab === tab
+                ? 'border-primary text-text'
+                : 'border-transparent text-text-secondary hover:text-text'
+            )}
+          >
+            {tab === 'positions' ? `Positions (${positions?.length || 0})` : `Orders (${orders?.length || 0})`}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'positions' ? (
+        <PositionsTable positions={positions as any[] || []} />
+      ) : (
+        <OrdersTable orders={orders as any[] || []} />
+      )}
+    </div>
+  )
+}
+
+function PositionsTable({ positions }: { positions: any[] }) {
+  const { settlePosition, isPending } = useSettlePosition()
+
+  if (positions.length === 0) {
+    return (
+      <div className="text-center py-12 text-text-secondary text-sm">
+        No positions yet. Start trading to open positions.
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-surface border border-border rounded-xl overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border text-text-secondary text-xs">
+            <th className="text-left px-4 py-3 font-medium">ID</th>
+            <th className="text-left px-4 py-3 font-medium">Market</th>
+            <th className="text-left px-4 py-3 font-medium">Side</th>
+            <th className="text-right px-4 py-3 font-medium">Entry Price</th>
+            <th className="text-right px-4 py-3 font-medium">Size</th>
+            <th className="text-right px-4 py-3 font-medium">Collateral</th>
+            <th className="text-left px-4 py-3 font-medium">Status</th>
+            <th className="text-right px-4 py-3 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {positions.map((pos: any, i: number) => (
+            <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
+              <td className="px-4 py-3 text-text">#{Number(pos.id)}</td>
+              <td className="px-4 py-3 text-text">Market #{Number(pos.marketId)}</td>
+              <td className="px-4 py-3">
+                <span className={cn(
+                  'px-2 py-0.5 rounded text-xs font-medium',
+                  pos.side === 0
+                    ? 'bg-long/10 text-long'
+                    : 'bg-short/10 text-short'
+                )}>
+                  {pos.side === 0 ? 'LONG' : 'SHORT'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-right text-text">${formatPrice(pos.entryPrice)}</td>
+              <td className="px-4 py-3 text-right text-text">{Number(pos.size)}</td>
+              <td className="px-4 py-3 text-right text-text">${formatUSDC(pos.collateral)}</td>
+              <td className="px-4 py-3">
+                <span className={cn(
+                  'px-2 py-0.5 rounded text-xs font-medium',
+                  pos.isOpen
+                    ? 'bg-success/10 text-success'
+                    : 'bg-text-secondary/10 text-text-secondary'
+                )}>
+                  {pos.isOpen ? 'Open' : 'Closed'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-right">
+                {pos.isOpen && (
+                  <button
+                    onClick={() => settlePosition(pos.id)}
+                    disabled={isPending}
+                    className="px-3 py-1 text-xs rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                  >
+                    Settle
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function OrdersTable({ orders }: { orders: any[] }) {
+  const { cancelOrder, isPending } = useCancelOrder()
+  const statusLabels = ['Open', 'Filled', 'Partial', 'Cancelled']
+
+  if (orders.length === 0) {
+    return (
+      <div className="text-center py-12 text-text-secondary text-sm">
+        No orders yet. Place an order to get started.
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-surface border border-border rounded-xl overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border text-text-secondary text-xs">
+            <th className="text-left px-4 py-3 font-medium">ID</th>
+            <th className="text-left px-4 py-3 font-medium">Side</th>
+            <th className="text-right px-4 py-3 font-medium">Price</th>
+            <th className="text-right px-4 py-3 font-medium">Amount</th>
+            <th className="text-right px-4 py-3 font-medium">Filled</th>
+            <th className="text-left px-4 py-3 font-medium">Status</th>
+            <th className="text-right px-4 py-3 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((order: any, i: number) => (
+            <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
+              <td className="px-4 py-3 text-text">#{Number(order.id)}</td>
+              <td className="px-4 py-3">
+                <span className={cn(
+                  'px-2 py-0.5 rounded text-xs font-medium',
+                  order.side === 0
+                    ? 'bg-long/10 text-long'
+                    : 'bg-short/10 text-short'
+                )}>
+                  {order.side === 0 ? 'LONG' : 'SHORT'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-right text-text">${formatPrice(order.price)}</td>
+              <td className="px-4 py-3 text-right text-text">{Number(order.amount)}</td>
+              <td className="px-4 py-3 text-right text-text">{Number(order.filled)}</td>
+              <td className="px-4 py-3">
+                <span className={cn(
+                  'px-2 py-0.5 rounded text-xs font-medium',
+                  order.status === 0 ? 'bg-primary/10 text-primary' :
+                  order.status === 1 ? 'bg-success/10 text-success' :
+                  order.status === 2 ? 'bg-warning/10 text-warning' :
+                  'bg-text-secondary/10 text-text-secondary'
+                )}>
+                  {statusLabels[order.status] || 'Unknown'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-right">
+                {(order.status === 0 || order.status === 2) && (
+                  <button
+                    onClick={() => cancelOrder(order.id)}
+                    disabled={isPending}
+                    className="px-3 py-1 text-xs rounded-md bg-danger/10 text-danger hover:bg-danger/20 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
