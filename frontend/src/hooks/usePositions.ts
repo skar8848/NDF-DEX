@@ -1,6 +1,6 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { useAccount } from 'wagmi'
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { PositionManagerABI } from '../lib/abis'
 import { CONTRACTS } from '../lib/config'
@@ -112,6 +112,43 @@ export function useSettlePosition() {
   }
 
   return { settlePosition, isPending, isConfirming, isSuccess, hash }
+}
+
+export function useBatchSettle() {
+  const { writeContractAsync } = useWriteContract()
+  const [isSettling, setIsSettling] = useState(false)
+  const [settled, setSettled] = useState(0)
+  const [total, setTotal] = useState(0)
+
+  const batchSettle = useCallback(async (positionIds: bigint[]) => {
+    if (positionIds.length === 0) return
+    setIsSettling(true)
+    setSettled(0)
+    setTotal(positionIds.length)
+    toast.loading(`Settling 0/${positionIds.length}...`, { id: 'batch-settle' })
+
+    for (let i = 0; i < positionIds.length; i++) {
+      try {
+        await writeContractAsync({
+          address: CONTRACTS.PositionManager,
+          abi: PositionManagerABI,
+          functionName: 'settlePosition',
+          args: [positionIds[i]],
+        })
+        setSettled(i + 1)
+        toast.loading(`Settling ${i + 1}/${positionIds.length}...`, { id: 'batch-settle' })
+      } catch (err: any) {
+        toast.error(`Failed on position #${Number(positionIds[i])}: ${err.message?.slice(0, 60)}`, { id: 'batch-settle' })
+        setIsSettling(false)
+        return
+      }
+    }
+
+    toast.success(`${positionIds.length} positions settled!`, { id: 'batch-settle' })
+    setIsSettling(false)
+  }, [writeContractAsync])
+
+  return { batchSettle, isSettling, settled, total }
 }
 
 export function useLiquidate() {
