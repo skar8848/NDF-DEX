@@ -73,7 +73,11 @@ function OrderRow({ order, fillPrice }: { order: Order; fillPrice: bigint | null
         </span>
       </td>
       <td className="px-3 py-2.5 text-xs text-text font-mono">
-        {displayPrice ? `$${formatPrice(displayPrice)}` : '--'}
+        {displayPrice
+          ? `$${formatPrice(displayPrice)}`
+          : isMkt
+          ? <span className="text-text-secondary italic text-[10px]">No fill</span>
+          : '--'}
       </td>
       <td className="px-3 py-2.5 text-xs text-text font-mono">
         {order.amount.toString()}

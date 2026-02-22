@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useUserPositions, useBatchSettle } from '../hooks/usePositions'
 import { useUserOrders } from '../hooks/useOrderBook'
 import { useUSDCBalance } from '../hooks/useOrderBook'
-import { useAllMarkets, type MarketInfo } from '../hooks/useForwardMarket'
+import { useAllMarkets, useSettleMarket, type MarketInfo } from '../hooks/useForwardMarket'
 import { useOraclePrice } from '../hooks/usePriceData'
 import { formatPrice, formatUSDC, formatExpiryDate, cn } from '../lib/utils'
 import { useCancelOrder } from '../hooks/useOrderBook'
@@ -38,6 +38,7 @@ export function Portfolio() {
   const [activeTab, setActiveTab] = useState<'positions' | 'orders'>('positions')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const { batchSettle, isSettling } = useBatchSettle()
+  const { settleMarket, isPending: isSettleMarketPending, isConfirming: isSettleMarketConfirming } = useSettleMarket()
 
   const markets = (marketsData as MarketInfo[] | undefined) ?? []
   const getMarket = (marketId: bigint) => markets.find((m) => m.id === marketId)
@@ -58,6 +59,10 @@ export function Portfolio() {
   ) || []
 
   const settleable = openPositions.filter((p: any) => getMarket(p.marketId)?.settled)
+
+  // Markets that are expired but not yet settled (need settleMarket call)
+  const now = BigInt(Math.floor(Date.now() / 1000))
+  const expiredUnsettled = markets.filter(m => !m.settled && now >= m.expiration)
 
   const toggleId = (id: string) => {
     setSelectedIds((prev) => {
@@ -104,6 +109,29 @@ export function Portfolio() {
           <p className="text-xl font-bold text-text">{openOrders.length}</p>
         </div>
       </div>
+
+      {/* Expired unsettled markets */}
+      {expiredUnsettled.length > 0 && (
+        <div className="mb-6 space-y-2">
+          {expiredUnsettled.map((m) => (
+            <div key={m.id.toString()} className="flex items-center justify-between bg-warning/5 border border-warning/20 rounded-xl px-5 py-3">
+              <div>
+                <span className="text-sm font-semibold text-text">
+                  {m.baseAsset}/{m.quoteAsset}
+                </span>
+                <span className="text-xs text-warning ml-2">Expired — needs settlement</span>
+              </div>
+              <button
+                onClick={() => settleMarket(m.id)}
+                disabled={isSettleMarketPending || isSettleMarketConfirming}
+                className="px-4 py-1.5 text-xs font-semibold rounded-md bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {isSettleMarketPending ? 'Confirm...' : isSettleMarketConfirming ? 'Settling...' : 'Settle Market'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-border">

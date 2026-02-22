@@ -37,6 +37,8 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   const [priceInput, setPriceInput] = useState('')
   const [sizeInput, setSizeInput] = useState('')
   const [dismissed1CT, setDismissed1CT] = useState(false)
+  const [slippageBps, setSlippageBps] = useState(50) // 0.5% default
+  const [showSlippageMenu, setShowSlippageMenu] = useState(false)
 
   const { data: balanceData } = useUSDCBalance()
   const { data: allowanceData, isLoading: allowanceLoading } = useUSDCAllowance()
@@ -199,6 +201,18 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
       placeLimitOrder(marketId, sideEnum, price, size)
     } else {
       if (size === 0n) return
+      // Use limit order with slippage-adjusted price for protection
+      const refPrice = side === 'long' ? bestAsk : bestBid
+      if (refPrice && slippageBps > 0) {
+        const slippagePrice = side === 'long'
+          ? refPrice + (refPrice * BigInt(slippageBps) / 10000n)
+          : refPrice - (refPrice * BigInt(slippageBps) / 10000n)
+        if (slippagePrice > 0n) {
+          placeLimitOrder(marketId, sideEnum, slippagePrice, size)
+          return
+        }
+      }
+      // Fallback: no book data or 0 slippage → use raw market order
       placeMarketOrder(marketId, sideEnum, size)
     }
   }
@@ -468,11 +482,56 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         <div className="border-t border-border/50 my-1" />
 
         {/* Slippage */}
-        <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between text-xs relative">
           <span className="text-text-secondary">Slippage</span>
-          <span className="text-text font-mono">
-            {orderType === 'limit' ? '0%' : 'Variable'}
-          </span>
+          {orderType === 'limit' ? (
+            <span className="text-text font-mono">0%</span>
+          ) : (
+            <button
+              onClick={() => setShowSlippageMenu(!showSlippageMenu)}
+              className="text-text font-mono hover:text-primary transition-colors cursor-pointer flex items-center gap-1"
+            >
+              {(slippageBps / 100).toFixed(slippageBps % 100 === 0 ? 0 : 1)}%
+              <svg className="w-2.5 h-2.5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+          )}
+          {showSlippageMenu && orderType === 'market' && (
+            <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg p-2 shadow-lg z-20 w-44">
+              <div className="flex gap-1 mb-2">
+                {[10, 50, 100, 200].map((bps) => (
+                  <button
+                    key={bps}
+                    onClick={() => { setSlippageBps(bps); setShowSlippageMenu(false) }}
+                    className={cn(
+                      'flex-1 py-1 text-[10px] font-medium rounded transition-colors cursor-pointer',
+                      slippageBps === bps
+                        ? 'bg-primary/20 text-primary'
+                        : 'bg-surface-2 text-text-secondary hover:text-text'
+                    )}
+                  >
+                    {(bps / 100).toFixed(bps % 100 === 0 ? 0 : 1)}%
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  value={(slippageBps / 100).toString()}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value)
+                    if (!isNaN(v) && v >= 0 && v <= 50) setSlippageBps(Math.round(v * 100))
+                  }}
+                  step="0.1"
+                  min="0"
+                  max="50"
+                  className="flex-1 bg-surface-2 border border-border rounded px-2 py-1 text-[10px] text-text font-mono focus:outline-none focus:border-primary w-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-[10px] text-text-secondary">%</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {market && (

@@ -11,6 +11,7 @@ type OrderLevel = {
 type OrderBookComponentProps = {
   bids: OrderLevel[]
   asks: OrderLevel[]
+  markPrice?: bigint | null
   onPriceClick?: (price: string) => void
 }
 
@@ -36,7 +37,7 @@ type ProcessedLevel = {
   cumulative: bigint
 }
 
-export function OrderBookComponent({ bids, asks, onPriceClick }: OrderBookComponentProps) {
+export function OrderBookComponent({ bids, asks, markPrice, onPriceClick }: OrderBookComponentProps) {
   // Process asks: sort low to high for cumulative, display high to low
   const processedAsks = useMemo(() => {
     const aggregated = aggregateByPrice(asks)
@@ -141,19 +142,20 @@ export function OrderBookComponent({ bids, asks, onPriceClick }: OrderBookCompon
         )}
       </div>
 
-      {/* Spread row */}
-      <div className="px-3 py-1.5 border-y border-border bg-surface-2/30 flex items-center justify-between">
-        {spreadInfo ? (
-          <>
-            <span className="text-[10px] text-text-secondary">Spread</span>
-            <span className="text-[11px] font-mono text-text">
-              {formatPrice(spreadInfo.value)}
-              <span className="text-text-secondary ml-1">({spreadInfo.percent.toFixed(2)}%)</span>
+      {/* Mid price + Spread row */}
+      <div className="px-3 py-1.5 border-y border-border bg-surface-2/30">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-bold font-mono text-text">
+            {markPrice ? `$${formatPrice(markPrice)}` : '--'}
+          </span>
+          {spreadInfo ? (
+            <span className="text-[10px] font-mono text-text-secondary">
+              Spread {formatPrice(spreadInfo.value)} ({spreadInfo.percent.toFixed(2)}%)
             </span>
-          </>
-        ) : (
-          <span className="text-[10px] text-text-secondary">--</span>
-        )}
+          ) : (
+            <span className="text-[10px] text-text-secondary">--</span>
+          )}
+        </div>
       </div>
 
       {/* Bids (buys) - green */}

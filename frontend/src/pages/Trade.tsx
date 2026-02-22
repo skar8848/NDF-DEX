@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { useMarket, useAllMarkets, type MarketInfo } from '../hooks/useForwardMarket'
+import { useMarket, useAllMarkets, useSettleMarket, type MarketInfo } from '../hooks/useForwardMarket'
 import { useOrderBookData, type Order } from '../hooks/useOrderBook'
 import { MarketSelector } from '../components/trading/MarketSelector'
 import { OrderBookComponent } from '../components/trading/OrderBookComponent'
@@ -39,6 +39,8 @@ export default function Trade() {
   const isDragging = useRef(false)
   const startY = useRef(0)
   const startHeight = useRef(0)
+
+  const { settleMarket, isPending: isSettlePending, isConfirming: isSettleConfirming } = useSettleMarket()
 
   const { data: marketData, isLoading: marketLoading } = useMarket(marketId)
   const { data: allMarketsData } = useAllMarkets()
@@ -222,6 +224,22 @@ export default function Trade() {
                 {formatCountdown(market.expiration)}
               </span>
             </div>
+
+            {/* Settle button for expired, unsettled markets */}
+            {!market.settled && BigInt(Math.floor(Date.now() / 1000)) >= market.expiration && (
+              <button
+                onClick={() => settleMarket(marketId)}
+                disabled={isSettlePending || isSettleConfirming}
+                className="px-3 py-1.5 text-xs font-semibold rounded-md bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {isSettlePending ? 'Confirm...' : isSettleConfirming ? 'Settling...' : 'Settle Market'}
+              </button>
+            )}
+            {market.settled && (
+              <span className="px-2 py-1 text-[10px] font-medium rounded bg-success/10 text-success">
+                Settled
+              </span>
+            )}
           </>
         )}
       </div>
@@ -267,6 +285,7 @@ export default function Trade() {
               <OrderBookComponent
                 bids={orderBookLevels.bids}
                 asks={orderBookLevels.asks}
+                markPrice={markPrice}
                 onPriceClick={(price) => setExternalPrice(price)}
               />
             ) : (

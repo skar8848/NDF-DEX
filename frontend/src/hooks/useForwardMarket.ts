@@ -54,6 +54,34 @@ export function useMarketCount() {
   })
 }
 
+export function useSettleMarket() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+
+  useEffect(() => {
+    if (hash) toast.loading('Settling market...', { id: 'settle-market' })
+  }, [hash])
+
+  useEffect(() => {
+    if (isSuccess) toast.success('Market settled!', { id: 'settle-market' })
+  }, [isSuccess])
+
+  useEffect(() => {
+    if (error) toast.error(`Settlement failed: ${error.message.slice(0, 80)}`, { id: 'settle-market' })
+  }, [error])
+
+  const settleMarket = (marketId: bigint) => {
+    writeContract({
+      address: CONTRACTS.ForwardMarket,
+      abi: ForwardMarketABI,
+      functionName: 'settleMarket',
+      args: [marketId],
+    })
+  }
+
+  return { settleMarket, isPending, isConfirming, isSuccess, hash }
+}
+
 export function useCreateMarket() {
   const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
