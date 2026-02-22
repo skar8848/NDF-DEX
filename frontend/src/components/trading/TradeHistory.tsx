@@ -151,58 +151,39 @@ export function TradeHistory() {
         <thead>
           <tr className="border-b border-border">
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
-              Time
-            </th>
-            <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
               Price
             </th>
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
               Size
             </th>
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
-              Fee
-            </th>
-            <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
-              Tx
+              Time
             </th>
           </tr>
         </thead>
         <tbody>
-          {trades.map((trade, i) => (
-            <tr key={`${trade.txHash}-${i}`} className="border-b border-border/50 hover:bg-surface-2/30 transition-colors">
-              <td className="px-3 py-2 text-xs font-mono">
-                <span className="text-text">{formatTradeTime(trade.timestamp)}</span>
-                <span className="text-text-secondary ml-1.5 text-[10px]">{formatTradeDate(trade.timestamp)}</span>
-              </td>
-              <td className="px-3 py-2 text-xs text-text font-mono">
-                ${formatTradePrice(trade.price)}
-              </td>
-              <td className="px-3 py-2 text-xs text-text font-mono">
-                {trade.amount.toString()}
-              </td>
-              <td className="px-3 py-2 text-xs text-text-secondary font-mono">
-                {trade.takerFee > 0n
-                  ? `$${(Number(trade.takerFee) / 1e6).toFixed(2)}`
-                  : '--'}
-              </td>
-              <td className="px-3 py-2 text-xs">
-                <a
-                  href={`${EXPLORER_URL}/tx/${trade.txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium',
-                    'bg-primary/10 text-primary hover:bg-primary/20 transition-colors'
-                  )}
-                >
-                  {trade.txHash.slice(0, 6)}...{trade.txHash.slice(-4)}
-                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
-              </td>
-            </tr>
-          ))}
+          {trades.map((trade, i) => {
+            // Color by price direction vs next trade (older) — up = long, down = short
+            const nextTrade = trades[i + 1]
+            const isUp = nextTrade ? trade.price >= nextTrade.price : true
+            return (
+              <tr
+                key={`${trade.txHash}-${i}`}
+                onClick={() => window.open(`${EXPLORER_URL}/tx/${trade.txHash}`, '_blank')}
+                className="border-b border-border/50 hover:bg-surface-2/30 transition-colors cursor-pointer"
+              >
+                <td className={cn('px-3 py-1.5 text-xs font-mono', isUp ? 'text-long' : 'text-short')}>
+                  ${formatTradePrice(trade.price)}
+                </td>
+                <td className="px-3 py-1.5 text-xs text-text font-mono">
+                  {trade.amount.toString()}
+                </td>
+                <td className="px-3 py-1.5 text-xs font-mono text-text-secondary">
+                  {formatTradeTime(trade.timestamp)}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
