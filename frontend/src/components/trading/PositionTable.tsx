@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { useUserOpenPositions, useBatchSettle } from '../../hooks/usePositions'
+import { useUserOpenPositions, useBatchSettle, useClosePosition, useTPSL } from '../../hooks/usePositions'
 import { useAllMarkets } from '../../hooks/useForwardMarket'
 import { useOraclePrice } from '../../hooks/usePriceData'
 import { formatPrice, formatUSDC, formatExpiryDate, cn } from '../../lib/utils'
 import { PRICE_PRECISION, COLLATERAL_PRECISION } from '../../lib/config'
+import { TPSLForm } from './TPSLForm'
 import type { Position } from '../../hooks/usePositions'
 import type { MarketInfo } from '../../hooks/useForwardMarket'
 
@@ -24,14 +25,35 @@ function usePnl(position: Position, market: MarketInfo | undefined) {
   return (diff * position.size * BigInt(COLLATERAL_PRECISION)) / BigInt(PRICE_PRECISION)
 }
 
+function TPSLDisplay({ positionId }: { positionId: bigint }) {
+  const { data } = useTPSL(positionId)
+  const tpsl = data as { takeProfitPrice: bigint; stopLossPrice: bigint } | undefined
+
+  if (!tpsl) return <span className="text-text-secondary">--</span>
+
+  const tp = tpsl.takeProfitPrice > 0n ? `$${formatPrice(tpsl.takeProfitPrice)}` : null
+  const sl = tpsl.stopLossPrice > 0n ? `$${formatPrice(tpsl.stopLossPrice)}` : null
+
+  if (!tp && !sl) return <span className="text-text-secondary">--</span>
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      {tp && <span className="text-long text-[10px]">TP {tp}</span>}
+      {sl && <span className="text-short text-[10px]">SL {sl}</span>}
+    </div>
+  )
+}
+
 type PositionRowProps = {
   position: Position
   market: MarketInfo | undefined
   selected: boolean
   onToggle: () => void
+  onClose: () => void
+  onTPSL: () => void
 }
 
-function PositionRow({ position, market, selected, onToggle }: PositionRowProps) {
+function PositionRow({ position, market, selected, onToggle, onClose, onTPSL }: PositionRowProps) {
   const baseAsset = market?.baseAsset ?? '?'
   const quoteAsset = market?.quoteAsset ?? '?'
   const pnl = usePnl(position, market)
@@ -75,6 +97,27 @@ function PositionRow({ position, market, selected, onToggle }: PositionRowProps)
           <span className="text-text-secondary">--</span>
         )}
       </td>
+      <td className="px-3 py-2.5 text-xs">
+        <TPSLDisplay positionId={position.id} />
+      </td>
+      <td className="px-3 py-2.5 text-xs">
+        {!isSettled && (
+          <div className="flex gap-1">
+            <button
+              onClick={onClose}
+              className="px-2 py-0.5 text-[10px] font-medium rounded bg-short/10 text-short border border-short/20 hover:bg-short/20 transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+            <button
+              onClick={onTPSL}
+              className="px-2 py-0.5 text-[10px] font-medium rounded bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors cursor-pointer"
+            >
+              TP/SL
+            </button>
+          </div>
+        )}
+      </td>
     </tr>
   )
 }
@@ -84,6 +127,8 @@ export function PositionTable() {
   const { data: marketsData } = useAllMarkets()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const { batchSettle, isSettling } = useBatchSettle()
+  const { closePosition, isPending: isClosing } = useClosePosition()
+  const [tpslPositionId, setTpslPositionId] = useState<Position | null>(null)
 
   const positions = (positionsData as Position[] | undefined) ?? []
   const markets = (marketsData as MarketInfo[] | undefined) ?? []
@@ -165,6 +210,8 @@ export function PositionTable() {
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">Size</th>
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">Collateral</th>
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">PnL</th>
+            <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">TP/SL</th>
+            <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -175,10 +222,19 @@ export function PositionTable() {
               market={getMarket(position)}
               selected={selectedIds.has(position.id.toString())}
               onToggle={() => toggleId(position.id.toString())}
+              onClose={() => closePosition(position.id)}
+              onTPSL={() => setTpslPositionId(position)}
             />
           ))}
         </tbody>
       </table>
+
+      {tpslPositionId && (
+        <TPSLForm
+          position={tpslPositionId}
+          onClose={() => setTpslPositionId(null)}
+        />
+      )}
     </div>
   )
 }

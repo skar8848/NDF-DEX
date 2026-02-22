@@ -91,6 +91,10 @@ contract DeployScript is Script {
         );
         console.log("AVAX/USDC Market created, ID:", avaxMarket);
 
+        // 8. Fund protocol pool (for early close payouts)
+        usdc.mint(address(positionManager), 1_000_000e6);
+        console.log("Protocol pool funded: 1,000,000 USDC to PositionManager");
+
         vm.stopBroadcast();
 
         // Print summary

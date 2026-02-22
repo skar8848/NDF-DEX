@@ -155,6 +155,72 @@ export function useBatchSettle() {
   return { batchSettle, isSettling, settled, total }
 }
 
+export function useClosePosition() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+
+  useEffect(() => {
+    if (hash) toast.loading('Closing position...', { id: 'close-position' })
+  }, [hash])
+
+  useEffect(() => {
+    if (isSuccess) toast.success('Position closed!', { id: 'close-position' })
+  }, [isSuccess])
+
+  useEffect(() => {
+    if (error) toast.error(`Close failed: ${error.message.slice(0, 80)}`, { id: 'close-position' })
+  }, [error])
+
+  const closePosition = (positionId: bigint) => {
+    writeContract({
+      address: CONTRACTS.PositionManager,
+      abi: PositionManagerABI,
+      functionName: 'closePosition',
+      args: [positionId],
+    })
+  }
+
+  return { closePosition, isPending, isConfirming, isSuccess, hash }
+}
+
+export function useSetTPSL() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+
+  useEffect(() => {
+    if (hash) toast.loading('Setting TP/SL...', { id: 'set-tpsl' })
+  }, [hash])
+
+  useEffect(() => {
+    if (isSuccess) toast.success('TP/SL set!', { id: 'set-tpsl' })
+  }, [isSuccess])
+
+  useEffect(() => {
+    if (error) toast.error(`TP/SL failed: ${error.message.slice(0, 80)}`, { id: 'set-tpsl' })
+  }, [error])
+
+  const setTPSL = (positionId: bigint, tp: bigint, sl: bigint) => {
+    writeContract({
+      address: CONTRACTS.PositionManager,
+      abi: PositionManagerABI,
+      functionName: 'setTPSL',
+      args: [positionId, tp, sl],
+    })
+  }
+
+  return { setTPSL, isPending, isConfirming, isSuccess, hash }
+}
+
+export function useTPSL(positionId: bigint) {
+  return useReadContract({
+    address: CONTRACTS.PositionManager,
+    abi: PositionManagerABI,
+    functionName: 'getTPSL',
+    args: [positionId],
+    query: { refetchInterval: 5000 },
+  })
+}
+
 export function useLiquidate() {
   const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })

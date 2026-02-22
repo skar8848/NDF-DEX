@@ -39,6 +39,11 @@ library OrderLib {
         bool isOpen;
     }
 
+    struct TPSLOrder {
+        uint256 takeProfitPrice; // 8 decimals. 0 = not set
+        uint256 stopLossPrice; // 8 decimals. 0 = not set
+    }
+
     struct MarketInfo {
         uint256 id;
         string baseAsset; // e.g. "ETH"
