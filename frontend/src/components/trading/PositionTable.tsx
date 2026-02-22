@@ -127,7 +127,7 @@ export function PositionTable() {
   const { data: marketsData } = useAllMarkets()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const { batchSettle, isSettling } = useBatchSettle()
-  const { closePosition, isPending: isClosing } = useClosePosition()
+  const { closePosition } = useClosePosition()
   const [tpslPositionId, setTpslPositionId] = useState<Position | null>(null)
 
   const positions = (positionsData as Position[] | undefined) ?? []
