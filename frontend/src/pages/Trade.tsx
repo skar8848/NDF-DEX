@@ -11,7 +11,7 @@ import { OrderHistory } from '../components/trading/OrderHistory'
 import { TradeHistory } from '../components/trading/TradeHistory'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { useOraclePrice } from '../hooks/usePriceData'
-import { formatPrice, formatCountdown, cn } from '../lib/utils'
+import { formatCountdown, cn } from '../lib/utils'
 import { PRICE_PRECISION } from '../lib/config'
 
 type BottomTab = 'positions' | 'orders' | 'history'

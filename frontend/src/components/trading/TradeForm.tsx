@@ -84,7 +84,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   const { data: openPositionsData } = useUserOpenPositions()
   const currentPosition = useMemo(() => {
     if (!openPositionsData) return null
-    const positions = openPositionsData as { id: bigint; marketId: bigint; side: number; size: bigint; collateral: bigint; entryPrice: bigint }[]
+    const positions = openPositionsData as unknown as { id: bigint; marketId: bigint; side: number; size: bigint; collateral: bigint; entryPrice: bigint }[]
     const matching = positions.filter(p => p.marketId === marketId)
     if (matching.length === 0) return null
     let longSize = 0n
