@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { useCreateMarket } from '../../hooks/useForwardMarket'
 import { parseUSDC } from '../../lib/utils'
+import { Calendar } from '../ui/Calendar'
 
-type ExpiryUnit = 'hours' | 'days'
 type ValueMode = 'percent' | 'bps'
+
+// Settlement at 14:00 UTC daily (15h Paris, 9h NY, 23h Seoul)
+const SETTLEMENT_HOUR_UTC = 14
 
 function UnitToggle({ value, onChange }: { value: ValueMode; onChange: (v: ValueMode) => void }) {
   return (
@@ -37,11 +40,23 @@ function toBps(value: string, mode: ValueMode): bigint {
   return BigInt(Math.round(num))
 }
 
+function formatSelectedDate(date: Date): string {
+  const day = date.getDate()
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const month = months[date.getMonth()]
+  const year = date.getFullYear()
+  return `${day} ${month} ${year}`
+}
+
+function dateToSettlementTimestamp(date: Date): bigint {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), SETTLEMENT_HOUR_UTC, 0, 0))
+  return BigInt(Math.floor(d.getTime() / 1000))
+}
+
 export function CreateMarket({ onClose }: { onClose: () => void }) {
   const [baseAsset, setBaseAsset] = useState('ETH')
   const [quoteAsset] = useState('USDC')
-  const [expiryValue, setExpiryValue] = useState('30')
-  const [expiryUnit, setExpiryUnit] = useState<ExpiryUnit>('days')
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [ltvValue, setLtvValue] = useState('80')
   const [ltvMode, setLtvMode] = useState<ValueMode>('percent')
   const [liqValue, setLiqValue] = useState('85')
@@ -50,12 +65,14 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
 
   const { createMarket, isPending, isConfirming, isSuccess, hash } = useCreateMarket()
 
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(0, 0, 0, 0)
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const seconds = expiryUnit === 'hours'
-      ? parseInt(expiryValue) * 3600
-      : parseInt(expiryValue) * 86400
-    const expiration = BigInt(Math.floor(Date.now() / 1000) + seconds)
+    if (!selectedDate) return
+    const expiration = dateToSettlementTimestamp(selectedDate)
     createMarket(
       baseAsset,
       quoteAsset,
@@ -81,7 +98,7 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
 
           <h2 className="text-lg font-semibold text-text mb-1">Market Created</h2>
           <p className="text-text-secondary text-sm mb-4">
-            {baseAsset}/{quoteAsset} forward market is now live.
+            {baseAsset}/{quoteAsset} {selectedDate ? formatSelectedDate(selectedDate) : ''} forward market is now live.
           </p>
 
           <div className="bg-surface-2 rounded-lg p-3 mb-4">
@@ -116,7 +133,7 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-surface border border-border rounded-xl p-6 w-full max-w-md"
+        className="bg-surface border border-border rounded-xl p-6 w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold text-text mb-4">Create Forward Market</h2>
@@ -136,35 +153,21 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="block text-xs text-text-secondary mb-1">Expiry</label>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                value={expiryValue}
-                onChange={(e) => setExpiryValue(e.target.value)}
-                className="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-text text-sm focus:outline-none focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                min="1"
+            <label className="block text-xs text-text-secondary mb-1">
+              Settlement Date
+              <span className="text-text-secondary/60 ml-1">(settles at 14:00 UTC)</span>
+            </label>
+            <div className="bg-surface-2 border border-border rounded-lg p-3 flex flex-col items-center">
+              <Calendar
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                disabled={(date) => date < tomorrow}
               />
-              <div className="flex bg-surface-2 border border-border rounded-lg overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setExpiryUnit('hours')}
-                  className={`px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
-                    expiryUnit === 'hours' ? 'bg-primary text-white' : 'text-text-secondary hover:text-text'
-                  }`}
-                >
-                  Hours
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExpiryUnit('days')}
-                  className={`px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
-                    expiryUnit === 'days' ? 'bg-primary text-white' : 'text-text-secondary hover:text-text'
-                  }`}
-                >
-                  Days
-                </button>
-              </div>
+              {selectedDate && (
+                <div className="mt-2 text-xs text-text-secondary text-center">
+                  Settlement: <span className="text-text font-medium">{formatSelectedDate(selectedDate)}</span> at <span className="text-text font-medium">14:00 UTC</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -244,7 +247,7 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
             </button>
             <button
               type="submit"
-              disabled={isPending || isConfirming}
+              disabled={isPending || isConfirming || !selectedDate}
               className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 cursor-pointer"
             >
               {isPending ? (
