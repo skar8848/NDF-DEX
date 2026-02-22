@@ -345,8 +345,8 @@ export default function Trade() {
             <div className="flex-1 overflow-auto no-scrollbar">
               <ErrorBoundary>
                 {bottomTab === 'positions' && <PositionTable />}
-                {bottomTab === 'orders' && <OrderHistory />}
-                {bottomTab === 'history' && <OrderHistory />}
+                {bottomTab === 'orders' && <OrderHistory filter="open" />}
+                {bottomTab === 'history' && <OrderHistory filter="all" />}
               </ErrorBoundary>
             </div>
           </div>

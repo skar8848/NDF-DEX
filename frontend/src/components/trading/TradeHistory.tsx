@@ -6,8 +6,13 @@ import { cn } from '../../lib/utils'
 
 const EXPLORER_URL = 'https://testnet.snowtrace.io'
 
-const OrderMatchedEvent = parseAbiItem(
+// New event (with fee system)
+const OrderMatchedEventNew = parseAbiItem(
   'event OrderMatched(uint256 indexed bidOrderId, uint256 indexed askOrderId, uint256 price, uint256 amount, uint256 positionIdLong, uint256 positionIdShort, uint256 takerFee)'
+)
+// Old event (pre-fee contract)
+const OrderMatchedEventOld = parseAbiItem(
+  'event OrderMatched(uint256 indexed bidOrderId, uint256 indexed askOrderId, uint256 price, uint256 amount, uint256 positionIdLong, uint256 positionIdShort)'
 )
 
 type Trade = {
@@ -37,12 +42,26 @@ export function TradeHistory() {
         // Fetch last ~5000 blocks (roughly a few hours on Fuji)
         const fromBlock = currentBlock > 5000n ? currentBlock - 5000n : 0n
 
-        const logs = await publicClient!.getLogs({
-          address: CONTRACTS.OrderBook,
-          event: OrderMatchedEvent,
-          fromBlock,
-          toBlock: 'latest',
-        })
+        // Try new event first, fallback to old (pre-fee contract)
+        let logs: any[] = []
+        try {
+          logs = await publicClient!.getLogs({
+            address: CONTRACTS.OrderBook,
+            event: OrderMatchedEventNew,
+            fromBlock,
+            toBlock: 'latest',
+          })
+        } catch { /* ignore */ }
+        if (logs.length === 0) {
+          try {
+            logs = await publicClient!.getLogs({
+              address: CONTRACTS.OrderBook,
+              event: OrderMatchedEventOld,
+              fromBlock,
+              toBlock: 'latest',
+            })
+          } catch { /* ignore */ }
+        }
 
         if (cancelled) return
 
@@ -50,7 +69,7 @@ export function TradeHistory() {
         const recentLogs = logs.slice(-50).reverse()
 
         const tradesWithTimestamps = await Promise.all(
-          recentLogs.map(async (log) => {
+          recentLogs.map(async (log: any) => {
             let timestamp: number | null = null
             try {
               const block = await publicClient!.getBlock({ blockNumber: log.blockNumber })
@@ -62,7 +81,7 @@ export function TradeHistory() {
               askOrderId: log.args.askOrderId!,
               price: log.args.price!,
               amount: log.args.amount!,
-              takerFee: log.args.takerFee!,
+              takerFee: log.args.takerFee ?? 0n,
               txHash: log.transactionHash,
               blockNumber: log.blockNumber,
               timestamp,

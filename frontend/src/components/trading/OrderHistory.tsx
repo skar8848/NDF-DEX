@@ -21,8 +21,11 @@ const ORDER_STATUS_COLORS: Record<number, string> = {
   3: 'text-text-secondary bg-surface-2',
 }
 
-const OrderMatchedEvent = parseAbiItem(
+const OrderMatchedEventNew = parseAbiItem(
   'event OrderMatched(uint256 indexed bidOrderId, uint256 indexed askOrderId, uint256 price, uint256 amount, uint256 positionIdLong, uint256 positionIdShort, uint256 takerFee)'
+)
+const OrderMatchedEventOld = parseAbiItem(
+  'event OrderMatched(uint256 indexed bidOrderId, uint256 indexed askOrderId, uint256 price, uint256 amount, uint256 positionIdLong, uint256 positionIdShort)'
 )
 
 // Market orders use extreme prices: uint256.max/2 for LONG, 1 for SHORT
@@ -43,8 +46,10 @@ function OrderRow({ order, fillPrice }: { order: Order; fillPrice: bigint | null
   const sideLabel = order.side === 0 ? 'Long' : 'Short'
   const typeLabel = isMkt ? `Market ${sideLabel}` : `Limit ${sideLabel}`
 
-  // For price display: use avg fill price for market orders, order price for limit
-  const displayPrice = isMkt ? fillPrice : order.price
+  // For price: show avg fill price if available, otherwise order price (for limit)
+  const displayPrice = isMkt
+    ? fillPrice       // market orders: fill price from events
+    : (fillPrice ?? order.price)  // limit orders: fill price if available, else order price
 
   return (
     <tr className="border-b border-border/50 hover:bg-surface-2/30 transition-colors">
@@ -112,10 +117,20 @@ function OrderRow({ order, fillPrice }: { order: Order; fillPrice: bigint | null
   )
 }
 
-export function OrderHistory() {
+type OrderHistoryProps = {
+  /** 'open' = only open/partial limit orders, 'all' = full history */
+  filter?: 'open' | 'all'
+}
+
+export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
   const { data: ordersData, isLoading } = useUserOrders()
-  const orders = (ordersData as Order[] | undefined) ?? []
+  const allOrders = (ordersData as Order[] | undefined) ?? []
   const publicClient = usePublicClient()
+
+  // Apply filter
+  const orders = filter === 'open'
+    ? allOrders.filter(o => (o.status === 0 || o.status === 2) && !isMarketOrder(o))
+    : allOrders
 
   // Fetch weighted average fill prices from OrderMatched events
   const [fillPrices, setFillPrices] = useState<Record<string, bigint>>({})
@@ -137,22 +152,29 @@ export function OrderHistory() {
         const prices: Record<string, bigint> = {}
 
         for (const order of filledOrders) {
-          // Search as bid (long) or ask (short)
-          const logs = order.side === 0
-            ? await publicClient!.getLogs({
+          // Search as bid (long) or ask (short), try new event then old
+          const args = order.side === 0 ? { bidOrderId: order.id } : { askOrderId: order.id }
+          let logs: any[] = []
+          try {
+            logs = await publicClient!.getLogs({
+              address: CONTRACTS.OrderBook,
+              event: OrderMatchedEventNew,
+              args,
+              fromBlock,
+              toBlock: 'latest',
+            })
+          } catch { /* ignore */ }
+          if (logs.length === 0) {
+            try {
+              logs = await publicClient!.getLogs({
                 address: CONTRACTS.OrderBook,
-                event: OrderMatchedEvent,
-                args: { bidOrderId: order.id },
+                event: OrderMatchedEventOld,
+                args,
                 fromBlock,
                 toBlock: 'latest',
               })
-            : await publicClient!.getLogs({
-                address: CONTRACTS.OrderBook,
-                event: OrderMatchedEvent,
-                args: { askOrderId: order.id },
-                fromBlock,
-                toBlock: 'latest',
-              })
+            } catch { /* ignore */ }
+          }
 
           if (logs.length > 0) {
             // Compute volume-weighted average price
