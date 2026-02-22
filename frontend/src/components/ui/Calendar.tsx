@@ -12,6 +12,9 @@ export function Calendar({ selected, onSelect, disabled }: CalendarProps) {
     <div className="rdp-dark">
       <DayPicker
         mode="single"
+        captionLayout="dropdown"
+        startMonth={new Date()}
+        endMonth={new Date(new Date().getFullYear() + 2, 11)}
         selected={selected}
         onSelect={onSelect}
         disabled={disabled}
@@ -28,7 +31,9 @@ export function Calendar({ selected, onSelect, disabled }: CalendarProps) {
           months: 'flex flex-col',
           month: 'space-y-2',
           month_caption: 'flex justify-center items-center h-8',
-          caption_label: 'text-sm font-medium',
+          caption_label: 'text-sm font-medium hidden',
+          dropdowns: 'flex items-center gap-2 justify-center',
+          dropdown: 'bg-surface-2 border border-border rounded-md px-2 py-1 text-xs text-text cursor-pointer focus:outline-none focus:border-primary',
           nav: 'flex items-center gap-1',
           button_previous: 'absolute left-1 top-0 h-8 w-8 flex items-center justify-center rounded-md hover:bg-surface-2 cursor-pointer',
           button_next: 'absolute right-1 top-0 h-8 w-8 flex items-center justify-center rounded-md hover:bg-surface-2 cursor-pointer',
