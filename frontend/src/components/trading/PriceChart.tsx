@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
-import { createChart, ColorType, LineSeries, type IChartApi } from 'lightweight-charts'
+import { createChart, ColorType, LineSeries, type IChartApi, type UTCTimestamp } from 'lightweight-charts'
 import { useOraclePrice } from '../../hooks/usePriceData'
 import { formatPrice } from '../../lib/utils'
 import { PRICE_PRECISION } from '../../lib/config'
@@ -8,18 +8,15 @@ type PriceChartProps = {
   baseAsset: string
 }
 
-function generateFlatLine(currentPrice: number, count: number) {
-  const points: { time: string; value: number }[] = []
-  const now = new Date()
+function generateFlatLine(currentPrice: number, count: number): { time: UTCTimestamp; value: number }[] {
+  const points: { time: UTCTimestamp; value: number }[] = []
+  const nowSec = Math.floor(Date.now() / 1000)
 
   for (let i = count - 1; i >= 0; i--) {
-    const date = new Date(now.getTime() - i * 3600 * 1000)
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-    const timeStr = `${dateStr} ${String(date.getHours()).padStart(2, '0')}:00`
-
+    const t = nowSec - i * 3600
     const noise = currentPrice * (Math.random() - 0.5) * 0.002
     points.push({
-      time: timeStr,
+      time: t as UTCTimestamp,
       value: Math.round((currentPrice + noise) * 100) / 100,
     })
   }
@@ -30,7 +27,7 @@ function generateFlatLine(currentPrice: number, count: number) {
 export function PriceChart({ baseAsset }: PriceChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
-  const [chartReady, setChartReady] = useState(false)
+  const [containerReady, setContainerReady] = useState(false)
   const { data: priceData, isLoading } = useOraclePrice(baseAsset)
 
   let price: bigint | null = null
@@ -42,110 +39,122 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
       timestamp = d[1]
     }
   } catch {
-    // ignore
+    // ignore parse errors
   }
 
   const currentPrice = price ? Number(price) / PRICE_PRECISION : null
 
   const lineData = useMemo(() => {
-    if (!currentPrice) return null
+    if (!currentPrice || currentPrice <= 0) return null
     return generateFlatLine(currentPrice, 48)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPrice])
 
-  // Wait for container to have dimensions
+  // Wait for container to get real dimensions
   useEffect(() => {
-    if (!chartContainerRef.current) return
-    const observer = new ResizeObserver((entries) => {
+    const el = chartContainerRef.current
+    if (!el) return
+    // Check immediately
+    if (el.clientWidth > 50 && el.clientHeight > 50) {
+      setContainerReady(true)
+      return
+    }
+    const ro = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect
-      if (width > 0 && height > 0) {
-        setChartReady(true)
-      }
+      if (width > 50 && height > 50) setContainerReady(true)
     })
-    observer.observe(chartContainerRef.current)
-    return () => observer.disconnect()
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
 
+  // Create chart
   useEffect(() => {
-    if (!chartContainerRef.current || !lineData || lineData.length === 0 || !chartReady) return
+    if (!chartContainerRef.current || !lineData || !containerReady) return
 
     const container = chartContainerRef.current
-    if (container.clientWidth === 0 || container.clientHeight === 0) return
+    const w = container.clientWidth
+    const h = container.clientHeight
+    if (w < 50 || h < 50) return
 
-    // Clean up previous chart
+    // Cleanup old chart
     if (chartRef.current) {
-      chartRef.current.remove()
+      try { chartRef.current.remove() } catch { /* */ }
       chartRef.current = null
     }
 
-    const chart = createChart(container, {
-      layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#8888a0',
-        fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: '#2a2a3e40' },
-        horzLines: { color: '#2a2a3e40' },
-      },
-      crosshair: {
-        vertLine: { color: '#6366f180', width: 1, style: 2, labelBackgroundColor: '#6366f1' },
-        horzLine: { color: '#6366f180', width: 1, style: 2, labelBackgroundColor: '#6366f1' },
-      },
-      rightPriceScale: {
-        borderColor: '#2a2a3e',
-        scaleMargins: { top: 0.2, bottom: 0.2 },
-      },
-      timeScale: {
-        borderColor: '#2a2a3e',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      width: container.clientWidth,
-      height: container.clientHeight,
-    })
-
-    chartRef.current = chart
-
-    const lineSeries = chart.addSeries(LineSeries, {
-      color: '#6366f1',
-      lineWidth: 2,
-      crosshairMarkerVisible: true,
-      crosshairMarkerRadius: 4,
-      crosshairMarkerBackgroundColor: '#6366f1',
-      priceLineVisible: true,
-      priceLineColor: '#6366f180',
-    })
-
-    lineSeries.setData(lineData as any)
-
-    if (currentPrice) {
-      lineSeries.createPriceLine({
-        price: currentPrice,
-        color: '#6366f1',
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: 'Oracle',
+    try {
+      const chart = createChart(container, {
+        layout: {
+          background: { type: ColorType.Solid, color: 'transparent' },
+          textColor: '#8888a0',
+          fontSize: 11,
+        },
+        grid: {
+          vertLines: { color: '#2a2a3e40' },
+          horzLines: { color: '#2a2a3e40' },
+        },
+        crosshair: {
+          vertLine: { color: '#6366f180', width: 1, style: 2, labelBackgroundColor: '#6366f1' },
+          horzLine: { color: '#6366f180', width: 1, style: 2, labelBackgroundColor: '#6366f1' },
+        },
+        rightPriceScale: {
+          borderColor: '#2a2a3e',
+          scaleMargins: { top: 0.2, bottom: 0.2 },
+        },
+        timeScale: {
+          borderColor: '#2a2a3e',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        width: w,
+        height: h,
       })
-    }
 
-    chart.timeScale().fitContent()
+      chartRef.current = chart
 
-    const resizeObserver = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect
-      if (width > 0 && height > 0) {
-        chart.applyOptions({ width, height })
+      const series = chart.addSeries(LineSeries, {
+        color: '#6366f1',
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
+        crosshairMarkerBackgroundColor: '#6366f1',
+        priceLineVisible: true,
+        priceLineColor: '#6366f180',
+      })
+
+      series.setData(lineData)
+
+      if (currentPrice) {
+        series.createPriceLine({
+          price: currentPrice,
+          color: '#6366f1',
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: 'Oracle',
+        })
       }
-    })
-    resizeObserver.observe(container)
 
-    return () => {
-      resizeObserver.disconnect()
-      chart.remove()
-      chartRef.current = null
+      chart.timeScale().fitContent()
+
+      // Resize listener
+      const ro = new ResizeObserver((entries) => {
+        const rect = entries[0].contentRect
+        if (rect.width > 0 && rect.height > 0) {
+          chart.applyOptions({ width: rect.width, height: rect.height })
+        }
+      })
+      ro.observe(container)
+
+      return () => {
+        ro.disconnect()
+        try { chart.remove() } catch { /* */ }
+        chartRef.current = null
+      }
+    } catch (err) {
+      console.error('Chart creation failed:', err)
     }
-  }, [lineData, currentPrice, chartReady])
+  }, [lineData, currentPrice, containerReady])
 
   if (isLoading) {
     return (
@@ -189,7 +198,7 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
         </span>
       </div>
 
-      {/* Chart */}
+      {/* Chart container */}
       <div ref={chartContainerRef} className="flex-1 min-h-0" />
     </div>
   )
