@@ -12,6 +12,11 @@ contract OrderBook {
     PositionManager public positionManager;
     IERC20 public collateralToken; // USDC
 
+    address public owner;
+    address public feeCollector;
+    uint256 public takerFeeBps;        // 10 = 0.10%
+    uint256 public totalFeesCollected;
+
     uint256 private _nextOrderId = 1;
 
     // orderId => Order
@@ -40,13 +45,34 @@ contract OrderBook {
         uint256 price,
         uint256 amount,
         uint256 positionIdLong,
-        uint256 positionIdShort
+        uint256 positionIdShort,
+        uint256 takerFee
     );
     event OrderCancelled(uint256 indexed orderId, address indexed trader);
+    event FeesCollected(uint256 indexed orderId, uint256 amount);
 
-    constructor(address _forwardMarket, address _collateralToken) {
+    modifier onlyOwner() {
+        require(msg.sender == owner, "OrderBook: not owner");
+        _;
+    }
+
+    constructor(address _forwardMarket, address _collateralToken, address _feeCollector, uint256 _takerFeeBps) {
+        require(_takerFeeBps <= 1000, "OrderBook: fee too high"); // max 10%
         forwardMarket = ForwardMarket(_forwardMarket);
         collateralToken = IERC20(_collateralToken);
+        owner = msg.sender;
+        feeCollector = _feeCollector;
+        takerFeeBps = _takerFeeBps;
+    }
+
+    function setTakerFee(uint256 _newBps) external onlyOwner {
+        require(_newBps <= 1000, "OrderBook: fee too high");
+        takerFeeBps = _newBps;
+    }
+
+    function setFeeCollector(address _feeCollector) external onlyOwner {
+        require(_feeCollector != address(0), "OrderBook: zero address");
+        feeCollector = _feeCollector;
     }
 
     function setPositionManager(address _positionManager) external {
@@ -239,25 +265,42 @@ contract OrderBook {
         uint256 longCollat = orders[longId].collateral * matchAmount / (orders[longId].amount - orders[longId].filled);
         uint256 shortCollat = orders[shortId].collateral * matchAmount / (orders[shortId].amount - orders[shortId].filled);
 
-        // Open positions
-        uint256 mktId = orders[longId].marketId;
-        positionManager.openPosition(mktId, orders[longId].trader, OrderLib.Side.LONG, matchPrice, matchAmount, longCollat);
-        positionManager.openPosition(mktId, orders[shortId].trader, OrderLib.Side.SHORT, matchPrice, matchAmount, shortCollat);
+        // Deduct taker fee from incoming order's collateral
+        uint256 takerFee = _deductFee(incomingId, incomingIsLong ? longCollat : shortCollat);
+        if (incomingIsLong) {
+            longCollat -= takerFee;
+        } else {
+            shortCollat -= takerFee;
+        }
 
-        // Transfer collateral to PositionManager
-        collateralToken.transfer(address(positionManager), longCollat + shortCollat);
+        // Open positions & transfer collateral
+        {
+            uint256 mktId = orders[longId].marketId;
+            positionManager.openPosition(mktId, orders[longId].trader, OrderLib.Side.LONG, matchPrice, matchAmount, longCollat);
+            positionManager.openPosition(mktId, orders[shortId].trader, OrderLib.Side.SHORT, matchPrice, matchAmount, shortCollat);
+            collateralToken.transfer(address(positionManager), longCollat + shortCollat);
+        }
 
-        // Update fill amounts and collateral
+        // Update fill amounts and collateral (use gross collateral for accounting)
         orders[incomingId].filled += matchAmount;
         orders[restingId].filled += matchAmount;
-        orders[longId].collateral -= longCollat;
-        orders[shortId].collateral -= shortCollat;
+        orders[longId].collateral -= (longCollat + (incomingIsLong ? takerFee : 0));
+        orders[shortId].collateral -= (shortCollat + (incomingIsLong ? 0 : takerFee));
 
-        // Update statuses
         _updateOrderStatus(incomingId);
         _updateOrderStatus(restingId);
 
-        emit OrderMatched(longId, shortId, matchPrice, matchAmount, 0, 0);
+        emit OrderMatched(longId, shortId, matchPrice, matchAmount, 0, 0, takerFee);
+    }
+
+    function _deductFee(uint256 orderId, uint256 collat) internal returns (uint256 fee) {
+        if (takerFeeBps == 0) return 0;
+        fee = collat * takerFeeBps / 10000;
+        if (fee > 0) {
+            collateralToken.transfer(feeCollector, fee);
+            totalFeesCollected += fee;
+            emit FeesCollected(orderId, fee);
+        }
     }
 
     function _updateOrderStatus(uint256 orderId) internal {

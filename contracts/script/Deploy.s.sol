@@ -57,8 +57,9 @@ contract DeployScript is Script {
         ForwardMarket forwardMarket = new ForwardMarket(oracleAddr);
         console.log("ForwardMarket deployed at:", address(forwardMarket));
 
-        // 4. Deploy OrderBook
-        OrderBook orderBook = new OrderBook(address(forwardMarket), address(usdc));
+        // 4. Deploy OrderBook (feeCollector = deployer, takerFee = 10 bps = 0.10%)
+        address deployer = vm.addr(deployerPrivateKey);
+        OrderBook orderBook = new OrderBook(address(forwardMarket), address(usdc), deployer, 10);
         console.log("OrderBook deployed at:", address(orderBook));
 
         // 5. Deploy PositionManager

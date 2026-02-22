@@ -25,7 +25,7 @@ contract SettlementTest is Test {
         oracle = new MockOracle();
         usdc = new MockUSDC();
         forwardMarket = new ForwardMarket(address(oracle));
-        orderBook = new OrderBook(address(forwardMarket), address(usdc));
+        orderBook = new OrderBook(address(forwardMarket), address(usdc), address(this), 10);
         positionManager = new PositionManager(
             address(forwardMarket), address(oracle), address(usdc), address(orderBook)
         );

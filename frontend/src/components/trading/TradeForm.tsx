@@ -143,6 +143,20 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     return true
   }, [priceInput, sizeInput, orderType])
 
+  const priceWarning = useMemo(() => {
+    if (orderType !== 'limit' || !priceInput || oraclePrice === 0n) return null
+    const limitPrice = parsePrice(priceInput)
+    if (limitPrice === 0n) return null
+    const markUsd = Number(oraclePrice) / PRICE_PRECISION
+    if (side === 'long' && limitPrice > oraclePrice) {
+      return `Your buy price is above the mark price ($${markUsd.toFixed(2)})`
+    }
+    if (side === 'short' && limitPrice < oraclePrice) {
+      return `Your sell price is below the mark price ($${markUsd.toFixed(2)})`
+    }
+    return null
+  }, [orderType, priceInput, oraclePrice, side])
+
   return (
     <div className="px-3 py-3 space-y-2.5">
       {/* 1CT Prompt - shown once on first connect if not approved */}
@@ -250,7 +264,11 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
             type="number"
             placeholder="0"
             value={sizeInput}
-            onChange={(e) => setSizeInput(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v === '' || /^\d+$/.test(v)) setSizeInput(v)
+            }}
+            onKeyDown={(e) => { if (e.key === '.' || e.key === ',') e.preventDefault() }}
             step="1"
             min="0"
             className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-secondary/50 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -309,6 +327,22 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
             )}
           </div>
         )}
+      </div>
+
+      {/* Price warning */}
+      {priceWarning && (
+        <div className="flex items-start gap-2 bg-warning/10 border border-warning/20 rounded-lg px-2.5 py-2">
+          <svg className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-[10px] text-warning leading-snug">{priceWarning}</span>
+        </div>
+      )}
+
+      {/* Taker fee */}
+      <div className="flex items-center justify-between text-xs px-1">
+        <span className="text-text-secondary">Taker Fee</span>
+        <span className="text-text-secondary font-mono">0.10%</span>
       </div>
 
       {/* Action button */}
