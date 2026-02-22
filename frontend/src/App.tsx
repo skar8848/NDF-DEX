@@ -17,7 +17,7 @@ const Portfolio = lazy(() =>
 
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-[calc(100vh-56px)]">
+    <div className="flex items-center justify-center h-full">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         <span className="text-text-secondary text-sm">Loading...</span>
@@ -28,16 +28,18 @@ function PageLoader() {
 
 function AppLayout() {
   return (
-    <>
+    <div className="h-screen flex flex-col overflow-hidden">
       <Header />
-      <NetworkGuard>
-        <ErrorBoundary>
-          <Suspense fallback={<PageLoader />}>
-            <Outlet />
-          </Suspense>
-        </ErrorBoundary>
-      </NetworkGuard>
-    </>
+      <div className="flex-1 min-h-0 overflow-auto no-scrollbar">
+        <NetworkGuard>
+          <ErrorBoundary>
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
+        </NetworkGuard>
+      </div>
+    </div>
   )
 }
 

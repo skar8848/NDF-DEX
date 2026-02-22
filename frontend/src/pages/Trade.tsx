@@ -148,7 +148,7 @@ export default function Trade() {
 
   if (marketLoading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-56px)] bg-background">
+      <div className="flex items-center justify-center h-full bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <span className="text-text-secondary text-sm">Loading market...</span>
@@ -158,7 +158,7 @@ export default function Trade() {
   }
 
   return (
-    <div className="h-[calc(100vh-56px)] flex flex-col bg-background overflow-hidden">
+    <div className="h-full flex flex-col bg-background overflow-hidden">
       {/* Top bar: Market selector + info */}
       <div className="flex items-center gap-3 px-3 py-2 border-b border-border bg-surface shrink-0">
         <MarketSelector
@@ -288,7 +288,7 @@ export default function Trade() {
           ))}
         </div>
 
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto no-scrollbar">
           <ErrorBoundary>
             {bottomTab === 'positions' && <PositionTable />}
             {bottomTab === 'orders' && <OrderHistory />}
