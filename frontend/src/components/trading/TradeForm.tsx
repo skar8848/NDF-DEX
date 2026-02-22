@@ -14,7 +14,7 @@ import { cn } from '../../lib/utils'
 import type { MarketInfo } from '../../hooks/useForwardMarket'
 
 const MAX_UINT256 = 2n ** 256n - 1n
-const ONE_CT_THRESHOLD = 2n ** 128n // If allowance > this, consider 1CT enabled
+const ONE_CT_THRESHOLD = 2n ** 128n
 
 type TradeFormProps = {
   marketId: bigint
@@ -33,9 +33,10 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   const [orderType, setOrderType] = useState<OrderType>('limit')
   const [priceInput, setPriceInput] = useState('')
   const [sizeInput, setSizeInput] = useState('')
+  const [dismissed1CT, setDismissed1CT] = useState(false)
 
   const { data: balanceData } = useUSDCBalance()
-  const { data: allowanceData } = useUSDCAllowance()
+  const { data: allowanceData, isLoading: allowanceLoading } = useUSDCAllowance()
   const balance = (balanceData as bigint) ?? 0n
   const allowance = (allowanceData as bigint) ?? 0n
 
@@ -61,13 +62,16 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
 
   const is1CTEnabled = allowance >= ONE_CT_THRESHOLD
 
-  const handleToggle1CT = useCallback(() => {
-    if (is1CTEnabled) {
-      approve(CONTRACTS.OrderBook, 0n)
-    } else {
-      approve(CONTRACTS.OrderBook, MAX_UINT256)
-    }
-  }, [is1CTEnabled, approve])
+  // Show 1CT prompt: connected, allowance loaded, not yet approved, not dismissed
+  const show1CTPrompt = isConnected && !allowanceLoading && !is1CTEnabled && !dismissed1CT
+
+  const handleEnable1CT = useCallback(() => {
+    approve(CONTRACTS.OrderBook, MAX_UINT256)
+  }, [approve])
+
+  const handleRevoke1CT = useCallback(() => {
+    approve(CONTRACTS.OrderBook, 0n)
+  }, [approve])
 
   const { data: oraclePriceData } = useOraclePrice(market?.baseAsset ?? '')
   const oraclePrice = useMemo(() => {
@@ -90,6 +94,11 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     }
   }, [externalPrice, onExternalPriceConsumed])
 
+  // Reset dismissed state when wallet disconnects
+  useEffect(() => {
+    if (!isConnected) setDismissed1CT(false)
+  }, [isConnected])
+
   const collateralRequired = useMemo(() => {
     if (!market) return 0n
     const size = sizeInput ? BigInt(Math.floor(Number(sizeInput))) : 0n
@@ -107,13 +116,8 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     }
   }, [priceInput, sizeInput, market, orderType, oraclePrice])
 
-  const needsApproval = collateralRequired > 0n && allowance < collateralRequired
   const isPending = isLimitPending || isMarketPending
   const isConfirming = isLimitConfirming || isMarketConfirming
-
-  function handleApprove() {
-    approve(CONTRACTS.OrderBook, 2n ** 256n - 1n)
-  }
 
   function handlePlaceOrder() {
     if (!isConnected || !address) return
@@ -141,6 +145,36 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
 
   return (
     <div className="px-3 py-3 space-y-2.5">
+      {/* 1CT Prompt - shown once on first connect if not approved */}
+      {show1CTPrompt && (
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span className="text-xs font-semibold text-text">Enable 1-Click Trading?</span>
+          </div>
+          <p className="text-[10px] text-text-secondary leading-relaxed">
+            Approve USDC once to skip the approval step on every trade. You'll only sign one transaction per order instead of two.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleEnable1CT}
+              disabled={isApprovePending || isApproveConfirming}
+              className="flex-1 py-1.5 text-xs font-semibold rounded-md bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {isApprovePending ? 'Confirm in wallet...' : isApproveConfirming ? 'Enabling...' : 'Enable'}
+            </button>
+            <button
+              onClick={() => setDismissed1CT(true)}
+              className="px-3 py-1.5 text-xs text-text-secondary hover:text-text transition-colors cursor-pointer"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Side tabs */}
       <div className="grid grid-cols-2 gap-1 p-1 bg-surface-2 rounded-lg">
         <button
@@ -250,48 +284,43 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
             </span>
           </div>
         )}
-      </div>
-
-      {/* 1-Click Trading toggle */}
-      {isConnected && (
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-text-secondary">1-Click Trading</span>
-            {is1CTEnabled && (
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+        {isConnected && (
+          <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+            <span className="text-text-secondary flex items-center gap-1">
+              1-Click Trading
+              {is1CTEnabled && <span className="w-1.5 h-1.5 rounded-full bg-success" />}
+            </span>
+            {is1CTEnabled ? (
+              <button
+                onClick={handleRevoke1CT}
+                disabled={isApprovePending || isApproveConfirming}
+                className="text-[10px] text-danger/70 hover:text-danger transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isApprovePending || isApproveConfirming ? 'Revoking...' : 'Revoke'}
+              </button>
+            ) : (
+              <button
+                onClick={handleEnable1CT}
+                disabled={isApprovePending || isApproveConfirming}
+                className="text-[10px] text-primary hover:text-primary-hover transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isApprovePending || isApproveConfirming ? 'Enabling...' : 'Enable'}
+              </button>
             )}
           </div>
-          <button
-            onClick={handleToggle1CT}
-            disabled={isApprovePending || isApproveConfirming}
-            className={cn(
-              'relative w-8 h-[18px] rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
-              is1CTEnabled ? 'bg-success' : 'bg-surface-2 border border-border'
-            )}
-          >
-            <span
-              className={cn(
-                'absolute top-[2px] w-[14px] h-[14px] rounded-full transition-transform bg-white',
-                is1CTEnabled ? 'left-[14px]' : 'left-[2px]'
-              )}
-            />
-          </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Action button */}
       {!isConnected ? (
         <div className="w-full py-2.5 text-center text-sm text-text-secondary bg-surface-2 rounded-lg border border-border">
           Connect wallet to trade
         </div>
-      ) : needsApproval && !is1CTEnabled ? (
-        <button
-          onClick={handleApprove}
-          disabled={isApprovePending || isApproveConfirming}
-          className="w-full py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          {isApprovePending ? 'Confirm in wallet...' : isApproveConfirming ? 'Approving...' : 'Approve USDC'}
-        </button>
+      ) : !is1CTEnabled && !dismissed1CT ? (
+        /* If 1CT not enabled and prompt not dismissed, the prompt above handles it */
+        <div className="w-full py-2.5 text-center text-[10px] text-text-secondary">
+          Enable 1-Click Trading above to start
+        </div>
       ) : (
         <button
           onClick={handlePlaceOrder}
