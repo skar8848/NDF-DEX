@@ -116,6 +116,8 @@ export const ForwardMarketABI = [
         { name: 'minCollateral', type: 'uint256' }, { name: 'settlePrice', type: 'uint256' },
         { name: 'settled', type: 'bool' }, { name: 'totalLongOI', type: 'uint256' },
         { name: 'totalShortOI', type: 'uint256' },
+        { name: 'settlementType', type: 'uint8' },
+        { name: 'underlyingToken', type: 'address' },
       ],
     }],
     stateMutability: 'view',
@@ -124,6 +126,18 @@ export const ForwardMarketABI = [
     type: 'function', name: 'settleMarket',
     inputs: [{ name: 'marketId', type: 'uint256' }],
     outputs: [], stateMutability: 'nonpayable',
+  },
+] as const
+
+export const MockWethABI = [
+  {
+    type: 'function', name: 'balanceOf',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ type: 'uint256' }], stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'faucet',
+    inputs: [], outputs: [], stateMutability: 'nonpayable',
   },
 ] as const
 
@@ -235,5 +249,11 @@ export const orderBook = getContract({
 export const mockUsdc = getContract({
   address: config.addresses.mockUsdc,
   abi: MockUsdcABI,
+  client: { public: publicClient, wallet: walletClient },
+})
+
+export const mockWeth = getContract({
+  address: config.addresses.mockWeth,
+  abi: MockWethABI,
   client: { public: publicClient, wallet: walletClient },
 })

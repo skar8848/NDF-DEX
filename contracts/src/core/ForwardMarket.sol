@@ -31,6 +31,32 @@ contract ForwardMarket is IForwardMarket {
         uint256 liquidationThreshold,
         uint256 minCollateral
     ) external onlyOwner returns (uint256 marketId) {
+        return _createMarket(baseAsset, quoteAsset, expiration, ltv, liquidationThreshold, minCollateral, OrderLib.SettlementType.CASH, address(0));
+    }
+
+    function createPhysicalMarket(
+        string calldata baseAsset,
+        string calldata quoteAsset,
+        uint256 expiration,
+        uint256 ltv,
+        uint256 liquidationThreshold,
+        uint256 minCollateral,
+        address underlyingToken
+    ) external onlyOwner returns (uint256 marketId) {
+        require(underlyingToken != address(0), "ForwardMarket: zero underlying");
+        return _createMarket(baseAsset, quoteAsset, expiration, ltv, liquidationThreshold, minCollateral, OrderLib.SettlementType.PHYSICAL, underlyingToken);
+    }
+
+    function _createMarket(
+        string calldata baseAsset,
+        string calldata quoteAsset,
+        uint256 expiration,
+        uint256 ltv,
+        uint256 liquidationThreshold,
+        uint256 minCollateral,
+        OrderLib.SettlementType settlementType,
+        address underlyingToken
+    ) internal returns (uint256 marketId) {
         require(expiration > block.timestamp, "ForwardMarket: expiration in past");
         require(ltv > 0 && ltv <= 10000, "ForwardMarket: invalid ltv");
         require(liquidationThreshold > 0 && liquidationThreshold <= 10000, "ForwardMarket: invalid threshold");
@@ -48,7 +74,9 @@ contract ForwardMarket is IForwardMarket {
             settlePrice: 0,
             settled: false,
             totalLongOI: 0,
-            totalShortOI: 0
+            totalShortOI: 0,
+            settlementType: settlementType,
+            underlyingToken: underlyingToken
         });
 
         marketIds.push(marketId);

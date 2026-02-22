@@ -8,6 +8,7 @@ import {
   oracleContract, MockOracleABI,
   orderBook, OrderBookABI,
   mockUsdc, MockUsdcABI,
+  mockWeth, MockWethABI,
 } from './contracts.js'
 import { fetchAllOpenPositions } from './services/positionMonitor.js'
 import { fetchOraclePrices } from './services/priceService.js'
@@ -65,23 +66,33 @@ async function waitTx(hash: `0x${string}`) {
 
 // ─── Commands ────────────────────────────────────────────────────
 
+function fmtTimeLeft(expiration: bigint): string {
+  const now = Date.now() / 1000
+  const diff = Number(expiration) - now
+  if (diff <= 0) return 'EXPIRED'
+  if (diff < 60) return `${Math.floor(diff)}s`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`
+  return `${Math.floor(diff / 86400)}d`
+}
+
 async function cmdMarkets() {
   const markets = await forwardMarket.read.getAllMarkets()
   if (markets.length === 0) { console.log('No markets found.'); return }
 
   console.log('')
-  console.log('  ID  Pair              Expiration            LTV    Liq%   Long OI      Short OI     Settled')
+  console.log('  ID  Pair              Type       Expires In   LTV    Long OI      Short OI     Status')
   console.log('  ' + '─'.repeat(100))
 
   for (const m of markets) {
     const pair = `${m.baseAsset}/${m.quoteAsset}`.padEnd(16)
-    const exp = fmtDate(m.expiration).padEnd(20)
+    const type = (m.settlementType === 1 ? 'PHYSICAL' : 'CASH').padEnd(10)
+    const timeLeft = fmtTimeLeft(m.expiration).padEnd(12)
     const ltv = `${Number(m.ltv) / 100}%`.padStart(6)
-    const liq = `${Number(m.liquidationThreshold) / 100}%`.padStart(6)
-    const longOI = fmtUsdc(m.totalLongOI).padStart(12)
-    const shortOI = fmtUsdc(m.totalShortOI).padStart(12)
-    const settled = m.settled ? 'YES' : 'NO'
-    console.log(`  ${String(m.id).padStart(2)}  ${pair}${exp}${ltv}${liq}${longOI}${shortOI}     ${settled}`)
+    const longOI = String(m.totalLongOI).padStart(12)
+    const shortOI = String(m.totalShortOI).padStart(12)
+    const status = m.settled ? 'SETTLED' : (Number(m.expiration) < Date.now() / 1000 ? 'EXPIRED' : 'ACTIVE')
+    console.log(`  ${String(m.id).padStart(2)}  ${pair}${type}${timeLeft}${ltv}${longOI}${shortOI}     ${status}`)
   }
   console.log('')
 }
@@ -179,7 +190,8 @@ async function cmdPosition(args: string[]) {
 async function cmdTrade(args: string[]) {
   // tenor trade long ETH 5 --price 2500
   // tenor trade short ETH 3 --market
-  if (args.length < 3) die('Usage: tenor trade <long|short> <asset> <amount> [--price <price>] [--market]')
+  // tenor trade long ETH 2 --price 1950 --mid 4
+  if (args.length < 3) die('Usage: tenor trade <long|short> <asset> <amount> [--price <price>] [--market] [--mid <marketId>]')
 
   const side = parseSide(args[0])
   const asset = args[1].toUpperCase()
@@ -188,13 +200,20 @@ async function cmdTrade(args: string[]) {
 
   const priceFlag = getFlag(args, '--price')
   const isMarket = hasFlag(args, '--market')
+  const midFlag = getFlag(args, '--mid')
 
   if (!priceFlag && !isMarket) die('Specify --price <price> for limit order or --market for market order')
 
-  // Find market by asset
+  // Find market by ID or by asset name
   const markets = await forwardMarket.read.getAllMarkets()
-  const market = markets.find(m => m.baseAsset.toUpperCase() === asset)
-  if (!market) die(`No market found for asset: ${asset}. Available: ${markets.map(m => m.baseAsset).join(', ')}`)
+  let market: any
+  if (midFlag) {
+    market = markets.find(m => String(m.id) === midFlag)
+    if (!market) die(`No market found with ID: ${midFlag}`)
+  } else {
+    market = markets.find(m => m.baseAsset.toUpperCase() === asset && !m.settled)
+    if (!market) die(`No market found for asset: ${asset}. Available: ${markets.map(m => m.baseAsset).join(', ')}`)
+  }
 
   // amount = number of contracts (raw), not USDC
   const amountRaw = BigInt(Math.floor(amount))
@@ -322,10 +341,16 @@ async function cmdFaucet() {
 }
 
 async function cmdBalance() {
-  const [usdcBalance, avaxBalance] = await Promise.all([
+  const [usdcBalance, wethBalance, avaxBalance] = await Promise.all([
     publicClient.readContract({
       address: config.addresses.mockUsdc,
       abi: MockUsdcABI,
+      functionName: 'balanceOf',
+      args: [account.address],
+    }),
+    publicClient.readContract({
+      address: config.addresses.mockWeth,
+      abi: MockWethABI,
       functionName: 'balanceOf',
       args: [account.address],
     }),
@@ -336,7 +361,110 @@ async function cmdBalance() {
   console.log(`  Wallet: ${account.address}`)
   console.log('  ' + '─'.repeat(50))
   console.log(`  USDC:   $${fmtUsdc(usdcBalance as bigint)}`)
+  console.log(`  WETH:   ${Number(formatUnits(wethBalance as bigint, 18)).toFixed(6)}`)
   console.log(`  AVAX:   ${Number(formatUnits(avaxBalance, 18)).toFixed(4)}`)
+  console.log('')
+}
+
+async function cmdSettleMarket(args: string[]) {
+  if (args.length === 0) die('Usage: tenor settle-market <marketId>')
+  const marketId = BigInt(args[0])
+
+  console.log(`  Settling market #${marketId}...`)
+  const hash = await walletClient.writeContract({
+    address: config.addresses.forwardMarket,
+    abi: ForwardMarketABI,
+    functionName: 'settleMarket',
+    args: [marketId],
+  })
+  await waitTx(hash)
+  console.log('  Market settled!')
+}
+
+async function cmdSettle(args: string[]) {
+  if (args.length === 0) die('Usage: tenor settle <positionId>')
+  const positionId = BigInt(args[0])
+
+  // Check WETH balance before (to show physical delivery)
+  const wethBefore = await publicClient.readContract({
+    address: config.addresses.mockWeth,
+    abi: MockWethABI,
+    functionName: 'balanceOf',
+    args: [account.address],
+  }) as bigint
+  const usdcBefore = await publicClient.readContract({
+    address: config.addresses.mockUsdc,
+    abi: MockUsdcABI,
+    functionName: 'balanceOf',
+    args: [account.address],
+  }) as bigint
+
+  console.log(`  Settling position #${positionId}...`)
+  console.log(`  Before: USDC=$${fmtUsdc(usdcBefore)} | WETH=${Number(formatUnits(wethBefore, 18)).toFixed(6)}`)
+
+  const hash = await walletClient.writeContract({
+    address: config.addresses.positionManager,
+    abi: PositionManagerABI,
+    functionName: 'settlePosition',
+    args: [positionId],
+  })
+  await waitTx(hash)
+
+  // Check balances after
+  const wethAfter = await publicClient.readContract({
+    address: config.addresses.mockWeth,
+    abi: MockWethABI,
+    functionName: 'balanceOf',
+    args: [account.address],
+  }) as bigint
+  const usdcAfter = await publicClient.readContract({
+    address: config.addresses.mockUsdc,
+    abi: MockUsdcABI,
+    functionName: 'balanceOf',
+    args: [account.address],
+  }) as bigint
+
+  console.log(`  After:  USDC=$${fmtUsdc(usdcAfter)} | WETH=${Number(formatUnits(wethAfter, 18)).toFixed(6)}`)
+
+  const wethDelta = wethAfter - wethBefore
+  const usdcDelta = usdcAfter - usdcBefore
+  if (wethDelta > 0n) console.log(`  >> Received ${Number(formatUnits(wethDelta, 18)).toFixed(6)} WETH (PHYSICAL DELIVERY)`)
+  if (usdcDelta > 0n) console.log(`  >> Received $${fmtUsdc(usdcDelta)} USDC`)
+  if (usdcDelta < 0n) console.log(`  >> Paid $${fmtUsdc(-usdcDelta)} USDC`)
+  console.log('  Done!')
+}
+
+async function cmdBook(args: string[]) {
+  if (args.length === 0) die('Usage: tenor book <marketId>')
+  const marketId = BigInt(args[0])
+
+  const [bids, asks] = await orderBook.read.getOrderBook([marketId]) as [any[], any[]]
+
+  console.log('')
+  console.log(`  Order Book - Market #${marketId}`)
+  console.log('  ' + '─'.repeat(70))
+
+  if (asks.length > 0) {
+    console.log('  ASKS (sell orders):')
+    for (const o of [...asks].sort((a: any, b: any) => Number(b.price - a.price))) {
+      const remaining = Number(o.amount) - Number(o.filled)
+      console.log(`    $${fmtPrice(o.price)}  x${remaining} contracts  (${o.trader.slice(0, 8)}...)`)
+    }
+  } else {
+    console.log('  ASKS: empty')
+  }
+
+  console.log('  ' + '-'.repeat(40))
+
+  if (bids.length > 0) {
+    console.log('  BIDS (buy orders):')
+    for (const o of [...bids].sort((a: any, b: any) => Number(b.price - a.price))) {
+      const remaining = Number(o.amount) - Number(o.filled)
+      console.log(`    $${fmtPrice(o.price)}  x${remaining} contracts  (${o.trader.slice(0, 8)}...)`)
+    }
+  } else {
+    console.log('  BIDS: empty')
+  }
   console.log('')
 }
 
@@ -355,11 +483,12 @@ function printHelp() {
     npm run cli -- <command> [options]
 
   COMMANDS
-    markets                              List all markets
+    markets                              List all markets (cash + physical)
     prices                               Live oracle prices
     positions                            All open positions
     positions --mine                     My open positions
     position <id>                        Position details
+    book <marketId>                      View order book
     trade <long|short> <asset> <amount>  Place an order
       --price <price>                      Limit order at price
       --market                             Market order
@@ -368,17 +497,19 @@ function printHelp() {
     tpsl <id>                            Set take-profit / stop-loss
       --tp <price>                         Take-profit price
       --sl <price>                         Stop-loss price
+    settle-market <id>                   Settle an expired market
+    settle <positionId>                  Settle position (shows token received)
     faucet                               Mint 10,000 USDC
-    balance                              Wallet balances
+    balance                              Wallet balances (USDC + WETH + AVAX)
     keeper                               Start keeper bot
 
   EXAMPLES
     npx tsx src/cli.ts faucet
     npx tsx src/cli.ts trade long ETH 5 --price 2500
     npx tsx src/cli.ts trade short ETH 3 --market
-    npx tsx src/cli.ts positions --mine
-    npx tsx src/cli.ts tpsl 1 --tp 3000 --sl 2000
-    npx tsx src/cli.ts close 1 --percent 50
+    npx tsx src/cli.ts book 4
+    npx tsx src/cli.ts settle-market 4
+    npx tsx src/cli.ts settle 1
     npx tsx src/cli.ts keeper
 `)
 }
@@ -397,6 +528,9 @@ async function run() {
       case 'trade':     return await cmdTrade(args)
       case 'close':     return await cmdClose(args)
       case 'tpsl':      return await cmdTPSL(args)
+      case 'settle-market': return await cmdSettleMarket(args)
+      case 'settle':    return await cmdSettle(args)
+      case 'book':      return await cmdBook(args)
       case 'faucet':    return await cmdFaucet()
       case 'balance':   return await cmdBalance()
       case 'keeper':    return await cmdKeeper()

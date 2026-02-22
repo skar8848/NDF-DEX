@@ -14,6 +14,11 @@ library OrderLib {
         CANCELLED
     }
 
+    enum SettlementType {
+        CASH,       // PnL settled in USDC (NDF-style)
+        PHYSICAL    // Underlying token delivered at expiry (classic forward)
+    }
+
     struct Order {
         uint256 id;
         address trader;
@@ -56,5 +61,7 @@ library OrderLib {
         bool settled;
         uint256 totalLongOI; // total long open interest (contracts)
         uint256 totalShortOI; // total short open interest (contracts)
+        SettlementType settlementType; // CASH or PHYSICAL
+        address underlyingToken; // ERC20 token for PHYSICAL delivery (address(0) for CASH)
     }
 }

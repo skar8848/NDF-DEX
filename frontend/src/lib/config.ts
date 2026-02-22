@@ -17,14 +17,14 @@ export const avalancheFuji = defineChain({
   testnet: true,
 })
 
-// Deployed on Avalanche Fuji Testnet — v5 Security (ReentrancyGuard, SafeERC20, Access Control, Oracle Staleness)
+// Deployed on Avalanche Fuji Testnet — v6 Physical Delivery + Security
 export const CONTRACTS = {
-  MockUSDC: '0x96917A8B9b9479b68e1E07847A759CC742a64f8e' as `0x${string}`,
-  MockWETH: '0x9DCB4C58F9E6bd083AA90a120eeD9BcaAf31363d' as `0x${string}`,
-  MockOracle: '0x6D76A1EA49C400bad81920e8e87b25355Bd236B4' as `0x${string}`, // ChainlinkOracle (same getPrice interface)
-  ForwardMarket: '0x8caaA8f4d7a48dE91f26b0273dF8900fDdeb97c0' as `0x${string}`,
-  OrderBook: '0x582E78ddd864C6f74607A615A206A576BF6b694E' as `0x${string}`,
-  PositionManager: '0x4834Fb2E0E1e8B8dec59aA18BD93B81bBB4EA23a' as `0x${string}`,
+  MockUSDC: '0x2395F7aB842a3B91634214E5d1D841c7DD0D30D9' as `0x${string}`,
+  MockWETH: '0x0eF47d0c930BF6D4ABbE165CeB8823139e1B8E97' as `0x${string}`,
+  MockOracle: '0x2413750CA5c7a48048b1295C2397003057EAf2ab' as `0x${string}`, // ChainlinkOracle
+  ForwardMarket: '0xf513AB1d36D179E9910070b6049249CD397Cd572' as `0x${string}`,
+  OrderBook: '0xCe34E18C1Cd5A3E04B997592dBc3272A58beEcAC' as `0x${string}`,
+  PositionManager: '0xe6a05bA11CD37A46E78eBE2f638b36dCA1c1ED17' as `0x${string}`,
 } as const
 
 export const PRICE_PRECISION = 1e8

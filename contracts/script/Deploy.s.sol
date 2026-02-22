@@ -11,101 +11,84 @@ import {OrderBook} from "../src/core/OrderBook.sol";
 import {PositionManager} from "../src/core/PositionManager.sol";
 
 contract DeployScript is Script {
-    // Chainlink Fuji price feed addresses
     address constant CHAINLINK_ETH_USD = 0x86d67c3D38D2bCeE722E601025C25a575021c6EA;
     address constant CHAINLINK_BTC_USD = 0x31CF013A08c6Ac228C94551d535d5BAfE19c602a;
     address constant CHAINLINK_AVAX_USD = 0x5498BB86BC934c8D34FDA08E81D444153d0D06aD;
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-
-        // Check whether to deploy with Chainlink oracle (default: false)
         bool useChainlink = vm.envOr("USE_CHAINLINK", false);
+        address deployer = vm.addr(deployerPrivateKey);
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // 1. Deploy Mock Tokens
+        // 1. Tokens
         MockUSDC usdc = new MockUSDC();
-        console.log("MockUSDC deployed at:", address(usdc));
-
         MockWETH weth = new MockWETH();
-        console.log("MockWETH deployed at:", address(weth));
-
-        // 2. Deploy Oracle (Chainlink or Mock depending on env var)
-        address oracleAddr;
-
-        if (useChainlink) {
-            ChainlinkOracle chainlinkOracle = new ChainlinkOracle();
-            oracleAddr = address(chainlinkOracle);
-
-            // Register Fuji Chainlink price feeds
-            chainlinkOracle.registerFeed("ETH", CHAINLINK_ETH_USD);
-            chainlinkOracle.registerFeed("BTC", CHAINLINK_BTC_USD);
-            chainlinkOracle.registerFeed("AVAX", CHAINLINK_AVAX_USD);
-
-            console.log("ChainlinkOracle deployed at:", oracleAddr);
-            console.log("  ETH/USD feed:", CHAINLINK_ETH_USD);
-            console.log("  BTC/USD feed:", CHAINLINK_BTC_USD);
-            console.log("  AVAX/USD feed:", CHAINLINK_AVAX_USD);
-        } else {
-            MockOracle mockOracle = new MockOracle();
-            oracleAddr = address(mockOracle);
-            console.log("MockOracle deployed at:", oracleAddr);
-        }
-
-        // 3. Deploy ForwardMarket
-        ForwardMarket forwardMarket = new ForwardMarket(oracleAddr);
-        console.log("ForwardMarket deployed at:", address(forwardMarket));
-
-        // 4. Deploy OrderBook (feeCollector = deployer, takerFee = 10 bps = 0.10%)
-        address deployer = vm.addr(deployerPrivateKey);
-        OrderBook orderBook = new OrderBook(address(forwardMarket), address(usdc), deployer, 10);
-        console.log("OrderBook deployed at:", address(orderBook));
-
-        // 5. Deploy PositionManager
-        PositionManager positionManager =
-            new PositionManager(address(forwardMarket), oracleAddr, address(usdc), address(orderBook));
-        console.log("PositionManager deployed at:", address(positionManager));
-
-        // 6. Link contracts
-        orderBook.setPositionManager(address(positionManager));
-        forwardMarket.setAuthorized(address(orderBook), true);
-        forwardMarket.setAuthorized(address(positionManager), true);
-
-        // 7. Create initial markets
-        // ETH/USDC Forward - 30 days
-        uint256 ethMarket = forwardMarket.createMarket(
-            "ETH", "USDC", block.timestamp + 30 days, 8000, 8500, 10e6
-        );
-        console.log("ETH/USDC Market created, ID:", ethMarket);
-
-        // BTC/USDC Forward - 30 days
-        uint256 btcMarket = forwardMarket.createMarket(
-            "BTC", "USDC", block.timestamp + 30 days, 8000, 8500, 10e6
-        );
-        console.log("BTC/USDC Market created, ID:", btcMarket);
-
-        // AVAX/USDC Forward - 7 days
-        uint256 avaxMarket = forwardMarket.createMarket(
-            "AVAX", "USDC", block.timestamp + 7 days, 8000, 8500, 5e6
-        );
-        console.log("AVAX/USDC Market created, ID:", avaxMarket);
-
-        // 8. Fund protocol pool (for early close payouts)
-        usdc.mint(address(positionManager), 1_000_000e6);
-        console.log("Protocol pool funded: 1,000,000 USDC to PositionManager");
-
-        vm.stopBroadcast();
-
-        // Print summary
-        console.log("\n=== Deployment Summary ===");
-        console.log("Network: Avalanche Fuji (43113)");
-        console.log("Oracle type:", useChainlink ? "Chainlink" : "Mock");
         console.log("MockUSDC:", address(usdc));
         console.log("MockWETH:", address(weth));
-        console.log("Oracle:", oracleAddr);
-        console.log("ForwardMarket:", address(forwardMarket));
-        console.log("OrderBook:", address(orderBook));
-        console.log("PositionManager:", address(positionManager));
+
+        // 2. Oracle
+        address oracleAddr = _deployOracle(useChainlink);
+
+        // 3. Core contracts
+        ForwardMarket fm = new ForwardMarket(oracleAddr);
+        OrderBook ob = new OrderBook(address(fm), address(usdc), deployer, 10);
+        PositionManager pm = new PositionManager(address(fm), oracleAddr, address(usdc), address(ob));
+
+        ob.setPositionManager(address(pm));
+        fm.setAuthorized(address(ob), true);
+        fm.setAuthorized(address(pm), true);
+
+        console.log("ForwardMarket:", address(fm));
+        console.log("OrderBook:", address(ob));
+        console.log("PositionManager:", address(pm));
+
+        // 4. Cash markets
+        _createCashMarkets(fm);
+
+        // 5. Physical delivery markets
+        _createPhysicalMarkets(fm, address(weth));
+
+        // 6. Fund pools
+        usdc.mint(address(pm), 1_000_000e6);
+        weth.mint(address(pm), 1000e18);
+        console.log("Funded: 1M USDC + 1000 WETH to PositionManager");
+
+        vm.stopBroadcast();
+    }
+
+    function _deployOracle(bool useChainlink) internal returns (address) {
+        if (useChainlink) {
+            ChainlinkOracle o = new ChainlinkOracle();
+            o.registerFeed("ETH", CHAINLINK_ETH_USD);
+            o.registerFeed("BTC", CHAINLINK_BTC_USD);
+            o.registerFeed("AVAX", CHAINLINK_AVAX_USD);
+            console.log("ChainlinkOracle:", address(o));
+            return address(o);
+        } else {
+            MockOracle o = new MockOracle();
+            console.log("MockOracle:", address(o));
+            return address(o);
+        }
+    }
+
+    function _createCashMarkets(ForwardMarket fm) internal {
+        uint256 m1 = fm.createMarket("ETH", "USDC", block.timestamp + 30 days, 8000, 8500, 10e6);
+        console.log("Cash ETH/USDC (30d) ID:", m1);
+
+        uint256 m2 = fm.createMarket("BTC", "USDC", block.timestamp + 30 days, 8000, 8500, 10e6);
+        console.log("Cash BTC/USDC (30d) ID:", m2);
+
+        uint256 m3 = fm.createMarket("AVAX", "USDC", block.timestamp + 7 days, 8000, 8500, 5e6);
+        console.log("Cash AVAX/USDC (7d) ID:", m3);
+    }
+
+    function _createPhysicalMarkets(ForwardMarket fm, address weth) internal {
+        uint256 m4 = fm.createPhysicalMarket("ETH", "USDC", block.timestamp + 10 minutes, 8000, 8500, 10e6, weth);
+        console.log("Physical ETH/USDC (10min) ID:", m4);
+
+        uint256 m5 = fm.createPhysicalMarket("ETH", "USDC", block.timestamp + 1 hours, 8000, 8500, 10e6, weth);
+        console.log("Physical ETH/USDC (1h) ID:", m5);
     }
 }

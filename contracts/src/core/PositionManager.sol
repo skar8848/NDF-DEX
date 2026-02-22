@@ -11,6 +11,8 @@ import {IPriceOracle} from "../oracle/PriceOracle.sol";
 
 contract PositionManager is ReentrancyGuard {
     using SafeERC20 for IERC20;
+
+    event PhysicalDelivery(uint256 indexed positionId, address indexed trader, address token, uint256 amount);
     ForwardMarket public forwardMarket;
     IPriceOracle public oracle;
     IERC20 public collateralToken;
@@ -316,11 +318,18 @@ contract PositionManager is ReentrancyGuard {
         // Update open interest
         forwardMarket.updateOI(pos.marketId, pos.side, pos.size, false);
 
-        // Calculate payout
+        if (market.settlementType == OrderLib.SettlementType.PHYSICAL && market.underlyingToken != address(0)) {
+            _settlePhysical(positionId, pos, market, pnl);
+        } else {
+            _settleCash(positionId, pos, pnl);
+        }
+    }
+
+    /// @notice Cash settlement: PnL paid in USDC (NDF-style)
+    function _settleCash(uint256 positionId, OrderLib.PositionInfo storage pos, int256 pnl) internal {
         uint256 payout;
         if (pnl >= 0) {
             payout = pos.collateral + uint256(pnl);
-            // Cap payout at available collateral in contract
             uint256 balance = collateralToken.balanceOf(address(this));
             if (payout > balance) payout = balance;
         } else {
@@ -330,6 +339,59 @@ contract PositionManager is ReentrancyGuard {
 
         if (payout > 0) {
             collateralToken.safeTransfer(pos.trader, payout);
+        }
+
+        emit PositionSettled(positionId, pnl);
+    }
+
+    /// @notice Physical delivery: long receives underlying tokens, short receives USDC
+    function _settlePhysical(
+        uint256 positionId,
+        OrderLib.PositionInfo storage pos,
+        OrderLib.MarketInfo memory market,
+        int256 pnl
+    ) internal {
+        IERC20 underlying = IERC20(market.underlyingToken);
+        bool isLong = pos.side == OrderLib.Side.LONG;
+
+        if (isLong) {
+            // LONG: receives underlying tokens proportional to position size
+            // delivery amount = size * 1e18 (underlying has 18 decimals)
+            uint256 deliveryAmount = pos.size * 1e18;
+
+            // Cap at available underlying balance
+            uint256 available = underlying.balanceOf(address(this));
+            if (deliveryAmount > available) deliveryAmount = available;
+
+            if (deliveryAmount > 0) {
+                underlying.safeTransfer(pos.trader, deliveryAmount);
+                emit PhysicalDelivery(positionId, pos.trader, market.underlyingToken, deliveryAmount);
+            }
+
+            // Return remaining USDC collateral minus forward price cost
+            // Forward price cost = entryPrice * size * COLLATERAL_PRECISION / PRICE_PRECISION
+            uint256 forwardCost = pos.entryPrice * pos.size * MathLib.COLLATERAL_PRECISION / MathLib.PRICE_PRECISION;
+            uint256 usdcPayout = pos.collateral > forwardCost ? pos.collateral - forwardCost : 0;
+            if (usdcPayout > 0) {
+                uint256 balance = collateralToken.balanceOf(address(this));
+                if (usdcPayout > balance) usdcPayout = balance;
+                collateralToken.safeTransfer(pos.trader, usdcPayout);
+            }
+        } else {
+            // SHORT: receives USDC (forward price + PnL from price movement)
+            // Short delivered the asset obligation, receives the forward price
+            uint256 payout;
+            if (pnl >= 0) {
+                payout = pos.collateral + uint256(pnl);
+            } else {
+                uint256 loss = MathLib.abs(pnl);
+                payout = pos.collateral > loss ? pos.collateral - loss : 0;
+            }
+            uint256 balance = collateralToken.balanceOf(address(this));
+            if (payout > balance) payout = balance;
+            if (payout > 0) {
+                collateralToken.safeTransfer(pos.trader, payout);
+            }
         }
 
         emit PositionSettled(positionId, pnl);
