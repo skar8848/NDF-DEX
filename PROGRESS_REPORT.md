@@ -21,7 +21,7 @@
 | Front: TP Price/Gain + SL Price/Loss | DONE | USD/% toggle |
 | SDK | DONE | `sdk/` |
 | All docs | DONE | Architecture, Matching, TP/SL, Settlement, CLI, Jury, Roadmap, Improvements |
-| Order books filled | IN PROGRESS | Agent filling ETH, BTC, AVAX books |
+| Order books filled | DONE | 50 orders: ETH (20) + BTC (20) + ETH Physical (10) |
 
 ---
 
@@ -73,8 +73,8 @@
 ---
 
 ## WHAT'S LEFT
-- [ ] Order book filling (agent running)
 - [ ] Review at localhost:5174
+- [ ] Merge `docs/full-release` into `main` when ready
 
 ---
 
