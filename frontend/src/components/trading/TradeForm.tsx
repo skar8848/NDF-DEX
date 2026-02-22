@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useAccount } from 'wagmi'
 import {
   usePlaceLimitOrder,
@@ -12,6 +12,9 @@ import { CONTRACTS, PRICE_PRECISION, COLLATERAL_PRECISION, PERCENT_BASE } from '
 import { formatUSDC, parsePrice } from '../../lib/utils'
 import { cn } from '../../lib/utils'
 import type { MarketInfo } from '../../hooks/useForwardMarket'
+
+const MAX_UINT256 = 2n ** 256n - 1n
+const ONE_CT_THRESHOLD = 2n ** 128n // If allowance > this, consider 1CT enabled
 
 type TradeFormProps = {
   marketId: bigint
@@ -55,6 +58,16 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     isPending: isApprovePending,
     isConfirming: isApproveConfirming,
   } = useApproveUSDC()
+
+  const is1CTEnabled = allowance >= ONE_CT_THRESHOLD
+
+  const handleToggle1CT = useCallback(() => {
+    if (is1CTEnabled) {
+      approve(CONTRACTS.OrderBook, 0n)
+    } else {
+      approve(CONTRACTS.OrderBook, MAX_UINT256)
+    }
+  }, [is1CTEnabled, approve])
 
   const { data: oraclePriceData } = useOraclePrice(market?.baseAsset ?? '')
   const oraclePrice = useMemo(() => {
@@ -239,12 +252,39 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         )}
       </div>
 
+      {/* 1-Click Trading toggle */}
+      {isConnected && (
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-text-secondary">1-Click Trading</span>
+            {is1CTEnabled && (
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+            )}
+          </div>
+          <button
+            onClick={handleToggle1CT}
+            disabled={isApprovePending || isApproveConfirming}
+            className={cn(
+              'relative w-8 h-[18px] rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+              is1CTEnabled ? 'bg-success' : 'bg-surface-2 border border-border'
+            )}
+          >
+            <span
+              className={cn(
+                'absolute top-[2px] w-[14px] h-[14px] rounded-full transition-transform bg-white',
+                is1CTEnabled ? 'left-[14px]' : 'left-[2px]'
+              )}
+            />
+          </button>
+        </div>
+      )}
+
       {/* Action button */}
       {!isConnected ? (
         <div className="w-full py-2.5 text-center text-sm text-text-secondary bg-surface-2 rounded-lg border border-border">
           Connect wallet to trade
         </div>
-      ) : needsApproval ? (
+      ) : needsApproval && !is1CTEnabled ? (
         <button
           onClick={handleApprove}
           disabled={isApprovePending || isApproveConfirming}
