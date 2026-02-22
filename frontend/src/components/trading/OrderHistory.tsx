@@ -181,8 +181,8 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
             let totalValue = 0n
             let totalAmount = 0n
             for (const log of logs) {
-              const p = log.args.price!
-              const a = log.args.amount!
+              const p = BigInt(log.args.price!)
+              const a = BigInt(log.args.amount!)
               totalValue += p * a
               totalAmount += a
             }
