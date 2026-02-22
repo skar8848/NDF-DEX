@@ -14,11 +14,16 @@ function PositionPnL({ position, market }: { position: any; market: MarketInfo |
   const { data: priceData } = useOraclePrice(baseAsset)
   const currentPrice = priceData ? (priceData as [bigint, bigint])[0] : null
 
-  if (!currentPrice || position.entryPrice === 0n) return <span className="text-text-secondary">--</span>
+  // Use settlePrice for closed positions on settled markets, oracle for open
+  const refPrice = !position.isOpen && market?.settled && market.settlePrice > 0n
+    ? market.settlePrice
+    : currentPrice
+
+  if (!refPrice || position.entryPrice === 0n) return <span className="text-text-secondary">--</span>
 
   const diff = position.side === 0
-    ? currentPrice - position.entryPrice
-    : position.entryPrice - currentPrice
+    ? refPrice - position.entryPrice
+    : position.entryPrice - refPrice
   const pnl = (diff * position.size * BigInt(COLLATERAL_PRECISION)) / BigInt(PRICE_PRECISION)
   const pnlNum = Number(pnl) / COLLATERAL_PRECISION
 
@@ -256,11 +261,7 @@ function PositionsTable({ positions, markets, settleable, selectedIds, toggleId,
                 <td className="px-4 py-3 text-right text-text font-mono">{Number(pos.size)}</td>
                 <td className="px-4 py-3 text-right text-text font-mono">${formatUSDC(pos.collateral)}</td>
                 <td className="px-4 py-3 text-right">
-                  {pos.isOpen ? (
-                    <PositionPnL position={pos} market={market} />
-                  ) : (
-                    <span className="text-text-secondary font-mono">--</span>
-                  )}
+                  <PositionPnL position={pos} market={market} />
                 </td>
                 <td className="px-4 py-3">
                   <span className={cn(
@@ -319,6 +320,9 @@ function OrdersTable({ orders }: { orders: any[] }) {
             const isMkt = isMarketOrder(order)
             const sideLabel = order.side === 0 ? 'Long' : 'Short'
             const typeLabel = isMkt ? `Market ${sideLabel}` : `Limit ${sideLabel}`
+            const fillPct = order.amount > 0n
+              ? Number((BigInt(order.filled) * 100n) / BigInt(order.amount))
+              : 0
             return (
               <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
                 <td className="px-4 py-3">
@@ -343,7 +347,7 @@ function OrdersTable({ orders }: { orders: any[] }) {
                   {isMkt ? <span className="text-text-secondary italic">Market</span> : `$${formatPrice(order.price)}`}
                 </td>
                 <td className="px-4 py-3 text-right text-text font-mono">{Number(order.amount)}</td>
-                <td className="px-4 py-3 text-right text-text font-mono">{Number(order.filled)}</td>
+                <td className="px-4 py-3 text-right text-text font-mono">{fillPct}%</td>
                 <td className="px-4 py-3">
                   <span className={cn(
                     'px-2 py-0.5 rounded text-xs font-medium',

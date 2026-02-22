@@ -1,4 +1,4 @@
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi'
 import { useAccount } from 'wagmi'
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
@@ -116,12 +116,13 @@ export function useSettlePosition() {
 
 export function useBatchSettle() {
   const { writeContractAsync } = useWriteContract()
+  const publicClient = usePublicClient()
   const [isSettling, setIsSettling] = useState(false)
   const [settled, setSettled] = useState(0)
   const [total, setTotal] = useState(0)
 
   const batchSettle = useCallback(async (positionIds: bigint[]) => {
-    if (positionIds.length === 0) return
+    if (positionIds.length === 0 || !publicClient) return
     setIsSettling(true)
     setSettled(0)
     setTotal(positionIds.length)
@@ -129,14 +130,17 @@ export function useBatchSettle() {
 
     for (let i = 0; i < positionIds.length; i++) {
       try {
-        await writeContractAsync({
+        const hash = await writeContractAsync({
           address: CONTRACTS.PositionManager,
           abi: PositionManagerABI,
           functionName: 'settlePosition',
           args: [positionIds[i]],
         })
+        toast.loading(`Confirming ${i + 1}/${positionIds.length}...`, { id: 'batch-settle' })
+        // Wait for tx to be confirmed before prompting next signature
+        await publicClient.waitForTransactionReceipt({ hash })
         setSettled(i + 1)
-        toast.loading(`Settling ${i + 1}/${positionIds.length}...`, { id: 'batch-settle' })
+        toast.loading(`Settled ${i + 1}/${positionIds.length}...`, { id: 'batch-settle' })
       } catch (err: any) {
         toast.error(`Failed on position #${Number(positionIds[i])}: ${err.message?.slice(0, 60)}`, { id: 'batch-settle' })
         setIsSettling(false)
@@ -146,7 +150,7 @@ export function useBatchSettle() {
 
     toast.success(`${positionIds.length} positions settled!`, { id: 'batch-settle' })
     setIsSettling(false)
-  }, [writeContractAsync])
+  }, [writeContractAsync, publicClient])
 
   return { batchSettle, isSettling, settled, total }
 }

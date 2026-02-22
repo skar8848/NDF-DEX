@@ -24,12 +24,14 @@ type TradeFormProps = {
   onExternalPriceConsumed?: () => void
   bestBid?: bigint | null
   bestAsk?: bigint | null
+  bookDepthAsk?: bigint  // total ask-side liquidity (for long market orders)
+  bookDepthBid?: bigint  // total bid-side liquidity (for short market orders)
 }
 
 type OrderSide = 'long' | 'short'
 type OrderType = 'limit' | 'market'
 
-export function TradeForm({ marketId, market, externalPrice, onExternalPriceConsumed, bestBid, bestAsk }: TradeFormProps) {
+export function TradeForm({ marketId, market, externalPrice, onExternalPriceConsumed, bestBid, bestAsk, bookDepthAsk, bookDepthBid }: TradeFormProps) {
   const { address, isConnected } = useAccount()
 
   const [side, setSide] = useState<OrderSide>('long')
@@ -241,6 +243,18 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     }
     return null
   }, [orderType, priceInput, bestBid, bestAsk, side])
+
+  // Market order: check if size exceeds available book depth
+  const depthWarning = useMemo(() => {
+    if (orderType !== 'market' || !sizeInput) return null
+    const size = BigInt(Math.floor(Number(sizeInput)))
+    if (size === 0n) return null
+    const depth = side === 'long' ? bookDepthAsk : bookDepthBid
+    if (depth !== undefined && size > depth) {
+      return `Only ${depth.toString()} contracts available in the book — order will be partially filled`
+    }
+    return null
+  }, [orderType, sizeInput, side, bookDepthAsk, bookDepthBid])
 
   const sizeNum = sizeInput ? Number(sizeInput) : 0
   const sliderValue = maxSize > 0 ? Math.min(sizeNum / maxSize, 1) : 0
@@ -577,6 +591,16 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span className="text-[10px] text-warning leading-snug">{priceWarning}</span>
+        </div>
+      )}
+
+      {/* Depth warning for market orders */}
+      {depthWarning && (
+        <div className="flex items-start gap-2 bg-short/10 border border-short/20 rounded-lg px-2.5 py-2">
+          <svg className="w-3.5 h-3.5 text-short shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-[10px] text-short leading-snug">{depthWarning}</span>
         </div>
       )}
 

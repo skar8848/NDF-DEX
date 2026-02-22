@@ -108,19 +108,21 @@ export default function Trade() {
     }
   }, [priceData])
 
-  // Best bid / best ask / mid / spread
-  const { bestBid, bestAsk, markPrice, spread } = useMemo(() => {
+  // Best bid / best ask / mid / spread / depth
+  const { bestBid, bestAsk, markPrice, spread, bookDepthBid, bookDepthAsk } = useMemo(() => {
     const activeBids = orderBookLevels.bids.filter(o => o.amount - o.filled > 0n)
     const activeAsks = orderBookLevels.asks.filter(o => o.amount - o.filled > 0n)
+    const depthBid = activeBids.reduce((sum, o) => sum + (o.amount - o.filled), 0n)
+    const depthAsk = activeAsks.reduce((sum, o) => sum + (o.amount - o.filled), 0n)
     if (activeBids.length === 0 || activeAsks.length === 0) {
-      return { bestBid: null, bestAsk: null, markPrice: null, spread: null }
+      return { bestBid: null, bestAsk: null, markPrice: null, spread: null, bookDepthBid: depthBid, bookDepthAsk: depthAsk }
     }
     const bb = activeBids.reduce((max, o) => o.price > max ? o.price : max, 0n)
     const ba = activeAsks.reduce((min, o) => o.price < min ? o.price : min, activeAsks[0].price)
-    if (ba <= bb) return { bestBid: bb, bestAsk: ba, markPrice: null, spread: null }
+    if (ba <= bb) return { bestBid: bb, bestAsk: ba, markPrice: null, spread: null, bookDepthBid: depthBid, bookDepthAsk: depthAsk }
     const mid = (bb + ba) / 2n
     const sp = ba - bb
-    return { bestBid: bb, bestAsk: ba, markPrice: mid, spread: sp }
+    return { bestBid: bb, bestAsk: ba, markPrice: mid, spread: sp, bookDepthBid: depthBid, bookDepthAsk: depthAsk }
   }, [orderBookLevels])
 
   // Drag to resize bottom panel
@@ -205,7 +207,9 @@ export default function Trade() {
             <div className="flex flex-col">
               <span className="text-[10px]" style={{ color: '#8888a0' }}>Open Interest</span>
               <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
-                {oraclePrice
+                {market.settled
+                  ? '--'
+                  : oraclePrice
                   ? `$${(Number(market.totalLongOI + market.totalShortOI) * Number(oraclePrice) / PRICE_PRECISION).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
                   : '--'}
               </span>
@@ -301,7 +305,7 @@ export default function Trade() {
           <div className="px-3 py-2 border-b border-border">
             <h3 className="text-xs font-semibold text-text">Place Order</h3>
           </div>
-          <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} bestBid={bestBid} bestAsk={bestAsk} />
+          <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} bestBid={bestBid} bestAsk={bestAsk} bookDepthAsk={bookDepthAsk} bookDepthBid={bookDepthBid} />
         </div>
       </div>
 

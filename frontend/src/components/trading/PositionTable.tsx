@@ -12,10 +12,15 @@ function usePnl(position: Position, market: MarketInfo | undefined) {
   const { data: priceData } = useOraclePrice(baseAsset)
   const currentPrice = priceData ? (priceData as [bigint, bigint])[0] : null
 
-  if (!currentPrice || position.entryPrice === 0n) return null
+  // Use settlePrice for settled markets, oracle for active
+  const refPrice = market?.settled && market.settlePrice > 0n
+    ? market.settlePrice
+    : currentPrice
+
+  if (!refPrice || position.entryPrice === 0n) return null
   const diff = position.side === 0
-    ? currentPrice - position.entryPrice
-    : position.entryPrice - currentPrice
+    ? refPrice - position.entryPrice
+    : position.entryPrice - refPrice
   return (diff * position.size * BigInt(COLLATERAL_PRECISION)) / BigInt(PRICE_PRECISION)
 }
 

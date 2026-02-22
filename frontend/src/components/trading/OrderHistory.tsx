@@ -45,7 +45,7 @@ function OrderRow({ order, fillPrice }: { order: Order; fillPrice: bigint | null
   const sideLabel = order.side === 0 ? 'Long' : 'Short'
   const typeLabel = isMkt ? `Market ${sideLabel}` : `Limit ${sideLabel}`
 
-  // For price display: use fill price for market orders, order price for limit
+  // For price display: use avg fill price for market orders, order price for limit
   const displayPrice = isMkt ? fillPrice : order.price
 
   return (
@@ -75,8 +75,6 @@ function OrderRow({ order, fillPrice }: { order: Order; fillPrice: bigint | null
       <td className="px-3 py-2.5 text-xs text-text font-mono">
         {displayPrice
           ? `$${formatPrice(displayPrice)}`
-          : isMkt
-          ? <span className="text-text-secondary italic text-[10px]">No fill</span>
           : '--'}
       </td>
       <td className="px-3 py-2.5 text-xs text-text font-mono">
@@ -94,7 +92,7 @@ function OrderRow({ order, fillPrice }: { order: Order; fillPrice: bigint | null
             />
           </div>
           <span className="text-text-secondary font-mono text-[10px]">
-            {order.filled.toString()}/{order.amount.toString()}
+            {fillPercent}%
           </span>
         </div>
       </td>
@@ -128,25 +126,26 @@ export function OrderHistory() {
   const orders = (ordersData as Order[] | undefined) ?? []
   const publicClient = usePublicClient()
 
-  // Fetch fill prices for market orders from OrderMatched events
+  // Fetch weighted average fill prices from OrderMatched events
   const [fillPrices, setFillPrices] = useState<Record<string, bigint>>({})
 
   useEffect(() => {
     if (!publicClient || orders.length === 0) return
 
-    const marketOrders = orders.filter(o => isMarketOrder(o) && o.filled > 0n)
-    if (marketOrders.length === 0) return
+    // Fetch fill prices for all orders that have fills (market or limit)
+    const filledOrders = orders.filter(o => o.filled > 0n)
+    if (filledOrders.length === 0) return
 
     let cancelled = false
 
     async function fetchFillPrices() {
       try {
         const currentBlock = await publicClient!.getBlockNumber()
-        const fromBlock = currentBlock > 10000n ? currentBlock - 10000n : 0n
+        const fromBlock = currentBlock > 100000n ? currentBlock - 100000n : 0n
 
         const prices: Record<string, bigint> = {}
 
-        for (const order of marketOrders) {
+        for (const order of filledOrders) {
           // Search as bid (long) or ask (short)
           const logs = order.side === 0
             ? await publicClient!.getLogs({
@@ -165,8 +164,18 @@ export function OrderHistory() {
               })
 
           if (logs.length > 0) {
-            // Use the last match price (most recent fill)
-            prices[order.id.toString()] = logs[logs.length - 1].args.price!
+            // Compute volume-weighted average price
+            let totalValue = 0n
+            let totalAmount = 0n
+            for (const log of logs) {
+              const p = log.args.price!
+              const a = log.args.amount!
+              totalValue += p * a
+              totalAmount += a
+            }
+            if (totalAmount > 0n) {
+              prices[order.id.toString()] = totalValue / totalAmount
+            }
           }
         }
 

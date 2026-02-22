@@ -7,7 +7,7 @@ import { AssetLogo } from '../components/trading/MarketSelector'
 export function Markets() {
   const { data: markets, isLoading } = useAllMarkets()
   const [showCreate, setShowCreate] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'settled'>('all')
+  const [statusFilter, setStatusFilter] = useState<'active' | 'settled'>('active')
   const [assetFilter, setAssetFilter] = useState<string>('all')
 
   const allAssets = useMemo(() => {
@@ -26,6 +26,16 @@ export function Markets() {
       return true
     })
   }, [markets, statusFilter, assetFilter])
+
+  // Count for tab labels
+  const activeCount = useMemo(() => {
+    if (!markets) return 0
+    return (markets as any[]).filter((m: any) => !m.settled).length
+  }, [markets])
+  const settledCount = useMemo(() => {
+    if (!markets) return 0
+    return (markets as any[]).filter((m: any) => m.settled).length
+  }, [markets])
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -47,17 +57,20 @@ export function Markets() {
       <div className="flex items-center gap-4 mb-6">
         {/* Status filter */}
         <div className="flex gap-1">
-          {(['all', 'active', 'settled'] as const).map((f) => (
+          {([
+            { id: 'active' as const, label: `Active (${activeCount})` },
+            { id: 'settled' as const, label: `Settled (${settledCount})` },
+          ]).map((f) => (
             <button
-              key={f}
-              onClick={() => setStatusFilter(f)}
+              key={f.id}
+              onClick={() => setStatusFilter(f.id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                statusFilter === f
+                statusFilter === f.id
                   ? 'bg-surface-2 text-text'
                   : 'text-text-secondary hover:text-text hover:bg-surface-2'
               }`}
             >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {f.label}
             </button>
           ))}
         </div>
