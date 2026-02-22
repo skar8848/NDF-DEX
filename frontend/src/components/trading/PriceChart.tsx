@@ -46,7 +46,7 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
       theme: 'dark',
       style: '1',
       locale: 'en',
-      backgroundColor: 'rgba(0, 0, 0, 0)',
+      backgroundColor: '#0a0a0f',
       gridColor: 'rgba(42, 42, 62, 0.25)',
       hide_top_toolbar: false,
       hide_legend: false,
