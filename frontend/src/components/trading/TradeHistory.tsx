@@ -101,8 +101,8 @@ export function TradeHistory() {
 
     fetchTrades()
 
-    // Refresh every 15 seconds
-    const interval = setInterval(fetchTrades, 15000)
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchTrades, 30000)
 
     return () => {
       cancelled = true

@@ -138,7 +138,6 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
   useEffect(() => {
     if (!publicClient || orders.length === 0) return
 
-    // Fetch fill prices for all orders that have fills (market or limit)
     const filledOrders = orders.filter(o => o.filled > 0n)
     if (filledOrders.length === 0) return
 
@@ -149,47 +148,56 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
         const currentBlock = await publicClient!.getBlockNumber()
         const fromBlock = currentBlock > 100000n ? currentBlock - 100000n : 0n
 
-        const prices: Record<string, bigint> = {}
-
-        for (const order of filledOrders) {
-          // Search as bid (long) or ask (short), try new event then old
-          const args = order.side === 0 ? { bidOrderId: order.id } : { askOrderId: order.id }
-          let logs: any[] = []
+        // Single getLogs call for ALL OrderMatched events (no per-order loop)
+        let logs: any[] = []
+        try {
+          logs = await publicClient!.getLogs({
+            address: CONTRACTS.OrderBook,
+            event: OrderMatchedEventNew,
+            fromBlock,
+            toBlock: 'latest',
+          })
+        } catch { /* ignore */ }
+        if (logs.length === 0) {
           try {
             logs = await publicClient!.getLogs({
               address: CONTRACTS.OrderBook,
-              event: OrderMatchedEventNew,
-              args,
+              event: OrderMatchedEventOld,
               fromBlock,
               toBlock: 'latest',
             })
           } catch { /* ignore */ }
-          if (logs.length === 0) {
-            try {
-              logs = await publicClient!.getLogs({
-                address: CONTRACTS.OrderBook,
-                event: OrderMatchedEventOld,
-                args,
-                fromBlock,
-                toBlock: 'latest',
-              })
-            } catch { /* ignore */ }
-          }
+        }
 
-          if (logs.length > 0) {
-            // Compute volume-weighted average price
-            let totalValue = 0n
-            let totalAmount = 0n
-            for (const log of logs) {
-              const p = BigInt(log.args.price!)
-              const a = BigInt(log.args.amount!)
-              totalValue += p * a
-              totalAmount += a
-            }
-            if (totalAmount > 0n) {
-              prices[order.id.toString()] = totalValue / totalAmount
-            }
+        // Build set of filled order IDs for fast lookup
+        const filledIds = new Set(filledOrders.map(o => o.id.toString()))
+        const filledSides = new Map(filledOrders.map(o => [o.id.toString(), o.side]))
+
+        // Accumulate VWAP per order from all matched logs
+        const accum: Record<string, { totalValue: bigint; totalAmount: bigint }> = {}
+        for (const log of logs) {
+          const bidId = log.args.bidOrderId!.toString()
+          const askId = log.args.askOrderId!.toString()
+          const p = BigInt(log.args.price!)
+          const a = BigInt(log.args.amount!)
+
+          // Match bid side (long orders)
+          if (filledIds.has(bidId) && filledSides.get(bidId) === 0) {
+            if (!accum[bidId]) accum[bidId] = { totalValue: 0n, totalAmount: 0n }
+            accum[bidId].totalValue += p * a
+            accum[bidId].totalAmount += a
           }
+          // Match ask side (short orders)
+          if (filledIds.has(askId) && filledSides.get(askId) === 1) {
+            if (!accum[askId]) accum[askId] = { totalValue: 0n, totalAmount: 0n }
+            accum[askId].totalValue += p * a
+            accum[askId].totalAmount += a
+          }
+        }
+
+        const prices: Record<string, bigint> = {}
+        for (const [id, { totalValue, totalAmount }] of Object.entries(accum)) {
+          if (totalAmount > 0n) prices[id] = totalValue / totalAmount
         }
 
         if (!cancelled) setFillPrices(prices)

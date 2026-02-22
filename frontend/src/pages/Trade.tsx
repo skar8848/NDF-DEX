@@ -99,7 +99,7 @@ export default function Trade() {
     }
 
     fetchVolume()
-    const interval = setInterval(fetchVolume, 30000)
+    const interval = setInterval(fetchVolume, 60000)
     return () => { cancelled = true; clearInterval(interval) }
   }, [publicClient])
 
