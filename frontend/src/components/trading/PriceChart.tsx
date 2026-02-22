@@ -1,33 +1,20 @@
-import { useEffect, useRef, useMemo, useState } from 'react'
-import { createChart, ColorType, LineSeries, type IChartApi, type UTCTimestamp } from 'lightweight-charts'
+import { useEffect, useRef, useMemo } from 'react'
 import { useOraclePrice } from '../../hooks/usePriceData'
 import { formatPrice } from '../../lib/utils'
-import { PRICE_PRECISION } from '../../lib/config'
 
 type PriceChartProps = {
   baseAsset: string
 }
 
-function generateFlatLine(currentPrice: number, count: number): { time: UTCTimestamp; value: number }[] {
-  const points: { time: UTCTimestamp; value: number }[] = []
-  const nowSec = Math.floor(Date.now() / 1000)
-
-  for (let i = count - 1; i >= 0; i--) {
-    const t = nowSec - i * 3600
-    const noise = currentPrice * (Math.random() - 0.5) * 0.002
-    points.push({
-      time: t as UTCTimestamp,
-      value: Math.round((currentPrice + noise) * 100) / 100,
-    })
-  }
-
-  return points
+const ASSET_TO_SYMBOL: Record<string, string> = {
+  ETH: 'COINBASE:ETHUSD',
+  BTC: 'COINBASE:BTCUSD',
+  AVAX: 'COINBASE:AVAXUSD',
 }
 
 export function PriceChart({ baseAsset }: PriceChartProps) {
-  const chartContainerRef = useRef<HTMLDivElement>(null)
-  const chartRef = useRef<IChartApi | null>(null)
-  const [containerReady, setContainerReady] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const widgetRef = useRef<HTMLDivElement | null>(null)
   const { data: priceData, isLoading } = useOraclePrice(baseAsset)
 
   let price: bigint | null = null
@@ -42,119 +29,77 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
     // ignore parse errors
   }
 
-  const currentPrice = price ? Number(price) / PRICE_PRECISION : null
+  const symbol = useMemo(() => ASSET_TO_SYMBOL[baseAsset] ?? 'COINBASE:ETHUSD', [baseAsset])
 
-  const lineData = useMemo(() => {
-    if (!currentPrice || currentPrice <= 0) return null
-    return generateFlatLine(currentPrice, 48)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPrice])
-
-  // Wait for container to get real dimensions
   useEffect(() => {
-    const el = chartContainerRef.current
-    if (!el) return
-    // Check immediately
-    if (el.clientWidth > 50 && el.clientHeight > 50) {
-      setContainerReady(true)
-      return
+    if (!containerRef.current) return
+
+    // Clear previous widget
+    if (widgetRef.current) {
+      widgetRef.current.innerHTML = ''
     }
-    const ro = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect
-      if (width > 50 && height > 50) setContainerReady(true)
+
+    const wrapper = document.createElement('div')
+    wrapper.className = 'tradingview-widget-container'
+    wrapper.style.width = '100%'
+    wrapper.style.height = '100%'
+
+    const widgetDiv = document.createElement('div')
+    widgetDiv.className = 'tradingview-widget-container__widget'
+    widgetDiv.style.width = '100%'
+    widgetDiv.style.height = '100%'
+    wrapper.appendChild(widgetDiv)
+
+    const script = document.createElement('script')
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
+    script.async = true
+    script.type = 'text/javascript'
+    script.textContent = JSON.stringify({
+      autosize: true,
+      symbol: symbol,
+      interval: '60',
+      timezone: 'Etc/UTC',
+      theme: 'dark',
+      style: '1',
+      locale: 'en',
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+      gridColor: 'rgba(42, 42, 62, 0.25)',
+      hide_top_toolbar: false,
+      hide_legend: false,
+      allow_symbol_change: false,
+      save_image: false,
+      calendar: false,
+      hide_volume: false,
+      support_host: 'https://www.tradingview.com',
+      withdateranges: true,
+      details: false,
+      hotlist: false,
+      show_popup_button: false,
+      studies: ['STD;EMA'],
+      overrides: {
+        'paneProperties.backgroundType': 'solid',
+        'paneProperties.background': '#0a0a14',
+        'mainSeriesProperties.candleStyle.upColor': '#22c55e',
+        'mainSeriesProperties.candleStyle.downColor': '#ef4444',
+        'mainSeriesProperties.candleStyle.borderUpColor': '#22c55e',
+        'mainSeriesProperties.candleStyle.borderDownColor': '#ef4444',
+        'mainSeriesProperties.candleStyle.wickUpColor': '#22c55e',
+        'mainSeriesProperties.candleStyle.wickDownColor': '#ef4444',
+      },
     })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
+    wrapper.appendChild(script)
 
-  // Create chart
-  useEffect(() => {
-    if (!chartContainerRef.current || !lineData || !containerReady) return
+    containerRef.current.innerHTML = ''
+    containerRef.current.appendChild(wrapper)
+    widgetRef.current = wrapper
 
-    const container = chartContainerRef.current
-    const w = container.clientWidth
-    const h = container.clientHeight
-    if (w < 50 || h < 50) return
-
-    // Cleanup old chart
-    if (chartRef.current) {
-      try { chartRef.current.remove() } catch { /* */ }
-      chartRef.current = null
-    }
-
-    try {
-      const chart = createChart(container, {
-        layout: {
-          background: { type: ColorType.Solid, color: 'transparent' },
-          textColor: '#8888a0',
-          fontSize: 11,
-        },
-        grid: {
-          vertLines: { color: '#2a2a3e40' },
-          horzLines: { color: '#2a2a3e40' },
-        },
-        crosshair: {
-          vertLine: { color: '#6366f180', width: 1, style: 2, labelBackgroundColor: '#6366f1' },
-          horzLine: { color: '#6366f180', width: 1, style: 2, labelBackgroundColor: '#6366f1' },
-        },
-        rightPriceScale: {
-          borderColor: '#2a2a3e',
-          scaleMargins: { top: 0.2, bottom: 0.2 },
-        },
-        timeScale: {
-          borderColor: '#2a2a3e',
-          timeVisible: true,
-          secondsVisible: false,
-        },
-        width: w,
-        height: h,
-      })
-
-      chartRef.current = chart
-
-      const series = chart.addSeries(LineSeries, {
-        color: '#6366f1',
-        lineWidth: 2,
-        crosshairMarkerVisible: true,
-        crosshairMarkerRadius: 4,
-        crosshairMarkerBackgroundColor: '#6366f1',
-        priceLineVisible: true,
-        priceLineColor: '#6366f180',
-      })
-
-      series.setData(lineData)
-
-      if (currentPrice) {
-        series.createPriceLine({
-          price: currentPrice,
-          color: '#6366f1',
-          lineWidth: 1,
-          lineStyle: 2,
-          axisLabelVisible: true,
-          title: 'Oracle',
-        })
+    return () => {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = ''
       }
-
-      chart.timeScale().fitContent()
-
-      // Resize listener
-      const ro = new ResizeObserver((entries) => {
-        const rect = entries[0].contentRect
-        if (rect.width > 0 && rect.height > 0) {
-          chart.applyOptions({ width: rect.width, height: rect.height })
-        }
-      })
-      ro.observe(container)
-
-      return () => {
-        ro.disconnect()
-        try { chart.remove() } catch { /* */ }
-        chartRef.current = null
-      }
-    } catch (err) {
-      console.error('Chart creation failed:', err)
+      widgetRef.current = null
     }
-  }, [lineData, currentPrice, containerReady])
+  }, [symbol])
 
   if (isLoading) {
     return (
@@ -183,14 +128,14 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Price header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
         <div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-text font-mono">${priceFormatted}</span>
-            <span className="text-xs text-text-secondary">Oracle Price</span>
+            <span className="text-xl font-bold text-text font-mono">${priceFormatted}</span>
+            <span className="text-[10px] text-text-secondary">Oracle</span>
           </div>
           <span className="text-[10px] text-text-secondary/60">
-            Last update: {lastUpdate}
+            Updated: {lastUpdate}
           </span>
         </div>
         <span className="text-[10px] text-text-secondary/50 font-mono">
@@ -198,8 +143,8 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
         </span>
       </div>
 
-      {/* Chart container */}
-      <div ref={chartContainerRef} className="flex-1 min-h-0" />
+      {/* TradingView Advanced Chart Widget */}
+      <div ref={containerRef} className="flex-1 min-h-0" />
     </div>
   )
 }
