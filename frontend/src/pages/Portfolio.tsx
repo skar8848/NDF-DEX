@@ -7,7 +7,7 @@ import { useAllMarkets, useSettleMarket, type MarketInfo } from '../hooks/useFor
 import { useOraclePrice } from '../hooks/usePriceData'
 import { formatPrice, formatUSDC, formatExpiryDate, cn } from '../lib/utils'
 import { useCancelOrder } from '../hooks/useOrderBook'
-import { CONTRACTS, PRICE_PRECISION, COLLATERAL_PRECISION } from '../lib/config'
+import { PRICE_PRECISION, COLLATERAL_PRECISION } from '../lib/config'
 
 function PositionPnL({ position, market }: { position: any; market: MarketInfo | undefined }) {
   const baseAsset = market?.baseAsset ?? ''
@@ -283,7 +283,6 @@ function PositionsTable({ positions, markets, settleable, selectedIds, toggleId,
 }
 
 const MARKET_ORDER_THRESHOLD = BigInt('1000000000000000000')
-const EXPLORER_URL = 'https://testnet.snowtrace.io'
 
 function isMarketOrder(order: any): boolean {
   return BigInt(order.price) > MARKET_ORDER_THRESHOLD || BigInt(order.price) <= 1n
@@ -325,15 +324,8 @@ function OrdersTable({ orders }: { orders: any[] }) {
               : 0
             return (
               <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
-                <td className="px-4 py-3">
-                  <a
-                    href={`${EXPLORER_URL}/address/${CONTRACTS.OrderBook}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:text-primary-hover transition-colors"
-                  >
-                    #{Number(order.id)}
-                  </a>
+                <td className="px-4 py-3 text-text font-mono">
+                  #{Number(order.id)}
                 </td>
                 <td className="px-4 py-3">
                   <span className={cn(

@@ -21,8 +21,6 @@ const ORDER_STATUS_COLORS: Record<number, string> = {
   3: 'text-text-secondary bg-surface-2',
 }
 
-const EXPLORER_URL = 'https://testnet.snowtrace.io'
-
 const OrderMatchedEvent = parseAbiItem(
   'event OrderMatched(uint256 indexed bidOrderId, uint256 indexed askOrderId, uint256 price, uint256 amount, uint256 positionIdLong, uint256 positionIdShort, uint256 takerFee)'
 )
@@ -50,15 +48,8 @@ function OrderRow({ order, fillPrice }: { order: Order; fillPrice: bigint | null
 
   return (
     <tr className="border-b border-border/50 hover:bg-surface-2/30 transition-colors">
-      <td className="px-3 py-2.5 text-xs font-mono">
-        <a
-          href={`${EXPLORER_URL}/address/${CONTRACTS.OrderBook}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:text-primary-hover transition-colors"
-        >
-          #{order.id.toString()}
-        </a>
+      <td className="px-3 py-2.5 text-xs font-mono text-text">
+        #{order.id.toString()}
       </td>
       <td className="px-3 py-2.5 text-xs">
         <span

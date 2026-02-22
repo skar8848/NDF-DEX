@@ -203,18 +203,6 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
       placeLimitOrder(marketId, sideEnum, price, size)
     } else {
       if (size === 0n) return
-      // Use limit order with slippage-adjusted price for protection
-      const refPrice = side === 'long' ? bestAsk : bestBid
-      if (refPrice && slippageBps > 0) {
-        const slippagePrice = side === 'long'
-          ? refPrice + (refPrice * BigInt(slippageBps) / 10000n)
-          : refPrice - (refPrice * BigInt(slippageBps) / 10000n)
-        if (slippagePrice > 0n) {
-          placeLimitOrder(marketId, sideEnum, slippagePrice, size)
-          return
-        }
-      }
-      // Fallback: no book data or 0 slippage → use raw market order
       placeMarketOrder(marketId, sideEnum, size)
     }
   }
