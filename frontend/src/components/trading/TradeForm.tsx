@@ -43,8 +43,12 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   const [showSlippageMenu, setShowSlippageMenu] = useState(false)
   const [tpInput, setTpInput] = useState('')
   const [slInput, setSlInput] = useState('')
+  const [tpGainInput, setTpGainInput] = useState('')
+  const [slLossInput, setSlLossInput] = useState('')
   const [tpGainMode, setTpGainMode] = useState<'usd' | 'pct'>('usd')
   const [slLossMode, setSlLossMode] = useState<'usd' | 'pct'>('usd')
+  const [tpLastEdited, setTpLastEdited] = useState<'price' | 'gain'>('price')
+  const [slLastEdited, setSlLastEdited] = useState<'price' | 'loss'>('price')
 
   const { data: balanceData } = useUSDCBalance()
   const { data: allowanceData, isLoading: allowanceLoading } = useUSDCAllowance()
@@ -126,12 +130,79 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     setPrevPositionCount(matching.length)
   }, [openPositionsData, marketId])
 
+  // TP: when gain input changes, compute TP price
+  useEffect(() => {
+    if (tpLastEdited !== 'gain' || !tpGainInput || effectivePrice === 0n || !sizeInput) return
+    const size = Number(sizeInput)
+    if (size <= 0) return
+    const gainVal = Number(tpGainInput)
+    if (isNaN(gainVal) || gainVal <= 0) return
+    let gainUsd = gainVal
+    if (tpGainMode === 'pct' && collateralRequired > 0n) {
+      gainUsd = (gainVal / 100) * (Number(collateralRequired) / COLLATERAL_PRECISION)
+    }
+    // gain = diff * size * CP / PP → diff = gain * PP / (size * CP)
+    const diff = (gainUsd * PRICE_PRECISION) / (size * COLLATERAL_PRECISION)
+    const entryNum = Number(effectivePrice) / PRICE_PRECISION
+    const tpPrice = side === 'long' ? entryNum + diff : entryNum - diff
+    if (tpPrice > 0) setTpInput(tpPrice.toFixed(2))
+  }, [tpGainInput, tpGainMode, tpLastEdited])
+
+  // SL: when loss input changes, compute SL price
+  useEffect(() => {
+    if (slLastEdited !== 'loss' || !slLossInput || effectivePrice === 0n || !sizeInput) return
+    const size = Number(sizeInput)
+    if (size <= 0) return
+    const lossVal = Number(slLossInput)
+    if (isNaN(lossVal) || lossVal <= 0) return
+    let lossUsd = lossVal
+    if (slLossMode === 'pct' && collateralRequired > 0n) {
+      lossUsd = (lossVal / 100) * (Number(collateralRequired) / COLLATERAL_PRECISION)
+    }
+    const diff = (lossUsd * PRICE_PRECISION) / (size * COLLATERAL_PRECISION)
+    const entryNum = Number(effectivePrice) / PRICE_PRECISION
+    const slPrice = side === 'long' ? entryNum - diff : entryNum + diff
+    if (slPrice > 0) setSlInput(slPrice.toFixed(2))
+  }, [slLossInput, slLossMode, slLastEdited])
+
+  // TP: when price input changes, compute gain display
+  useEffect(() => {
+    if (tpLastEdited !== 'price' || !tpInput || effectivePrice === 0n || !sizeInput || collateralRequired === 0n) { setTpGainInput(''); return }
+    const tpPrice = parsePrice(tpInput)
+    if (tpPrice === 0n) { setTpGainInput(''); return }
+    const diff = side === 'long' ? tpPrice - effectivePrice : effectivePrice - tpPrice
+    const gain = Number(diff * BigInt(Math.floor(Number(sizeInput))) * BigInt(COLLATERAL_PRECISION) / BigInt(PRICE_PRECISION)) / COLLATERAL_PRECISION
+    if (tpGainMode === 'pct') {
+      const roe = (gain / (Number(collateralRequired) / COLLATERAL_PRECISION)) * 100
+      setTpGainInput(roe > 0 ? roe.toFixed(1) : '')
+    } else {
+      setTpGainInput(gain > 0 ? gain.toFixed(2) : '')
+    }
+  }, [tpInput, tpLastEdited, effectivePrice, sizeInput, collateralRequired, tpGainMode])
+
+  // SL: when price input changes, compute loss display
+  useEffect(() => {
+    if (slLastEdited !== 'price' || !slInput || effectivePrice === 0n || !sizeInput || collateralRequired === 0n) { setSlLossInput(''); return }
+    const slPrice = parsePrice(slInput)
+    if (slPrice === 0n) { setSlLossInput(''); return }
+    const diff = side === 'long' ? effectivePrice - slPrice : slPrice - effectivePrice
+    const loss = Number(diff * BigInt(Math.floor(Number(sizeInput))) * BigInt(COLLATERAL_PRECISION) / BigInt(PRICE_PRECISION)) / COLLATERAL_PRECISION
+    if (slLossMode === 'pct') {
+      const roe = (loss / (Number(collateralRequired) / COLLATERAL_PRECISION)) * 100
+      setSlLossInput(roe > 0 ? roe.toFixed(1) : '')
+    } else {
+      setSlLossInput(loss > 0 ? loss.toFixed(2) : '')
+    }
+  }, [slInput, slLastEdited, effectivePrice, sizeInput, collateralRequired, slLossMode])
+
   useEffect(() => {
     if (isLimitSuccess || isMarketSuccess) {
       setPriceInput('')
       setSizeInput('')
       setTpInput('')
       setSlInput('')
+      setTpGainInput('')
+      setSlLossInput('')
     }
   }, [isLimitSuccess, isMarketSuccess])
 
@@ -465,7 +536,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
       {/* TP/SL Section — always visible */}
       <div className="space-y-2">
         <span className="text-xs text-text-secondary font-medium">TP / SL</span>
-        {/* Take Profit row: TP Price | Gain */}
+        {/* Take Profit row: TP Price | Gain (both editable) */}
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <label className="block text-[10px] text-long mb-0.5">TP Price</label>
@@ -473,7 +544,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
               type="number"
               placeholder={side === 'long' ? 'Above entry' : 'Below entry'}
               value={tpInput}
-              onChange={(e) => setTpInput(e.target.value)}
+              onChange={(e) => { setTpInput(e.target.value); setTpLastEdited('price') }}
               step="0.01"
               min="0"
               className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs text-text placeholder:text-text-secondary/40 focus:outline-none focus:border-long transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -483,30 +554,24 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
             <div className="flex items-center justify-between mb-0.5">
               <label className="text-[10px] text-long">Gain</label>
               <button
-                onClick={() => setTpGainMode(tpGainMode === 'usd' ? 'pct' : 'usd')}
+                onClick={() => { setTpGainMode(tpGainMode === 'usd' ? 'pct' : 'usd'); setTpLastEdited(tpLastEdited) }}
                 className="text-[9px] text-text-secondary hover:text-text transition-colors cursor-pointer px-1 py-0.5 rounded bg-surface-2 border border-border/50"
               >
-                {tpGainMode === 'usd' ? 'USD' : '%'}
+                {tpGainMode === 'usd' ? '$' : '%'}
               </button>
             </div>
-            <div className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs font-mono min-h-[30px] flex items-center">
-              {(() => {
-                if (!tpInput || effectivePrice === 0n || !sizeInput || collateralRequired === 0n) return <span className="text-text-secondary">--</span>
-                const tpPrice = parsePrice(tpInput)
-                if (tpPrice === 0n) return <span className="text-text-secondary">--</span>
-                const diff = side === 'long' ? tpPrice - effectivePrice : effectivePrice - tpPrice
-                const gain = Number(diff * BigInt(Math.floor(Number(sizeInput))) * BigInt(COLLATERAL_PRECISION) / BigInt(PRICE_PRECISION)) / COLLATERAL_PRECISION
-                const roe = (gain / (Number(collateralRequired) / COLLATERAL_PRECISION)) * 100
-                return (
-                  <span className="text-long">
-                    {tpGainMode === 'usd' ? `+$${gain.toFixed(2)}` : `+${roe.toFixed(1)}%`}
-                  </span>
-                )
-              })()}
-            </div>
+            <input
+              type="number"
+              placeholder={tpGainMode === 'usd' ? '+$0.00' : '+0%'}
+              value={tpGainInput}
+              onChange={(e) => { setTpGainInput(e.target.value); setTpLastEdited('gain') }}
+              step={tpGainMode === 'usd' ? '1' : '0.1'}
+              min="0"
+              className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs text-long font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-long transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
           </div>
         </div>
-        {/* Stop Loss row: SL Price | Loss */}
+        {/* Stop Loss row: SL Price | Loss (both editable) */}
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <label className="block text-[10px] text-short mb-0.5">SL Price</label>
@@ -514,7 +579,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
               type="number"
               placeholder={side === 'long' ? 'Below entry' : 'Above entry'}
               value={slInput}
-              onChange={(e) => setSlInput(e.target.value)}
+              onChange={(e) => { setSlInput(e.target.value); setSlLastEdited('price') }}
               step="0.01"
               min="0"
               className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs text-text placeholder:text-text-secondary/40 focus:outline-none focus:border-short transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -524,27 +589,21 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
             <div className="flex items-center justify-between mb-0.5">
               <label className="text-[10px] text-short">Loss</label>
               <button
-                onClick={() => setSlLossMode(slLossMode === 'usd' ? 'pct' : 'usd')}
+                onClick={() => { setSlLossMode(slLossMode === 'usd' ? 'pct' : 'usd'); setSlLastEdited(slLastEdited) }}
                 className="text-[9px] text-text-secondary hover:text-text transition-colors cursor-pointer px-1 py-0.5 rounded bg-surface-2 border border-border/50"
               >
-                {slLossMode === 'usd' ? 'USD' : '%'}
+                {slLossMode === 'usd' ? '$' : '%'}
               </button>
             </div>
-            <div className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs font-mono min-h-[30px] flex items-center">
-              {(() => {
-                if (!slInput || effectivePrice === 0n || !sizeInput || collateralRequired === 0n) return <span className="text-text-secondary">--</span>
-                const slPrice = parsePrice(slInput)
-                if (slPrice === 0n) return <span className="text-text-secondary">--</span>
-                const diff = side === 'long' ? effectivePrice - slPrice : slPrice - effectivePrice
-                const loss = Number(diff * BigInt(Math.floor(Number(sizeInput))) * BigInt(COLLATERAL_PRECISION) / BigInt(PRICE_PRECISION)) / COLLATERAL_PRECISION
-                const roe = (loss / (Number(collateralRequired) / COLLATERAL_PRECISION)) * 100
-                return (
-                  <span className="text-short">
-                    {slLossMode === 'usd' ? `-$${loss.toFixed(2)}` : `-${roe.toFixed(1)}%`}
-                  </span>
-                )
-              })()}
-            </div>
+            <input
+              type="number"
+              placeholder={slLossMode === 'usd' ? '-$0.00' : '-0%'}
+              value={slLossInput}
+              onChange={(e) => { setSlLossInput(e.target.value); setSlLastEdited('loss') }}
+              step={slLossMode === 'usd' ? '1' : '0.1'}
+              min="0"
+              className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs text-short font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-short transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
           </div>
         </div>
       </div>
@@ -721,7 +780,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
       {/* Taker fee */}
       <div className="flex items-center justify-between text-xs px-1">
         <span className="text-text-secondary">Taker Fee</span>
-        <span className="text-text-secondary font-mono">0.10%</span>
+        <span className="text-text-secondary font-mono">0.05%</span>
       </div>
 
       {/* Action button */}

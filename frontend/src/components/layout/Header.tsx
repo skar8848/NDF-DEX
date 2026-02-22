@@ -12,6 +12,7 @@ const navLinks = [
   { to: '/markets', label: 'Markets' },
   { to: '/portfolio', label: 'Portfolio' },
   { to: '/vault', label: 'Vault' },
+  { to: '/docs', label: 'Docs' },
 ]
 
 export function Header() {
@@ -35,9 +36,7 @@ export function Header() {
           {navLinks.map((link) => {
             const isActive = link.to.startsWith('/trade')
               ? location.pathname.startsWith('/trade')
-              : link.to.startsWith('/vault')
-                ? location.pathname.startsWith('/vault')
-                : location.pathname === link.to
+              : location.pathname === link.to
             return (
               <Link
                 key={link.to}

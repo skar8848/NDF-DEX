@@ -17,6 +17,9 @@ const Portfolio = lazy(() =>
 const Vault = lazy(() =>
   import('./pages/Vault').then((m) => ({ default: m.Vault }))
 )
+const Docs = lazy(() =>
+  import('./pages/Docs').then((m) => ({ default: m.Docs }))
+)
 
 function PageLoader() {
   return (
@@ -59,6 +62,7 @@ function App() {
                 <Route path="/markets" element={<Markets />} />
                 <Route path="/portfolio" element={<Portfolio />} />
                 <Route path="/vault" element={<Vault />} />
+                <Route path="/docs" element={<Docs />} />
               </Route>
             </Routes>
             <Toaster
