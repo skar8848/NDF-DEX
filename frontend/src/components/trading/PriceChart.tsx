@@ -1,6 +1,4 @@
 import { useEffect, useRef, useMemo } from 'react'
-import { useOraclePrice } from '../../hooks/usePriceData'
-import { formatPrice } from '../../lib/utils'
 
 type PriceChartProps = {
   baseAsset: string
@@ -15,26 +13,12 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
 export function PriceChart({ baseAsset }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<HTMLDivElement | null>(null)
-  const { data: priceData, isLoading } = useOraclePrice(baseAsset)
-
-  let price: bigint | null = null
-  let timestamp: bigint | null = null
-  try {
-    if (priceData) {
-      const d = priceData as [bigint, bigint]
-      price = d[0]
-      timestamp = d[1]
-    }
-  } catch {
-    // ignore parse errors
-  }
 
   const symbol = useMemo(() => ASSET_TO_SYMBOL[baseAsset] ?? 'COINBASE:ETHUSD', [baseAsset])
 
   useEffect(() => {
     if (!containerRef.current) return
 
-    // Clear previous widget
     if (widgetRef.current) {
       widgetRef.current.innerHTML = ''
     }
@@ -101,50 +85,5 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
     }
   }, [symbol])
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-text-secondary text-sm">Loading price data...</div>
-      </div>
-    )
-  }
-
-  if (!price) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <p className="text-text-secondary text-sm">No price data available</p>
-          <p className="text-text-secondary/60 text-xs mt-1">Oracle not set for {baseAsset}</p>
-        </div>
-      </div>
-    )
-  }
-
-  const priceFormatted = formatPrice(price)
-  const lastUpdate = timestamp
-    ? new Date(Number(timestamp) * 1000).toLocaleTimeString()
-    : '--'
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Price header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
-        <div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-xl font-bold text-text font-mono">${priceFormatted}</span>
-            <span className="text-[10px] text-text-secondary">Oracle</span>
-          </div>
-          <span className="text-[10px] text-text-secondary/60">
-            Updated: {lastUpdate}
-          </span>
-        </div>
-        <span className="text-[10px] text-text-secondary/50 font-mono">
-          {baseAsset}/USD
-        </span>
-      </div>
-
-      {/* TradingView Advanced Chart Widget */}
-      <div ref={containerRef} className="flex-1 min-h-0" />
-    </div>
-  )
+  return <div ref={containerRef} className="w-full h-full" />
 }

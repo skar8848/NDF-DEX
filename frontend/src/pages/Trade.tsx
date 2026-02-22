@@ -103,6 +103,17 @@ export default function Trade() {
     }
   }, [priceData])
 
+  // Mark price = mid of best bid / best ask
+  const markPrice = useMemo(() => {
+    const activeBids = orderBookLevels.bids.filter(o => o.amount - o.filled > 0n)
+    const activeAsks = orderBookLevels.asks.filter(o => o.amount - o.filled > 0n)
+    if (activeBids.length === 0 || activeAsks.length === 0) return null
+    const bestBid = activeBids.reduce((max, o) => o.price > max ? o.price : max, 0n)
+    const bestAsk = activeAsks.reduce((min, o) => o.price < min ? o.price : min, activeAsks[0].price)
+    if (bestAsk <= bestBid) return null
+    return (bestBid + bestAsk) / 2n
+  }, [orderBookLevels])
+
   // Drag to resize bottom panel
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true
@@ -148,7 +159,7 @@ export default function Trade() {
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col bg-background overflow-hidden">
       {/* Top bar: Market selector + info */}
-      <div className="flex items-center gap-4 px-3 py-2 border-b border-border bg-surface shrink-0">
+      <div className="flex items-center gap-3 px-3 py-2 border-b border-border bg-surface shrink-0">
         <MarketSelector
           markets={allMarkets}
           selectedMarketId={marketId}
@@ -156,13 +167,38 @@ export default function Trade() {
         />
 
         {market && (
-          <div className="flex items-center gap-6 ml-4">
+          <>
+            <div className="w-px h-6 bg-border" />
+
+            <div className="flex flex-col">
+              <span className="text-[10px] text-text-secondary">Mark Price</span>
+              <span className="text-sm font-bold text-text font-mono">
+                {markPrice ? `$${formatPrice(markPrice)}` : '--'}
+              </span>
+            </div>
+
             <div className="flex flex-col">
               <span className="text-[10px] text-text-secondary">Oracle Price</span>
-              <span className="text-sm font-bold text-text font-mono">
+              <span className="text-sm text-text font-mono">
                 {oraclePrice ? `$${formatPrice(oraclePrice)}` : '--'}
               </span>
             </div>
+
+            <div className="w-px h-6 bg-border" />
+
+            <div className="flex flex-col">
+              <span className="text-[10px] text-text-secondary">Open Interest</span>
+              <span className="text-sm text-text font-mono">
+                {(market.totalLongOI + market.totalShortOI).toString()}
+              </span>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-[10px] text-text-secondary">Volume 24h</span>
+              <span className="text-sm text-text font-mono">$0</span>
+            </div>
+
+            <div className="w-px h-6 bg-border" />
 
             <div className="flex flex-col">
               <span className="text-[10px] text-text-secondary">Expiry</span>
@@ -170,29 +206,7 @@ export default function Trade() {
                 {formatCountdown(market.expiration)}
               </span>
             </div>
-
-            <div className="flex flex-col">
-              <span className="text-[10px] text-text-secondary">Long OI</span>
-              <span className="text-sm text-long font-mono">
-                {market.totalLongOI.toString()}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] text-text-secondary">Short OI</span>
-              <span className="text-sm text-short font-mono">
-                {market.totalShortOI.toString()}
-              </span>
-            </div>
-
-            <div className="flex flex-col">
-              <span className="text-[10px] text-text-secondary">Status</span>
-              {market.settled ? (
-                <span className="text-xs font-medium text-warning">Settled</span>
-              ) : (
-                <span className="text-xs font-medium text-success">Active</span>
-              )}
-            </div>
-          </div>
+          </>
         )}
       </div>
 
