@@ -19,6 +19,13 @@ library OrderLib {
         PHYSICAL    // Underlying token delivered at expiry (classic forward)
     }
 
+    enum TimeInForce {
+        GTC,        // Good-Til-Cancelled (default)
+        IOC,        // Immediate-Or-Cancel: fill what's available, cancel rest
+        FOK,        // Fill-Or-Kill: fill entirely or revert
+        POST_ONLY   // Add to book only, revert if would match
+    }
+
     struct Order {
         uint256 id;
         address trader;
@@ -30,6 +37,7 @@ library OrderLib {
         uint256 collateral; // USDC locked (6 decimals)
         uint256 timestamp;
         OrderStatus status;
+        TimeInForce timeInForce;
     }
 
     struct PositionInfo {

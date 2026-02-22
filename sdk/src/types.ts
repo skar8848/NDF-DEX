@@ -10,7 +10,16 @@ export enum Side {
 export enum OrderStatus {
   Open = 0,
   Filled = 1,
-  Cancelled = 2,
+  PartiallyFilled = 2,
+  Cancelled = 3,
+}
+
+/** Time-in-force for advanced order types */
+export enum TimeInForce {
+  GTC = 0,        // Good-Til-Cancelled
+  IOC = 1,        // Immediate-Or-Cancel
+  FOK = 2,        // Fill-Or-Kill
+  POST_ONLY = 3,  // Add to book only, revert if would match
 }
 
 // ─── Core data types ────────────────────────────────────────────
@@ -93,6 +102,8 @@ export interface Order {
   timestamp: bigint
   /** Current order status */
   status: OrderStatus
+  /** Time-in-force mode */
+  timeInForce: TimeInForce
 }
 
 /** Order book snapshot for a market */
@@ -112,6 +123,47 @@ export interface PriceData {
 }
 
 // ─── SDK configuration ──────────────────────────────────────────
+
+/** Fee configuration */
+export interface FeeConfig {
+  takerFeeBps: bigint
+  makerFeeBps: bigint
+  makerRebateEnabled: boolean
+  protocolFeeBps: bigint
+  insuranceFeeBps: bigint
+  lpFeeBps: bigint
+}
+
+/** Fee totals */
+export interface FeeTotals {
+  totalFeesCollected: bigint
+  totalProtocolFees: bigint
+  totalInsuranceFees: bigint
+  totalBuilderFees: bigint
+  totalMakerRebates: bigint
+}
+
+/** Insurance fund health */
+export interface InsuranceFundHealth {
+  balance: bigint
+  totalCovered: bigint
+  totalDeposited: bigint
+}
+
+/** Vault (TLP) info */
+export interface VaultInfo {
+  totalSupply: bigint
+  sharePrice: bigint
+  totalValue: bigint
+  depositCap: bigint
+  withdrawalDelay: bigint
+}
+
+/** Collateral deposit info */
+export interface CollateralDeposit {
+  balance: bigint
+  valueUSD: bigint
+}
 
 /** Configuration for creating a TenorClient */
 export interface TenorClientConfig {

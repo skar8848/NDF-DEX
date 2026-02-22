@@ -15,8 +15,14 @@ export {
   type PriceData,
   type TPSL,
   type TenorClientConfig,
+  type FeeConfig,
+  type FeeTotals,
+  type InsuranceFundHealth,
+  type VaultInfo,
+  type CollateralDeposit,
   Side,
   OrderStatus,
+  TimeInForce,
 } from './types.js'
 
 export {
@@ -35,6 +41,9 @@ export {
   MockOracleABI,
   OrderBookABI,
   MockUsdcABI,
+  InsuranceFundABI,
+  TenorVaultABI,
+  CollateralManagerABI,
 } from './constants.js'
 
 export {

@@ -31,6 +31,9 @@ export const ADDRESSES = {
   ForwardMarket: '0x281dc4C64D2BF3508bA2670897f321a31F5e1e65' as `0x${string}`,
   OrderBook: '0x74AeE1AdBcE40B984beA4B09deAf581c6139cbC9' as `0x${string}`,
   PositionManager: '0xAB6b565384773C70da8D9e254aFB4B59d710eaD7' as `0x${string}`,
+  InsuranceFund: '0x0000000000000000000000000000000000000000' as `0x${string}`, // Set after deploy
+  TenorVault: '0x0000000000000000000000000000000000000000' as `0x${string}`,   // Set after deploy
+  CollateralManager: '0x0000000000000000000000000000000000000000' as `0x${string}`, // Set after deploy
 } as const
 
 // ─── Precision constants (match Solidity contracts) ─────────────
@@ -136,6 +139,7 @@ export const ForwardMarketABI = [
         { name: 'minCollateral', type: 'uint256' }, { name: 'settlePrice', type: 'uint256' },
         { name: 'settled', type: 'bool' }, { name: 'totalLongOI', type: 'uint256' },
         { name: 'totalShortOI', type: 'uint256' },
+        { name: 'settlementType', type: 'uint8' }, { name: 'underlyingToken', type: 'address' },
       ],
     }],
     stateMutability: 'view',
@@ -166,6 +170,15 @@ export const OrderBookABI = [
     outputs: [], stateMutability: 'nonpayable',
   },
   {
+    type: 'function', name: 'placeLimitOrderAdvanced',
+    inputs: [
+      { name: 'marketId', type: 'uint256' }, { name: 'side', type: 'uint8' },
+      { name: 'price', type: 'uint256' }, { name: 'amount', type: 'uint256' },
+      { name: 'tif', type: 'uint8' },
+    ],
+    outputs: [], stateMutability: 'nonpayable',
+  },
+  {
     type: 'function', name: 'placeMarketOrder',
     inputs: [
       { name: 'marketId', type: 'uint256' }, { name: 'side', type: 'uint8' },
@@ -184,6 +197,7 @@ export const OrderBookABI = [
           { name: 'price', type: 'uint256' }, { name: 'amount', type: 'uint256' },
           { name: 'filled', type: 'uint256' }, { name: 'collateral', type: 'uint256' },
           { name: 'timestamp', type: 'uint256' }, { name: 'status', type: 'uint8' },
+          { name: 'timeInForce', type: 'uint8' },
         ],
       },
       {
@@ -193,6 +207,7 @@ export const OrderBookABI = [
           { name: 'price', type: 'uint256' }, { name: 'amount', type: 'uint256' },
           { name: 'filled', type: 'uint256' }, { name: 'collateral', type: 'uint256' },
           { name: 'timestamp', type: 'uint256' }, { name: 'status', type: 'uint8' },
+          { name: 'timeInForce', type: 'uint8' },
         ],
       },
     ],
@@ -202,6 +217,157 @@ export const OrderBookABI = [
     type: 'function', name: 'cancelOrder',
     inputs: [{ name: 'orderId', type: 'uint256' }],
     outputs: [], stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function', name: 'getFeeConfig',
+    inputs: [],
+    outputs: [
+      { name: '_takerFeeBps', type: 'uint256' }, { name: '_makerFeeBps', type: 'uint256' },
+      { name: '_makerRebateEnabled', type: 'bool' }, { name: '_protocolFeeBps', type: 'uint256' },
+      { name: '_insuranceFeeBps', type: 'uint256' }, { name: '_lpFeeBps', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'getFeeTotals',
+    inputs: [],
+    outputs: [
+      { name: '_totalFeesCollected', type: 'uint256' }, { name: '_totalProtocolFees', type: 'uint256' },
+      { name: '_totalInsuranceFees', type: 'uint256' }, { name: '_totalBuilderFees', type: 'uint256' },
+      { name: '_totalMakerRebates', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'setBuilderForTrader',
+    inputs: [{ name: '_trader', type: 'address' }, { name: '_builder', type: 'address' }],
+    outputs: [], stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function', name: 'getOrder',
+    inputs: [{ name: 'orderId', type: 'uint256' }],
+    outputs: [{
+      type: 'tuple', components: [
+        { name: 'id', type: 'uint256' }, { name: 'trader', type: 'address' },
+        { name: 'marketId', type: 'uint256' }, { name: 'side', type: 'uint8' },
+        { name: 'price', type: 'uint256' }, { name: 'amount', type: 'uint256' },
+        { name: 'filled', type: 'uint256' }, { name: 'collateral', type: 'uint256' },
+        { name: 'timestamp', type: 'uint256' }, { name: 'status', type: 'uint8' },
+        { name: 'timeInForce', type: 'uint8' },
+      ],
+    }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'getUserOrders',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [{
+      type: 'tuple[]', components: [
+        { name: 'id', type: 'uint256' }, { name: 'trader', type: 'address' },
+        { name: 'marketId', type: 'uint256' }, { name: 'side', type: 'uint8' },
+        { name: 'price', type: 'uint256' }, { name: 'amount', type: 'uint256' },
+        { name: 'filled', type: 'uint256' }, { name: 'collateral', type: 'uint256' },
+        { name: 'timestamp', type: 'uint256' }, { name: 'status', type: 'uint8' },
+        { name: 'timeInForce', type: 'uint8' },
+      ],
+    }],
+    stateMutability: 'view',
+  },
+] as const
+
+export const InsuranceFundABI = [
+  {
+    type: 'function', name: 'getBalance',
+    inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'getFundHealth',
+    inputs: [],
+    outputs: [
+      { name: 'balance', type: 'uint256' },
+      { name: '_totalCovered', type: 'uint256' },
+      { name: '_totalDeposited', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'deposit',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [], stateMutability: 'nonpayable',
+  },
+] as const
+
+export const TenorVaultABI = [
+  {
+    type: 'function', name: 'deposit',
+    inputs: [{ name: 'usdcAmount', type: 'uint256' }],
+    outputs: [], stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function', name: 'requestWithdraw',
+    inputs: [{ name: 'shares', type: 'uint256' }],
+    outputs: [], stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function', name: 'executeWithdraw',
+    inputs: [], outputs: [], stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function', name: 'sharePrice',
+    inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'totalSupply',
+    inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'totalValue',
+    inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'depositCap',
+    inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'withdrawalDelay',
+    inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'balanceOf',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ type: 'uint256' }], stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'cancelWithdraw',
+    inputs: [], outputs: [], stateMutability: 'nonpayable',
+  },
+] as const
+
+export const CollateralManagerABI = [
+  {
+    type: 'function', name: 'depositCollateral',
+    inputs: [{ name: 'token', type: 'address' }, { name: 'amount', type: 'uint256' }],
+    outputs: [], stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function', name: 'withdrawCollateral',
+    inputs: [{ name: 'token', type: 'address' }, { name: 'amount', type: 'uint256' }],
+    outputs: [], stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function', name: 'getCollateralValueUSD',
+    inputs: [{ name: 'trader', type: 'address' }],
+    outputs: [{ name: 'totalUSD', type: 'uint256' }], stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'getDeposit',
+    inputs: [{ name: 'trader', type: 'address' }, { name: 'token', type: 'address' }],
+    outputs: [{ name: 'balance', type: 'uint256' }, { name: 'valueUSD', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function', name: 'getSupportedTokens',
+    inputs: [], outputs: [{ type: 'address[]' }], stateMutability: 'view',
   },
 ] as const
 

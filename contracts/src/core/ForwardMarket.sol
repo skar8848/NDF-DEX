@@ -84,7 +84,7 @@ contract ForwardMarket is IForwardMarket {
         emit MarketCreated(marketId, baseAsset, quoteAsset, expiration);
     }
 
-    function settleMarket(uint256 marketId) external {
+    function settleMarket(uint256 marketId) external onlyOwner {
         OrderLib.MarketInfo storage market = markets[marketId];
         require(market.id != 0, "ForwardMarket: market not found");
         require(!market.settled, "ForwardMarket: already settled");
@@ -133,6 +133,7 @@ contract ForwardMarket is IForwardMarket {
     }
 
     function updateOI(uint256 marketId, OrderLib.Side side, uint256 amount, bool isIncrease) external {
+        require(authorized[msg.sender], "ForwardMarket: not authorized");
         OrderLib.MarketInfo storage market = markets[marketId];
         require(market.id != 0, "ForwardMarket: market not found");
 

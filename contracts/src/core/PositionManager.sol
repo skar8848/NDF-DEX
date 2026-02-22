@@ -8,15 +8,19 @@ import {OrderLib} from "../libraries/OrderLib.sol";
 import {MathLib} from "../libraries/MathLib.sol";
 import {ForwardMarket} from "./ForwardMarket.sol";
 import {IPriceOracle} from "../oracle/PriceOracle.sol";
+import {IInsuranceFund} from "./interfaces/IInsuranceFund.sol";
 
 contract PositionManager is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     event PhysicalDelivery(uint256 indexed positionId, address indexed trader, address token, uint256 amount);
+    event InsuranceCover(uint256 indexed positionId, uint256 shortfall, uint256 covered);
     ForwardMarket public forwardMarket;
     IPriceOracle public oracle;
     IERC20 public collateralToken;
     address public orderBook;
+    IInsuranceFund public insuranceFund;
+    address public admin;
 
     uint256 private _nextPositionId = 1;
 
@@ -59,6 +63,12 @@ contract PositionManager is ReentrancyGuard {
         oracle = IPriceOracle(_oracle);
         collateralToken = IERC20(_collateralToken);
         orderBook = _orderBook;
+        admin = msg.sender;
+    }
+
+    function setInsuranceFund(address _fund) external {
+        require(msg.sender == admin, "PositionManager: not admin");
+        insuranceFund = IInsuranceFund(_fund);
     }
 
     function openPosition(
@@ -183,7 +193,11 @@ contract PositionManager is ReentrancyGuard {
         if (pnl >= 0) {
             payout = collatForClose + uint256(pnl);
             uint256 balance = collateralToken.balanceOf(address(this));
-            if (payout > balance) payout = balance;
+            if (payout > balance) {
+                uint256 shortfall = payout - balance;
+                uint256 covered = _requestInsuranceCover(positionId, shortfall);
+                payout = balance + covered;
+            }
         } else {
             uint256 loss = MathLib.abs(pnl);
             payout = collatForClose > loss ? collatForClose - loss : 0;
@@ -331,7 +345,11 @@ contract PositionManager is ReentrancyGuard {
         if (pnl >= 0) {
             payout = pos.collateral + uint256(pnl);
             uint256 balance = collateralToken.balanceOf(address(this));
-            if (payout > balance) payout = balance;
+            if (payout > balance) {
+                uint256 shortfall = payout - balance;
+                uint256 covered = _requestInsuranceCover(positionId, shortfall);
+                payout = balance + covered;
+            }
         } else {
             uint256 loss = MathLib.abs(pnl);
             payout = pos.collateral > loss ? pos.collateral - loss : 0;
@@ -441,6 +459,14 @@ contract PositionManager is ReentrancyGuard {
     }
 
     // ─── Internal ────────────────────────────────────────────────────
+
+    function _requestInsuranceCover(uint256 positionId, uint256 shortfall) internal returns (uint256 covered) {
+        if (address(insuranceFund) == address(0)) return 0;
+        covered = insuranceFund.coverShortfall(positionId, shortfall);
+        if (covered > 0) {
+            emit InsuranceCover(positionId, shortfall, covered);
+        }
+    }
 
     function _removeFromOpenList(uint256 positionId) internal {
         uint256 indexPlusOne = _openPositionIndex[positionId];

@@ -24,6 +24,9 @@ import {
   MockOracleABI,
   OrderBookABI,
   MockUsdcABI,
+  InsuranceFundABI,
+  TenorVaultABI,
+  CollateralManagerABI,
 } from './constants.js'
 
 import type {
@@ -35,7 +38,14 @@ import type {
   OrderBook,
   Order,
   Side,
+  FeeConfig,
+  FeeTotals,
+  InsuranceFundHealth,
+  VaultInfo,
+  CollateralDeposit,
 } from './types.js'
+
+import { TimeInForce } from './types.js'
 
 import { parsePrice } from './utils.js'
 
@@ -67,6 +77,7 @@ function mapOrder(raw: Record<string, unknown>): Order {
     collateral: raw.collateral as bigint,
     timestamp: raw.timestamp as bigint,
     status: Number(raw.status),
+    timeInForce: Number(raw.timeInForce) as TimeInForce,
   }
 }
 
@@ -516,5 +527,226 @@ export class TenorClient {
       args: [orderId],
     })
     return this.waitForTx(hash)
+  }
+
+  // ─── Advanced order types ────────────────────────────────────
+
+  /**
+   * Place a limit order with advanced time-in-force options.
+   *
+   * @param marketId - Market to trade on
+   * @param side - 'long' or 'short'
+   * @param price - Limit price (8 decimals)
+   * @param size - Number of contracts
+   * @param tif - Time-in-force: GTC, IOC, FOK, or POST_ONLY
+   * @returns Transaction hash
+   */
+  async placeLimitOrderAdvanced(
+    marketId: bigint,
+    side: 'long' | 'short',
+    price: bigint,
+    size: bigint,
+    tif: TimeInForce,
+  ): Promise<string> {
+    const wallet = this.requireWallet()
+    const sideNum = side === 'long' ? 0 : 1
+
+    const markets = await this.getMarkets()
+    const market = markets.find((m) => m.id === marketId)
+    if (!market) throw new Error(`Market ${marketId} not found`)
+
+    const collateralEstimate =
+      (size * price / PRICE_PRECISION) * COLLATERAL_PRECISION * PERCENT_BASE / market.ltv
+
+    const approveHash = await wallet.writeContract({
+      address: ADDRESSES.MockUSDC,
+      abi: MockUsdcABI,
+      functionName: 'approve',
+      args: [ADDRESSES.OrderBook, collateralEstimate * 2n],
+    })
+    await this.waitForTx(approveHash)
+
+    const hash = await wallet.writeContract({
+      address: ADDRESSES.OrderBook,
+      abi: OrderBookABI,
+      functionName: 'placeLimitOrderAdvanced',
+      args: [marketId, sideNum, price, size, tif],
+    })
+    return this.waitForTx(hash)
+  }
+
+  // ─── Fee system ──────────────────────────────────────────────
+
+  /** Fetch the current fee configuration. */
+  async getFeeConfig(): Promise<FeeConfig> {
+    const result = await this.publicClient.readContract({
+      address: ADDRESSES.OrderBook,
+      abi: OrderBookABI,
+      functionName: 'getFeeConfig',
+    })
+    const r = result as unknown as bigint[]
+    return {
+      takerFeeBps: r[0], makerFeeBps: r[1],
+      makerRebateEnabled: Boolean(r[2]),
+      protocolFeeBps: r[3], insuranceFeeBps: r[4], lpFeeBps: r[5],
+    }
+  }
+
+  /** Fetch cumulative fee totals. */
+  async getFeeTotals(): Promise<FeeTotals> {
+    const result = await this.publicClient.readContract({
+      address: ADDRESSES.OrderBook,
+      abi: OrderBookABI,
+      functionName: 'getFeeTotals',
+    })
+    const r = result as unknown as bigint[]
+    return {
+      totalFeesCollected: r[0], totalProtocolFees: r[1],
+      totalInsuranceFees: r[2], totalBuilderFees: r[3], totalMakerRebates: r[4],
+    }
+  }
+
+  /** Set a builder referral code for the connected wallet. */
+  async setBuilder(builder: string): Promise<string> {
+    const wallet = this.requireWallet()
+    const hash = await wallet.writeContract({
+      address: ADDRESSES.OrderBook,
+      abi: OrderBookABI,
+      functionName: 'setBuilderForTrader',
+      args: [this.account!.address, builder as `0x${string}`],
+    })
+    return this.waitForTx(hash)
+  }
+
+  // ─── Insurance fund ──────────────────────────────────────────
+
+  /** Get the insurance fund USDC balance. */
+  async getInsuranceFundBalance(): Promise<bigint> {
+    return await this.publicClient.readContract({
+      address: ADDRESSES.InsuranceFund,
+      abi: InsuranceFundABI,
+      functionName: 'getBalance',
+    }) as bigint
+  }
+
+  /** Get insurance fund health metrics. */
+  async getInsuranceFundHealth(): Promise<InsuranceFundHealth> {
+    const result = await this.publicClient.readContract({
+      address: ADDRESSES.InsuranceFund,
+      abi: InsuranceFundABI,
+      functionName: 'getFundHealth',
+    })
+    const r = result as unknown as bigint[]
+    return { balance: r[0], totalCovered: r[1], totalDeposited: r[2] }
+  }
+
+  // ─── Vault (TLP) ────────────────────────────────────────────
+
+  /** Deposit USDC into the TLP vault. */
+  async vaultDeposit(usdcAmount: bigint): Promise<string> {
+    const wallet = this.requireWallet()
+    const approveHash = await wallet.writeContract({
+      address: ADDRESSES.MockUSDC,
+      abi: MockUsdcABI,
+      functionName: 'approve',
+      args: [ADDRESSES.TenorVault, usdcAmount],
+    })
+    await this.waitForTx(approveHash)
+
+    const hash = await wallet.writeContract({
+      address: ADDRESSES.TenorVault,
+      abi: TenorVaultABI,
+      functionName: 'deposit',
+      args: [usdcAmount],
+    })
+    return this.waitForTx(hash)
+  }
+
+  /** Request a withdrawal from the TLP vault. */
+  async vaultRequestWithdraw(shares: bigint): Promise<string> {
+    const wallet = this.requireWallet()
+    const hash = await wallet.writeContract({
+      address: ADDRESSES.TenorVault,
+      abi: TenorVaultABI,
+      functionName: 'requestWithdraw',
+      args: [shares],
+    })
+    return this.waitForTx(hash)
+  }
+
+  /** Execute a pending vault withdrawal. */
+  async vaultExecuteWithdraw(): Promise<string> {
+    const wallet = this.requireWallet()
+    const hash = await wallet.writeContract({
+      address: ADDRESSES.TenorVault,
+      abi: TenorVaultABI,
+      functionName: 'executeWithdraw',
+    })
+    return this.waitForTx(hash)
+  }
+
+  /** Get vault info (share price, total value, etc.). */
+  async getVaultInfo(): Promise<VaultInfo> {
+    const [totalSupply, sharePrice, totalValue, depositCap, withdrawalDelay] = await Promise.all([
+      this.publicClient.readContract({ address: ADDRESSES.TenorVault, abi: TenorVaultABI, functionName: 'totalSupply' }),
+      this.publicClient.readContract({ address: ADDRESSES.TenorVault, abi: TenorVaultABI, functionName: 'sharePrice' }),
+      this.publicClient.readContract({ address: ADDRESSES.TenorVault, abi: TenorVaultABI, functionName: 'totalValue' }),
+      this.publicClient.readContract({ address: ADDRESSES.TenorVault, abi: TenorVaultABI, functionName: 'depositCap' }),
+      this.publicClient.readContract({ address: ADDRESSES.TenorVault, abi: TenorVaultABI, functionName: 'withdrawalDelay' }),
+    ])
+    return {
+      totalSupply: totalSupply as bigint,
+      sharePrice: sharePrice as bigint,
+      totalValue: totalValue as bigint,
+      depositCap: depositCap as bigint,
+      withdrawalDelay: withdrawalDelay as bigint,
+    }
+  }
+
+  // ─── Multi-collateral ────────────────────────────────────────
+
+  /** Deposit collateral token (e.g. WETH). */
+  async depositCollateral(token: string, amount: bigint): Promise<string> {
+    const wallet = this.requireWallet()
+    // Approve the token first
+    const approveHash = await wallet.writeContract({
+      address: token as `0x${string}`,
+      abi: MockUsdcABI, // ERC20 approve is the same
+      functionName: 'approve',
+      args: [ADDRESSES.CollateralManager, amount],
+    })
+    await this.waitForTx(approveHash)
+
+    const hash = await wallet.writeContract({
+      address: ADDRESSES.CollateralManager,
+      abi: CollateralManagerABI,
+      functionName: 'depositCollateral',
+      args: [token as `0x${string}`, amount],
+    })
+    return this.waitForTx(hash)
+  }
+
+  /** Withdraw collateral token. */
+  async withdrawCollateral(token: string, amount: bigint): Promise<string> {
+    const wallet = this.requireWallet()
+    const hash = await wallet.writeContract({
+      address: ADDRESSES.CollateralManager,
+      abi: CollateralManagerABI,
+      functionName: 'withdrawCollateral',
+      args: [token as `0x${string}`, amount],
+    })
+    return this.waitForTx(hash)
+  }
+
+  /** Get total collateral value in USD for a trader. */
+  async getCollateralValue(trader?: string): Promise<bigint> {
+    const addr = trader ?? this.account?.address
+    if (!addr) throw new Error('TenorClient: address required')
+    return await this.publicClient.readContract({
+      address: ADDRESSES.CollateralManager,
+      abi: CollateralManagerABI,
+      functionName: 'getCollateralValueUSD',
+      args: [addr as `0x${string}`],
+    }) as bigint
   }
 }

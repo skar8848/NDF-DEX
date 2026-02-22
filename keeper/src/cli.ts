@@ -9,6 +9,9 @@ import {
   orderBook, OrderBookABI,
   mockUsdc, MockUsdcABI,
   mockWeth, MockWethABI,
+  InsuranceFundABI,
+  TenorVaultABI,
+  CollateralManagerABI,
 } from './contracts.js'
 import { fetchAllOpenPositions } from './services/positionMonitor.js'
 import { fetchOraclePrices } from './services/priceService.js'
@@ -236,6 +239,10 @@ async function cmdTrade(args: string[]) {
   })
   await waitTx(approveHash)
 
+  const tifFlag = getFlag(args, '--tif')
+  const tifMap: Record<string, number> = { gtc: 0, ioc: 1, fok: 2, 'post-only': 3 }
+  const tif = tifFlag ? tifMap[tifFlag.toLowerCase()] : undefined
+
   if (isMarket) {
     console.log(`  Placing MARKET order: ${side === 0 ? 'LONG' : 'SHORT'} ${asset} x${amount} contracts`)
     const hash = await walletClient.writeContract({
@@ -250,14 +257,26 @@ async function cmdTrade(args: string[]) {
     if (isNaN(price) || price <= 0) die('Invalid price')
     const priceRaw = parseUnits(String(price), PRICE_DECIMALS)
 
-    console.log(`  Placing LIMIT order: ${side === 0 ? 'LONG' : 'SHORT'} ${asset} x${amount} @ $${price}`)
-    const hash = await walletClient.writeContract({
-      address: config.addresses.orderBook,
-      abi: OrderBookABI,
-      functionName: 'placeLimitOrder',
-      args: [market.id, side, priceRaw, amountRaw],
-    })
-    await waitTx(hash)
+    const tifLabel = tifFlag ? tifFlag.toUpperCase() : 'GTC'
+    console.log(`  Placing ${tifLabel} LIMIT order: ${side === 0 ? 'LONG' : 'SHORT'} ${asset} x${amount} @ $${price}`)
+
+    if (tif !== undefined && tif !== 0) {
+      const hash = await walletClient.writeContract({
+        address: config.addresses.orderBook,
+        abi: OrderBookABI,
+        functionName: 'placeLimitOrderAdvanced',
+        args: [market.id, side, priceRaw, amountRaw, tif],
+      })
+      await waitTx(hash)
+    } else {
+      const hash = await walletClient.writeContract({
+        address: config.addresses.orderBook,
+        abi: OrderBookABI,
+        functionName: 'placeLimitOrder',
+        args: [market.id, side, priceRaw, amountRaw],
+      })
+      await waitTx(hash)
+    }
   }
 
   console.log('  Done!')
@@ -468,6 +487,193 @@ async function cmdBook(args: string[]) {
   console.log('')
 }
 
+async function cmdFees() {
+  const [feeConfig, feeTotals] = await Promise.all([
+    publicClient.readContract({
+      address: config.addresses.orderBook,
+      abi: OrderBookABI,
+      functionName: 'getFeeConfig',
+    }),
+    publicClient.readContract({
+      address: config.addresses.orderBook,
+      abi: OrderBookABI,
+      functionName: 'getFeeTotals',
+    }),
+  ])
+
+  const fc = feeConfig as any[]
+  const ft = feeTotals as any[]
+
+  console.log('')
+  console.log('  Fee Configuration')
+  console.log('  ' + '─'.repeat(40))
+  console.log(`  Taker Fee:      ${Number(fc[0]) / 100}%`)
+  console.log(`  Maker Rebate:   ${Number(fc[1]) / 100}% (${fc[2] ? 'enabled' : 'disabled'})`)
+  console.log(`  Protocol Split: ${Number(fc[3]) / 100}%`)
+  console.log(`  Insurance:      ${Number(fc[4]) / 100}%`)
+  console.log(`  LP Vault:       ${Number(fc[5]) / 100}%`)
+  console.log('')
+  console.log('  Fee Totals')
+  console.log('  ' + '─'.repeat(40))
+  console.log(`  Total Collected:  $${fmtUsdc(ft[0])}`)
+  console.log(`  Protocol Fees:    $${fmtUsdc(ft[1])}`)
+  console.log(`  Insurance Fees:   $${fmtUsdc(ft[2])}`)
+  console.log(`  Builder Fees:     $${fmtUsdc(ft[3])}`)
+  console.log(`  Maker Rebates:    $${fmtUsdc(ft[4])}`)
+  console.log('')
+}
+
+async function cmdInsurance() {
+  const insuranceAddr = process.env.INSURANCE_FUND
+  if (!insuranceAddr) { console.log('  INSURANCE_FUND address not set'); return }
+
+  const [balance, health] = await Promise.all([
+    publicClient.readContract({
+      address: insuranceAddr as `0x${string}`,
+      abi: InsuranceFundABI,
+      functionName: 'getBalance',
+    }),
+    publicClient.readContract({
+      address: insuranceAddr as `0x${string}`,
+      abi: InsuranceFundABI,
+      functionName: 'getFundHealth',
+    }),
+  ])
+
+  const h = health as any[]
+  console.log('')
+  console.log('  Insurance Fund')
+  console.log('  ' + '─'.repeat(40))
+  console.log(`  Balance:        $${fmtUsdc(balance as bigint)}`)
+  console.log(`  Total Deposited: $${fmtUsdc(h[2])}`)
+  console.log(`  Total Covered:   $${fmtUsdc(h[1])}`)
+  console.log('')
+}
+
+async function cmdVault(args: string[]) {
+  const vaultAddr = process.env.TENOR_VAULT
+  if (!vaultAddr) { console.log('  TENOR_VAULT address not set'); return }
+
+  const subcmd = args[0]
+
+  if (subcmd === 'deposit' && args[1]) {
+    const amount = parseUnits(args[1], USDC_DECIMALS)
+    console.log(`  Approving USDC...`)
+    const approveHash = await walletClient.writeContract({
+      address: config.addresses.mockUsdc,
+      abi: MockUsdcABI,
+      functionName: 'approve',
+      args: [vaultAddr as `0x${string}`, amount],
+    })
+    await waitTx(approveHash)
+
+    console.log(`  Depositing $${args[1]} into TLP vault...`)
+    const hash = await walletClient.writeContract({
+      address: vaultAddr as `0x${string}`,
+      abi: TenorVaultABI,
+      functionName: 'deposit',
+      args: [amount],
+    })
+    await waitTx(hash)
+    console.log('  Done!')
+  } else if (subcmd === 'withdraw' && args[1]) {
+    const shares = BigInt(args[1])
+    console.log(`  Requesting withdrawal of ${shares} TLP shares...`)
+    const hash = await walletClient.writeContract({
+      address: vaultAddr as `0x${string}`,
+      abi: TenorVaultABI,
+      functionName: 'requestWithdraw',
+      args: [shares],
+    })
+    await waitTx(hash)
+    console.log('  Withdrawal requested! Execute after delay.')
+  } else if (subcmd === 'execute') {
+    console.log(`  Executing pending withdrawal...`)
+    const hash = await walletClient.writeContract({
+      address: vaultAddr as `0x${string}`,
+      abi: TenorVaultABI,
+      functionName: 'executeWithdraw',
+    })
+    await waitTx(hash)
+    console.log('  Done!')
+  } else {
+    // status
+    const [sharePrice, totalValue, supply, myShares] = await Promise.all([
+      publicClient.readContract({ address: vaultAddr as `0x${string}`, abi: TenorVaultABI, functionName: 'sharePrice' }),
+      publicClient.readContract({ address: vaultAddr as `0x${string}`, abi: TenorVaultABI, functionName: 'totalValue' }),
+      publicClient.readContract({ address: vaultAddr as `0x${string}`, abi: TenorVaultABI, functionName: 'totalSupply' }),
+      publicClient.readContract({ address: vaultAddr as `0x${string}`, abi: TenorVaultABI, functionName: 'balanceOf', args: [account.address] }),
+    ])
+
+    console.log('')
+    console.log('  TLP Vault')
+    console.log('  ' + '─'.repeat(40))
+    console.log(`  Share Price:   $${(Number(sharePrice as bigint) / 1e18).toFixed(6)}`)
+    console.log(`  Total Value:   $${fmtUsdc(totalValue as bigint)}`)
+    console.log(`  Total Supply:  ${formatUnits(supply as bigint, 18)} TLP`)
+    console.log(`  My Shares:     ${formatUnits(myShares as bigint, 18)} TLP`)
+    console.log('')
+  }
+}
+
+async function cmdCollateral(args: string[]) {
+  const cmAddr = process.env.COLLATERAL_MANAGER
+  if (!cmAddr) { console.log('  COLLATERAL_MANAGER address not set'); return }
+
+  const subcmd = args[0]
+
+  if (subcmd === 'deposit' && args[1] && args[2]) {
+    const tokenAddr = args[1] === 'WETH' ? config.addresses.mockWeth : args[1] as `0x${string}`
+    const amount = parseUnits(args[2], args[1] === 'WETH' ? 18 : 6)
+
+    console.log(`  Approving token...`)
+    const approveAbi = [{ type: 'function' as const, name: 'approve' as const, inputs: [{ name: 'spender', type: 'address' as const }, { name: 'amount', type: 'uint256' as const }], outputs: [{ type: 'bool' as const }], stateMutability: 'nonpayable' as const }]
+    const approveHash = await walletClient.writeContract({
+      address: tokenAddr,
+      abi: approveAbi,
+      functionName: 'approve',
+      args: [cmAddr as `0x${string}`, amount],
+    })
+    await waitTx(approveHash)
+
+    console.log(`  Depositing ${args[2]} ${args[1]}...`)
+    const hash = await walletClient.writeContract({
+      address: cmAddr as `0x${string}`,
+      abi: CollateralManagerABI,
+      functionName: 'depositCollateral',
+      args: [tokenAddr, amount],
+    })
+    await waitTx(hash)
+    console.log('  Done!')
+  } else if (subcmd === 'withdraw' && args[1] && args[2]) {
+    const tokenAddr = args[1] === 'WETH' ? config.addresses.mockWeth : args[1] as `0x${string}`
+    const amount = parseUnits(args[2], args[1] === 'WETH' ? 18 : 6)
+
+    console.log(`  Withdrawing ${args[2]} ${args[1]}...`)
+    const hash = await walletClient.writeContract({
+      address: cmAddr as `0x${string}`,
+      abi: CollateralManagerABI,
+      functionName: 'withdrawCollateral',
+      args: [tokenAddr, amount],
+    })
+    await waitTx(hash)
+    console.log('  Done!')
+  } else {
+    // status
+    const totalValue = await publicClient.readContract({
+      address: cmAddr as `0x${string}`,
+      abi: CollateralManagerABI,
+      functionName: 'getCollateralValueUSD',
+      args: [account.address],
+    })
+    console.log('')
+    console.log('  Collateral Status')
+    console.log('  ' + '─'.repeat(40))
+    console.log(`  Total USD Value: $${fmtUsdc(totalValue as bigint)} (after haircuts)`)
+    console.log('')
+  }
+}
+
 async function cmdKeeper() {
   const { main } = await import('./index.js')
   await main()
@@ -492,11 +698,16 @@ function printHelp() {
     trade <long|short> <asset> <amount>  Place an order
       --price <price>                      Limit order at price
       --market                             Market order
+      --tif <gtc|ioc|fok|post-only>        Time-in-force (default: gtc)
     close <id>                           Close position (full)
       --percent <1-100>                    Partial close
     tpsl <id>                            Set take-profit / stop-loss
       --tp <price>                         Take-profit price
       --sl <price>                         Stop-loss price
+    fees                                 Show fee config + totals
+    insurance                            Show insurance fund status
+    vault [deposit|withdraw|execute|status]  TLP vault operations
+    collateral [deposit|withdraw|status]     Multi-collateral management
     settle-market <id>                   Settle an expired market
     settle <positionId>                  Settle position (shows token received)
     faucet                               Mint 10,000 USDC
@@ -506,10 +717,13 @@ function printHelp() {
   EXAMPLES
     npx tsx src/cli.ts faucet
     npx tsx src/cli.ts trade long ETH 5 --price 2500
+    npx tsx src/cli.ts trade long ETH 2 --price 2500 --tif ioc
     npx tsx src/cli.ts trade short ETH 3 --market
+    npx tsx src/cli.ts fees
+    npx tsx src/cli.ts vault deposit 1000
+    npx tsx src/cli.ts vault status
+    npx tsx src/cli.ts collateral deposit WETH 1
     npx tsx src/cli.ts book 4
-    npx tsx src/cli.ts settle-market 4
-    npx tsx src/cli.ts settle 1
     npx tsx src/cli.ts keeper
 `)
 }
@@ -528,6 +742,10 @@ async function run() {
       case 'trade':     return await cmdTrade(args)
       case 'close':     return await cmdClose(args)
       case 'tpsl':      return await cmdTPSL(args)
+      case 'fees':      return await cmdFees()
+      case 'insurance': return await cmdInsurance()
+      case 'vault':     return await cmdVault(args)
+      case 'collateral': return await cmdCollateral(args)
       case 'settle-market': return await cmdSettleMarket(args)
       case 'settle':    return await cmdSettle(args)
       case 'book':      return await cmdBook(args)
