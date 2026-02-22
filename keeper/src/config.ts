@@ -11,11 +11,11 @@ export const config = {
   keeperPrivateKey: env('KEEPER_PRIVATE_KEY') as `0x${string}`,
 
   addresses: {
-    positionManager: env('POSITION_MANAGER', '0xAB6b565384773C70da8D9e254aFB4B59d710eaD7') as `0x${string}`,
-    forwardMarket: env('FORWARD_MARKET', '0x281dc4C64D2BF3508bA2670897f321a31F5e1e65') as `0x${string}`,
-    mockOracle: env('MOCK_ORACLE', '0x23196688CDc03348d712BBc2E74CeA4Eea1e60EB') as `0x${string}`, // ChainlinkOracle
-    orderBook: env('ORDER_BOOK', '0x74AeE1AdBcE40B984beA4B09deAf581c6139cbC9') as `0x${string}`,
-    mockUsdc: env('MOCK_USDC', '0xA41BCF380ff358c849619538fda0Dd38214E019d') as `0x${string}`,
+    positionManager: env('POSITION_MANAGER', '0x4834Fb2E0E1e8B8dec59aA18BD93B81bBB4EA23a') as `0x${string}`,
+    forwardMarket: env('FORWARD_MARKET', '0x8caaA8f4d7a48dE91f26b0273dF8900fDdeb97c0') as `0x${string}`,
+    mockOracle: env('MOCK_ORACLE', '0x6D76A1EA49C400bad81920e8e87b25355Bd236B4') as `0x${string}`, // ChainlinkOracle
+    orderBook: env('ORDER_BOOK', '0x582E78ddd864C6f74607A615A206A576BF6b694E') as `0x${string}`,
+    mockUsdc: env('MOCK_USDC', '0x96917A8B9b9479b68e1E07847A759CC742a64f8e') as `0x${string}`,
   },
 
   pollIntervalMs: Number(env('POLL_INTERVAL_MS', '5000')),
