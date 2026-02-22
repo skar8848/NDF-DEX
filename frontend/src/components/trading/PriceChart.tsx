@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import { createChart, ColorType, LineSeries, type IChartApi } from 'lightweight-charts'
 import { useOraclePrice } from '../../hooks/usePriceData'
 import { formatPrice } from '../../lib/utils'
@@ -17,7 +17,6 @@ function generateFlatLine(currentPrice: number, count: number) {
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     const timeStr = `${dateStr} ${String(date.getHours()).padStart(2, '0')}:00`
 
-    // Tiny noise around oracle price (~0.1%) to look natural but essentially flat
     const noise = currentPrice * (Math.random() - 0.5) * 0.002
     points.push({
       time: timeStr,
@@ -31,14 +30,16 @@ function generateFlatLine(currentPrice: number, count: number) {
 export function PriceChart({ baseAsset }: PriceChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
+  const [chartReady, setChartReady] = useState(false)
   const { data: priceData, isLoading } = useOraclePrice(baseAsset)
 
   let price: bigint | null = null
   let timestamp: bigint | null = null
   try {
     if (priceData) {
-      price = (priceData as [bigint, bigint])[0]
-      timestamp = (priceData as [bigint, bigint])[1]
+      const d = priceData as [bigint, bigint]
+      price = d[0]
+      timestamp = d[1]
     }
   } catch {
     // ignore
@@ -49,13 +50,33 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
   const lineData = useMemo(() => {
     if (!currentPrice) return null
     return generateFlatLine(currentPrice, 48)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPrice])
 
+  // Wait for container to have dimensions
   useEffect(() => {
-    if (!chartContainerRef.current || !lineData || lineData.length === 0) return
+    if (!chartContainerRef.current) return
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect
+      if (width > 0 && height > 0) {
+        setChartReady(true)
+      }
+    })
+    observer.observe(chartContainerRef.current)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!chartContainerRef.current || !lineData || lineData.length === 0 || !chartReady) return
 
     const container = chartContainerRef.current
     if (container.clientWidth === 0 || container.clientHeight === 0) return
+
+    // Clean up previous chart
+    if (chartRef.current) {
+      chartRef.current.remove()
+      chartRef.current = null
+    }
 
     const chart = createChart(container, {
       layout: {
@@ -98,7 +119,6 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
 
     lineSeries.setData(lineData as any)
 
-    // Oracle price line
     if (currentPrice) {
       lineSeries.createPriceLine({
         price: currentPrice,
@@ -114,7 +134,9 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
 
     const resizeObserver = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect
-      chart.applyOptions({ width, height })
+      if (width > 0 && height > 0) {
+        chart.applyOptions({ width, height })
+      }
     })
     resizeObserver.observe(container)
 
@@ -123,7 +145,7 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
       chart.remove()
       chartRef.current = null
     }
-  }, [lineData, currentPrice])
+  }, [lineData, currentPrice, chartReady])
 
   if (isLoading) {
     return (
