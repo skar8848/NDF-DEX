@@ -8,6 +8,10 @@ frontend/node_modules/
 
 # Keeper
 keeper/node_modules/
+
+# SDK
+sdk/node_modules/
+sdk/dist/
 frontend/dist/
 frontend/.vite/
 
