@@ -1,6 +1,6 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { useAccount } from 'wagmi'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { OrderBookABI, MockUSDCABI } from '../lib/abis'
 import { CONTRACTS } from '../lib/config'
@@ -129,20 +129,22 @@ export function useCancelOrder() {
 export function useApproveUSDC() {
   const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+  const [isRevoke, setIsRevoke] = useState(false)
 
   useEffect(() => {
-    if (hash) toast.loading('Approving USDC...', { id: 'approve-usdc' })
-  }, [hash])
+    if (hash) toast.loading(isRevoke ? 'Revoking approval...' : 'Enabling 1-Click Trading...', { id: 'approve-usdc' })
+  }, [hash, isRevoke])
 
   useEffect(() => {
-    if (isSuccess) toast.success('USDC approved!', { id: 'approve-usdc' })
-  }, [isSuccess])
+    if (isSuccess) toast.success(isRevoke ? '1-Click Trading revoked' : '1-Click Trading enabled!', { id: 'approve-usdc' })
+  }, [isSuccess, isRevoke])
 
   useEffect(() => {
-    if (error) toast.error(`Approval failed: ${error.message.slice(0, 80)}`, { id: 'approve-usdc' })
-  }, [error])
+    if (error) toast.error(`${isRevoke ? 'Revoke' : 'Approval'} failed: ${error.message.slice(0, 80)}`, { id: 'approve-usdc' })
+  }, [error, isRevoke])
 
   const approve = (spender: `0x${string}`, amount: bigint) => {
+    setIsRevoke(amount === 0n)
     writeContract({
       address: CONTRACTS.MockUSDC,
       abi: MockUSDCABI,
