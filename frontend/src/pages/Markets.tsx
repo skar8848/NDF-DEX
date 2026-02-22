@@ -1,18 +1,31 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useAllMarkets } from '../hooks/useForwardMarket'
 import { MarketCard } from '../components/market/MarketCard'
 import { CreateMarket } from '../components/market/CreateMarket'
+import { AssetLogo } from '../components/trading/MarketSelector'
 
 export function Markets() {
   const { data: markets, isLoading } = useAllMarkets()
   const [showCreate, setShowCreate] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'active' | 'settled'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'settled'>('all')
+  const [assetFilter, setAssetFilter] = useState<string>('all')
 
-  const filteredMarkets = markets?.filter((m: any) => {
-    if (filter === 'active') return !m.settled
-    if (filter === 'settled') return m.settled
-    return true
-  })
+  const allAssets = useMemo(() => {
+    if (!markets) return []
+    const set = new Set<string>()
+    ;(markets as any[]).forEach((m: any) => set.add(m.baseAsset))
+    return Array.from(set)
+  }, [markets])
+
+  const filteredMarkets = useMemo(() => {
+    if (!markets) return []
+    return (markets as any[]).filter((m: any) => {
+      if (statusFilter === 'active' && m.settled) return false
+      if (statusFilter === 'settled' && !m.settled) return false
+      if (assetFilter !== 'all' && m.baseAsset !== assetFilter) return false
+      return true
+    })
+  }, [markets, statusFilter, assetFilter])
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -25,26 +38,63 @@ export function Markets() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors"
+          className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors cursor-pointer"
         >
           + Create Market
         </button>
       </div>
 
-      <div className="flex gap-2 mb-6">
-        {(['all', 'active', 'settled'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === f
-                ? 'bg-surface-2 text-text'
-                : 'text-text-secondary hover:text-text hover:bg-surface-2'
-            }`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
+      <div className="flex items-center gap-4 mb-6">
+        {/* Status filter */}
+        <div className="flex gap-1">
+          {(['all', 'active', 'settled'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                statusFilter === f
+                  ? 'bg-surface-2 text-text'
+                  : 'text-text-secondary hover:text-text hover:bg-surface-2'
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {allAssets.length > 0 && (
+          <>
+            <div className="w-px h-6 bg-border" />
+
+            {/* Asset filter */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => setAssetFilter('all')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  assetFilter === 'all'
+                    ? 'bg-surface-2 text-text'
+                    : 'text-text-secondary hover:text-text hover:bg-surface-2'
+                }`}
+              >
+                All Assets
+              </button>
+              {allAssets.map((asset) => (
+                <button
+                  key={asset}
+                  onClick={() => setAssetFilter(asset)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    assetFilter === asset
+                      ? 'bg-surface-2 text-text'
+                      : 'text-text-secondary hover:text-text hover:bg-surface-2'
+                  }`}
+                >
+                  <AssetLogo asset={asset} size={16} />
+                  {asset}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {isLoading ? (
@@ -53,7 +103,7 @@ export function Markets() {
             <div key={i} className="bg-surface border border-border rounded-xl p-5 animate-pulse h-48" />
           ))}
         </div>
-      ) : filteredMarkets && filteredMarkets.length > 0 ? (
+      ) : filteredMarkets.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMarkets.map((market: any) => (
             <MarketCard
