@@ -6,168 +6,192 @@
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" />
 </p>
 
-<h1 align="center">NDF-DEX</h1>
-<p align="center"><strong>The First On-Chain Non-Deliverable Forward Exchange on Avalanche</strong></p>
+<h1 align="center">Tenor Protocol</h1>
+<p align="center"><strong>The First Decentralized Non-Deliverable Forward Exchange on Avalanche</strong></p>
 
 <p align="center">
-  Trade crypto forward contracts with on-chain order matching, Chainlink oracle settlement, and zero counterparty risk.
+  Trade crypto forward contracts with a fully on-chain order book, Chainlink oracle settlement, automated keeper bots, and zero counterparty risk.
 </p>
 
 ---
 
-## What is NDF-DEX?
+## What is Tenor?
 
-**NDF-DEX** brings Non-Deliverable Forwards (NDFs) — a $7 trillion/day traditional finance instrument — to DeFi for the first time on Avalanche.
+**Tenor** brings Non-Deliverable Forwards (NDFs) -- a [$7 trillion/day](https://www.bis.org/statistics/rpfx22_fx.pdf) traditional finance instrument -- to DeFi for the first time on Avalanche.
 
-A Non-Deliverable Forward is a cash-settled contract where two parties agree on a future price for an asset. At expiration, instead of delivering the asset, the contract settles the **price difference** in USDC. No physical delivery, pure price exposure.
+A forward contract is an agreement between two parties on a future price. At expiration, Tenor settles the **price difference** in USDC using Chainlink oracle prices. No physical delivery of the underlying asset -- pure price exposure, fully collateralized on-chain.
 
 ```
 Example: ETH/USDC 30-day Forward
 
-Alice goes LONG  at $2,500 (5 contracts)  →  deposits $3,125 USDC collateral
-Bob   goes SHORT at $2,500 (5 contracts)  →  deposits $3,125 USDC collateral
+Alice goes LONG  at $2,500 (5 contracts)  -->  deposits $25,000 USDC collateral
+Bob   goes SHORT at $2,500 (5 contracts)  -->  deposits $25,000 USDC collateral
 
 30 days later, ETH settles at $2,800 (via Chainlink oracle):
 
-Alice PnL: ($2,800 - $2,500) × 5 = +$1,500  →  receives $4,625
-Bob   PnL: ($2,500 - $2,800) × 5 = -$1,500  →  receives $1,625
+Alice PnL: ($2,800 - $2,500) x 5 = +$1,500  -->  receives $26,500
+Bob   PnL: ($2,500 - $2,800) x 5 = -$1,500  -->  receives $23,500
 ```
 
-## Why This Matters
-
-| TradFi NDFs | NDF-DEX |
-|---|---|
-| $7T daily volume, banks only | Permissionless, anyone can trade |
-| Bilateral, counterparty risk | Smart contract escrow, zero default risk |
-| T+2 settlement, manual | Instant settlement via Chainlink oracle |
-| Opaque OTC market | Transparent on-chain order book |
-| Minimum $1M notional | Trade any size |
-
-## Key Features
-
-- **On-Chain Order Book** — Full limit order book with price-time priority matching engine, partial fills, and market orders
-- **Chainlink Oracle Settlement** — Real-time price feeds (ETH/USD, BTC/USD, AVAX/USD) for trustless settlement at expiry
-- **Collateralized Positions** — All positions backed by USDC with configurable LTV ratios
-- **Liquidation Engine** — Under-collateralized positions can be liquidated with 5% bonus to liquidators
-- **Cash Settlement** — Automatic PnL calculation and USDC distribution at market expiry
-- **Permissionless Markets** — Anyone can create new forward markets for any asset pair
+---
 
 ## Architecture
 
+```mermaid
+graph TB
+    subgraph Users
+        Trader["Trader (Browser + Wallet)"]
+        KeeperOp["Keeper Operator"]
+    end
+
+    subgraph Frontend["Frontend (React + Vite)"]
+        UI["Trading UI<br/>Order Book, Charts, Portfolio"]
+        Web3["wagmi v2 + RainbowKit"]
+    end
+
+    subgraph Avalanche["Avalanche Fuji (Chain 43113)"]
+        FM["ForwardMarket<br/><i>Markets, OI, Settlement</i>"]
+        OB["OrderBook<br/><i>CLOB, Matching, Fees</i>"]
+        PM["PositionManager<br/><i>Positions, TP/SL, Liquidation</i>"]
+        Oracle["ChainlinkOracle"]
+        USDC["MockUSDC"]
+        CL["Chainlink Price Feeds<br/>ETH/USD, BTC/USD, AVAX/USD"]
+    end
+
+    subgraph Keeper["Keeper Bot (TypeScript)"]
+        TPSL["TP/SL Keeper"]
+        Liq["Liquidation Keeper"]
+        Settle["Settlement Keeper"]
+    end
+
+    Trader --> UI --> Web3
+    Web3 --> OB
+    Web3 --> PM
+
+    KeeperOp --> Keeper
+    TPSL --> PM
+    Liq --> PM
+    Settle --> FM
+    Settle --> PM
+
+    OB --> PM
+    OB --> USDC
+    PM --> FM
+    PM --> Oracle
+    FM --> Oracle
+    Oracle --> CL
+    PM --> USDC
+
+    style FM fill:#4A90D9,color:#fff
+    style OB fill:#7B68EE,color:#fff
+    style PM fill:#E8832A,color:#fff
+    style Oracle fill:#375BD2,color:#fff
+    style USDC fill:#2775CA,color:#fff
 ```
-ndf_dex/
-├── contracts/                # Solidity smart contracts (Foundry)
+
+---
+
+## Key Features
+
+| Feature | Description |
+|---|---|
+| **On-Chain CLOB** | Full limit order book with price-time priority matching, partial fills, and market orders |
+| **Chainlink Oracles** | Live price feeds (ETH/USD, BTC/USD, AVAX/USD) for trustless settlement |
+| **TP/SL Orders** | On-chain take-profit and stop-loss with automated keeper execution |
+| **Liquidation Engine** | Health-factor-based liquidation with 5% bonus to liquidators |
+| **Cash Settlement** | Automatic PnL calculation and USDC distribution at forward expiry |
+| **1-Click Trading** | Single USDC approval enables instant order placement |
+| **Keeper Bot** | Automated settlement, TP/SL triggering, and liquidation with retry logic |
+| **CLI Tool** | Full command-line interface for trading, monitoring, and keeper operations |
+
+---
+
+## Documentation
+
+| Document | Description |
+|---|---|
+| **[Architecture](docs/ARCHITECTURE.md)** | System design, contract relationships, deployed addresses, tech stack |
+| **[Order Matching](docs/MATCHING.md)** | CLOB mechanics, matching algorithm, collateral, partial fills, fees |
+| **[TP/SL](docs/TPSL.md)** | Take-profit/stop-loss mechanics, keeper execution, position lifecycle |
+| **[Settlement](docs/SETTLEMENT.md)** | Forward expiry, oracle settlement, batch processing, payout math |
+
+---
+
+## Deployed Contracts (Avalanche Fuji -- v4)
+
+| Contract | Address | Explorer |
+|---|---|---|
+| **MockUSDC** | `0xA41BCF380ff358c849619538fda0Dd38214E019d` | [SnowTrace](https://testnet.snowtrace.io/address/0xA41BCF380ff358c849619538fda0Dd38214E019d) |
+| **MockWETH** | `0xC2DFD7581C9D27ac195C3873f12b93e7eCd4B24c` | [SnowTrace](https://testnet.snowtrace.io/address/0xC2DFD7581C9D27ac195C3873f12b93e7eCd4B24c) |
+| **ChainlinkOracle** | `0x23196688CDc03348d712BBc2E74CeA4Eea1e60EB` | [SnowTrace](https://testnet.snowtrace.io/address/0x23196688CDc03348d712BBc2E74CeA4Eea1e60EB) |
+| **ForwardMarket** | `0x281dc4C64D2BF3508bA2670897f321a31F5e1e65` | [SnowTrace](https://testnet.snowtrace.io/address/0x281dc4C64D2BF3508bA2670897f321a31F5e1e65) |
+| **OrderBook** | `0x74AeE1AdBcE40B984beA4B09deAf581c6139cbC9` | [SnowTrace](https://testnet.snowtrace.io/address/0x74AeE1AdBcE40B984beA4B09deAf581c6139cbC9) |
+| **PositionManager** | `0xAB6b565384773C70da8D9e254aFB4B59d710eaD7` | [SnowTrace](https://testnet.snowtrace.io/address/0xAB6b565384773C70da8D9e254aFB4B59d710eaD7) |
+
+**Network:** Avalanche Fuji Testnet (Chain ID: 43113)
+
+---
+
+## Project Structure
+
+```
+tenor-protocol/
+├── contracts/                 # Solidity smart contracts (Foundry)
 │   ├── src/
 │   │   ├── core/
 │   │   │   ├── ForwardMarket.sol       # Market creation, settlement, OI tracking
 │   │   │   ├── OrderBook.sol           # On-chain CLOB with matching engine
-│   │   │   └── PositionManager.sol     # Positions, collateral, liquidation
+│   │   │   └── PositionManager.sol     # Positions, collateral, TP/SL, liquidation
 │   │   ├── oracle/
-│   │   │   ├── ChainlinkOracle.sol     # Live Chainlink price feeds (Fuji)
+│   │   │   ├── ChainlinkOracle.sol     # Live Chainlink price feeds
+│   │   │   ├── PriceOracle.sol         # IPriceOracle interface
 │   │   │   └── MockOracle.sol          # Mock oracle for testing
 │   │   ├── tokens/
-│   │   │   ├── MockUSDC.sol            # ERC20 mock USDC (faucet enabled)
-│   │   │   └── MockWETH.sol            # ERC20 mock WETH
+│   │   │   ├── MockUSDC.sol            # ERC20 USDC (6 dec, faucet enabled)
+│   │   │   └── MockWETH.sol            # ERC20 WETH
 │   │   ├── libraries/
 │   │   │   ├── MathLib.sol             # PnL, health factor, collateral math
-│   │   │   └── OrderLib.sol            # Data structures & enums
+│   │   │   └── OrderLib.sol            # Structs & enums
 │   │   └── interfaces/                 # Contract interfaces
-│   ├── script/
-│   │   └── Deploy.s.sol                # Automated Fuji deployment
-│   └── test/                           # 20 unit & integration tests
-│       ├── ForwardMarket.t.sol         # 8 tests
-│       ├── OrderBook.t.sol             # 7 tests
-│       └── Settlement.t.sol            # 5 tests
-└── frontend/                 # React trading interface
-    └── src/
-        ├── pages/            # Landing, Trade, Markets, Portfolio
-        ├── components/       # Trading UI, order book, charts, landing
-        ├── hooks/            # wagmi contract hooks with toast notifications
-        ├── providers/        # Web3 (wagmi + RainbowKit + Fuji)
-        └── lib/              # ABIs, config, utilities
+│   ├── script/Deploy.s.sol             # Automated Fuji deployment
+│   └── test/                           # Unit & integration tests
+├── frontend/                  # React trading interface
+│   └── src/
+│       ├── pages/             # Landing, Trade, Markets, Portfolio
+│       ├── components/        # Trading UI, order book, charts
+│       ├── hooks/             # wagmi contract hooks
+│       ├── providers/         # Web3 (wagmi + RainbowKit + Fuji)
+│       └── lib/               # ABIs, config, utilities
+├── keeper/                    # Keeper bot + CLI
+│   └── src/
+│       ├── cli.ts             # Full CLI for trading & monitoring
+│       ├── index.ts           # Keeper main loop
+│       ├── config.ts          # Environment configuration
+│       ├── contracts.ts       # viem contract instances + ABIs
+│       ├── services/
+│       │   ├── tpslKeeper.ts        # TP/SL trigger detection & execution
+│       │   ├── liquidationKeeper.ts # Liquidation detection & execution
+│       │   ├── settlementKeeper.ts  # Market & position settlement
+│       │   ├── positionMonitor.ts   # Position fetching with multicall
+│       │   └── priceService.ts      # Oracle price fetching
+│       └── utils/
+│           ├── logger.ts      # Structured logging
+│           └── retry.ts       # Retry with exponential backoff
+└── docs/                      # Documentation
+    ├── ARCHITECTURE.md        # Protocol architecture
+    ├── MATCHING.md            # Order matching engine
+    ├── TPSL.md                # Take-profit / stop-loss
+    └── SETTLEMENT.md          # Forward settlement
 ```
 
-## Smart Contracts
+---
 
-| Contract | Description |
-|---|---|
-| **ForwardMarket** | Creates and manages forward markets with configurable LTV, liquidation threshold, and expiration. Settlement triggers via Chainlink oracle price. |
-| **OrderBook** | Full on-chain Central Limit Order Book (CLOB) with automatic matching engine. Supports limit orders, market orders, partial fills, and cancellations. |
-| **PositionManager** | Manages open positions, collateral deposits/withdrawals, liquidation with 5% bonus, and cash settlement at expiry. |
-| **ChainlinkOracle** | Production oracle reading live Chainlink price feeds on Fuji (ETH/USD, BTC/USD, AVAX/USD). Normalizes all feeds to 8 decimals. Falls back to manual prices for unsupported assets. |
-| **MockUSDC** | ERC20 mock USDC (6 decimals) with public faucet — mint 10,000 USDC per call for testing. |
-
-### Order Matching Engine
-
-The OrderBook implements a price-time priority CLOB:
-
-```
-New LONG limit order at $2,500 arrives:
-  1. Scan SHORT orders (asks) from lowest price up
-  2. If ask price ≤ $2,500 → MATCH
-     - Transfer collateral from both sides
-     - Create positions via PositionManager
-     - Update order fill status
-  3. Remaining unfilled amount → rest in order book
-  4. Supports partial fills (order can match with multiple counterparties)
-```
-
-### Settlement & PnL
-
-```solidity
-// Long PnL  = (settlePrice - entryPrice) × size × COLLATERAL_PRECISION / PRICE_PRECISION
-// Short PnL = (entryPrice - settlePrice) × size × COLLATERAL_PRECISION / PRICE_PRECISION
-
-// Health Factor = (collateral × liquidationThreshold) / (maintenanceMargin × PERCENT_BASE)
-// If healthFactor < 1.0 → position is liquidatable (5% bonus to liquidator)
-```
-
-### Chainlink Integration
-
-```solidity
-// Fuji Testnet Price Feeds
-ETH/USD  → 0x86d67c3D38D2bCeE722E601025C25a575021c6EA
-BTC/USD  → 0x31CF013A08c6Ac228C94551d535d5BAfE19c602a
-AVAX/USD → 0x5498BB86BC934c8D34FDA08E81D444153d0D06aD
-```
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Smart Contracts** | Solidity 0.8.24, Foundry, OpenZeppelin |
-| **Oracle** | Chainlink AggregatorV3 (live Fuji feeds) |
-| **Frontend** | React 18, Vite, TypeScript |
-| **Styling** | Tailwind CSS v4, Framer Motion |
-| **Web3** | wagmi v2, viem, RainbowKit |
-| **Notifications** | Sonner (toast notifications for all tx) |
-| **Charts** | TradingView Lightweight Charts |
-| **Target Chain** | Avalanche Fuji Testnet (Chain ID 43113) |
-
-## Deployed Contracts (Avalanche Fuji)
-
-All contracts are **live and verified** on Avalanche Fuji Testnet:
-
-| Contract | Address | SnowTrace |
-|---|---|---|
-| **MockUSDC** | `0x47f5a33714a84178F83f65Be6ecBcB79ACe6ef44` | [View](https://testnet.snowtrace.io/address/0x47f5a33714a84178F83f65Be6ecBcB79ACe6ef44) |
-| **MockWETH** | `0x06618AE2Ca9a684431e20A4be056a74A9Dc25A10` | [View](https://testnet.snowtrace.io/address/0x06618AE2Ca9a684431e20A4be056a74A9Dc25A10) |
-| **MockOracle** | `0x05B2512B64E43b44d94a6241d3745d5965c700d9` | [View](https://testnet.snowtrace.io/address/0x05B2512B64E43b44d94a6241d3745d5965c700d9) |
-| **ForwardMarket** | `0x9BB9CD8a6Caeaa06cBdB35FAc37D88C3b7b3DfC2` | [View](https://testnet.snowtrace.io/address/0x9BB9CD8a6Caeaa06cBdB35FAc37D88C3b7b3DfC2) |
-| **OrderBook** | `0xc6727c3cF00e374d72B1348173E4308083BC97e2` | [View](https://testnet.snowtrace.io/address/0xc6727c3cF00e374d72B1348173E4308083BC97e2) |
-| **PositionManager** | `0xBDb0b90825b4d5f8dA0A9D54fb2E72EA02618C56` | [View](https://testnet.snowtrace.io/address/0xBDb0b90825b4d5f8dA0A9D54fb2E72EA02618C56) |
-
-**Initial Markets:**
-- Market #1: ETH/USDC Forward (30-day expiry)
-- Market #2: BTC/USDC Forward (30-day expiry)
-- Market #3: AVAX/USDC Forward (7-day expiry)
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- [Foundry](https://book.getfoundry.sh/getting-started/installation)
-- Node.js 18+
+- [Foundry](https://book.getfoundry.sh/getting-started/installation) (for smart contracts)
+- Node.js 18+ (for frontend and keeper)
 - MetaMask or compatible wallet with [Fuji AVAX](https://faucet.avax.network/)
 
 ### Smart Contracts
@@ -178,14 +202,13 @@ cd contracts
 # Install dependencies
 forge install
 
-# Run all 20 tests
+# Run tests
 forge test -vvv
 
-# Deploy to Fuji (with MockOracle)
-forge script script/Deploy.s.sol --rpc-url https://api.avax-test.network/ext/bc/C/rpc --broadcast --private-key $PRIVATE_KEY
-
 # Deploy to Fuji (with Chainlink Oracle)
-USE_CHAINLINK=true forge script script/Deploy.s.sol --rpc-url https://api.avax-test.network/ext/bc/C/rpc --broadcast --private-key $PRIVATE_KEY
+USE_CHAINLINK=true forge script script/Deploy.s.sol \
+  --rpc-url https://api.avax-test.network/ext/bc/C/rpc \
+  --broadcast --private-key $PRIVATE_KEY
 ```
 
 ### Frontend
@@ -193,15 +216,67 @@ USE_CHAINLINK=true forge script script/Deploy.s.sol --rpc-url https://api.avax-t
 ```bash
 cd frontend
 
-# Install dependencies
+npm install
+npm run dev          # Development server at localhost:5173
+npm run build        # Production build
+```
+
+### Keeper Bot
+
+```bash
+cd keeper
+
 npm install
 
-# Start development server
-npm run dev
+# Set environment variables
+export KEEPER_PRIVATE_KEY=0x...
+export RPC_URL=https://avalanche-fuji-c-chain-rpc.publicnode.com
 
-# Production build
-npm run build
+# Start the keeper (automated TP/SL, liquidation, settlement)
+npx tsx src/cli.ts keeper
+
+# Or use the CLI for manual operations
+npx tsx src/cli.ts markets           # List all markets
+npx tsx src/cli.ts prices            # Live oracle prices
+npx tsx src/cli.ts faucet            # Mint 10,000 test USDC
+npx tsx src/cli.ts trade long ETH 5 --price 2500   # Place limit order
+npx tsx src/cli.ts trade short ETH 3 --market       # Place market order
+npx tsx src/cli.ts tpsl 1 --tp 3000 --sl 2000       # Set TP/SL
+npx tsx src/cli.ts positions --mine                  # View your positions
+npx tsx src/cli.ts close 1 --percent 50              # Partial close
 ```
+
+---
+
+## How It Works (E2E)
+
+```
+1. Connect Wallet      -->  MetaMask on Avalanche Fuji
+2. Get Test USDC       -->  Click "Faucet 10k USDC" or use CLI
+3. Enable 1-Click      -->  One-time USDC approval for OrderBook
+4. Choose Market       -->  ETH/USDC, BTC/USDC, or AVAX/USDC forward
+5. Place Order         -->  Limit or market, long or short, with optional TP/SL
+6. Automatic Match     -->  Orders match on-chain when prices cross
+7. Monitor Position    -->  Track PnL, health factor, TP/SL in Portfolio
+8. Exit                -->  Close early, TP/SL trigger, or wait for settlement
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Smart Contracts | Solidity 0.8.24, Foundry, OpenZeppelin |
+| Oracle | Chainlink AggregatorV3 (live Fuji feeds) |
+| Frontend | React 18, Vite, TypeScript, Tailwind CSS v4, Framer Motion |
+| Web3 | wagmi v2, viem, RainbowKit |
+| Keeper | TypeScript, viem, Multicall3 |
+| Charts | TradingView Lightweight Charts |
+| Notifications | Sonner (toast notifications) |
+| Chain | Avalanche Fuji Testnet (43113) |
+
+---
 
 ## Testing
 
@@ -209,34 +284,28 @@ npm run build
 cd contracts && forge test -vvv
 ```
 
-**20 tests** covering:
+**20 tests** across three suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
-| ForwardMarket | 8 | Market creation, settlement, reverts, active market filtering |
+| ForwardMarket | 8 | Market creation, settlement, reverts, active filtering |
 | OrderBook | 7 | Limit orders, matching, partial fills, cancellation, price crossing |
-| Settlement | 5 | Long/short profit, liquidation, collateral management, settlement guards |
+| Settlement | 5 | Long/short profit, liquidation, collateral management, guards |
 
-## How It Works (E2E Flow)
+---
 
-```
-1. Connect Wallet     → MetaMask on Avalanche Fuji
-2. Get Test USDC      → Click "Faucet 10k USDC" in header
-3. Approve USDC       → One-time approval for OrderBook contract
-4. Choose Market      → ETH/USDC, BTC/USDC, or AVAX/USDC forward
-5. Place Order        → Limit or market order, long or short
-6. Automatic Match    → When prices cross, orders match on-chain
-7. Monitor Position   → Track PnL, health factor in Portfolio
-8. Settlement         → At expiry, oracle settles all positions in USDC
-```
+## Why Tenor Matters
 
-## Innovation & Differentiators
+| TradFi NDFs | Tenor Protocol |
+|---|---|
+| $7T daily volume, banks only | Permissionless, anyone can trade |
+| Bilateral, counterparty risk | Smart contract escrow, zero default risk |
+| T+2 settlement, manual processes | Instant settlement via Chainlink oracle |
+| Opaque OTC market | Transparent on-chain order book |
+| $1M+ minimum notional | Trade any size |
+| No automated risk management | On-chain TP/SL, liquidation, keeper bots |
 
-1. **First NDF protocol on Avalanche** — Bringing a $7T/day TradFi instrument to DeFi
-2. **Fully on-chain CLOB** — No off-chain components, everything verifiable on Avalanche
-3. **Chainlink-powered settlement** — Trustless price discovery at expiry
-4. **Permissionless market creation** — Anyone can create forwards for any asset pair
-5. **Production-ready math** — Precise 8-decimal price and 6-decimal collateral arithmetic throughout
+---
 
 ## License
 
