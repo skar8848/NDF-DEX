@@ -7,7 +7,7 @@ import { useAllMarkets, type MarketInfo } from '../hooks/useForwardMarket'
 import { useOraclePrice } from '../hooks/usePriceData'
 import { formatPrice, formatUSDC, formatExpiryDate, cn } from '../lib/utils'
 import { useCancelOrder } from '../hooks/useOrderBook'
-import { PRICE_PRECISION, COLLATERAL_PRECISION } from '../lib/config'
+import { CONTRACTS, PRICE_PRECISION, COLLATERAL_PRECISION } from '../lib/config'
 
 function PositionPnL({ position, market }: { position: any; market: MarketInfo | undefined }) {
   const baseAsset = market?.baseAsset ?? ''
@@ -253,6 +253,13 @@ function PositionsTable({ positions, markets, settleable, selectedIds, toggleId,
   )
 }
 
+const MARKET_ORDER_THRESHOLD = BigInt('1000000000000000000')
+const EXPLORER_URL = 'https://testnet.snowtrace.io'
+
+function isMarketOrder(order: any): boolean {
+  return BigInt(order.price) > MARKET_ORDER_THRESHOLD || BigInt(order.price) <= 1n
+}
+
 function OrdersTable({ orders }: { orders: any[] }) {
   const { cancelOrder, isPending } = useCancelOrder()
   const statusLabels = ['Open', 'Filled', 'Partial', 'Cancelled']
@@ -271,7 +278,7 @@ function OrdersTable({ orders }: { orders: any[] }) {
         <thead>
           <tr className="border-b border-border text-text-secondary text-xs">
             <th className="text-left px-4 py-3 font-medium">ID</th>
-            <th className="text-left px-4 py-3 font-medium">Side</th>
+            <th className="text-left px-4 py-3 font-medium">Type</th>
             <th className="text-right px-4 py-3 font-medium">Price</th>
             <th className="text-right px-4 py-3 font-medium">Amount</th>
             <th className="text-right px-4 py-3 font-medium">Filled</th>
@@ -280,44 +287,60 @@ function OrdersTable({ orders }: { orders: any[] }) {
           </tr>
         </thead>
         <tbody>
-          {orders.map((order: any, i: number) => (
-            <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
-              <td className="px-4 py-3 text-text">#{Number(order.id)}</td>
-              <td className="px-4 py-3">
-                <span className={cn(
-                  'px-2 py-0.5 rounded text-xs font-medium',
-                  order.side === 0 ? 'bg-long/10 text-long' : 'bg-short/10 text-short'
-                )}>
-                  {order.side === 0 ? 'LONG' : 'SHORT'}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-right text-text font-mono">${formatPrice(order.price)}</td>
-              <td className="px-4 py-3 text-right text-text font-mono">{Number(order.amount)}</td>
-              <td className="px-4 py-3 text-right text-text font-mono">{Number(order.filled)}</td>
-              <td className="px-4 py-3">
-                <span className={cn(
-                  'px-2 py-0.5 rounded text-xs font-medium',
-                  order.status === 0 ? 'bg-primary/10 text-primary' :
-                  order.status === 1 ? 'bg-success/10 text-success' :
-                  order.status === 2 ? 'bg-warning/10 text-warning' :
-                  'bg-text-secondary/10 text-text-secondary'
-                )}>
-                  {statusLabels[order.status] || 'Unknown'}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-right">
-                {(order.status === 0 || order.status === 2) && (
-                  <button
-                    onClick={() => cancelOrder(order.id)}
-                    disabled={isPending}
-                    className="px-3 py-1 text-xs rounded-md bg-danger/10 text-danger hover:bg-danger/20 transition-colors disabled:opacity-50 cursor-pointer"
+          {orders.map((order: any, i: number) => {
+            const isMkt = isMarketOrder(order)
+            const sideLabel = order.side === 0 ? 'Long' : 'Short'
+            const typeLabel = isMkt ? `Market ${sideLabel}` : `Limit ${sideLabel}`
+            return (
+              <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
+                <td className="px-4 py-3">
+                  <a
+                    href={`${EXPLORER_URL}/address/${CONTRACTS.OrderBook}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary-hover transition-colors"
                   >
-                    Cancel
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+                    #{Number(order.id)}
+                  </a>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={cn(
+                    'px-2 py-0.5 rounded text-xs font-medium',
+                    order.side === 0 ? 'bg-long/10 text-long' : 'bg-short/10 text-short'
+                  )}>
+                    {typeLabel}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right text-text font-mono">
+                  {isMkt ? <span className="text-text-secondary italic">Market</span> : `$${formatPrice(order.price)}`}
+                </td>
+                <td className="px-4 py-3 text-right text-text font-mono">{Number(order.amount)}</td>
+                <td className="px-4 py-3 text-right text-text font-mono">{Number(order.filled)}</td>
+                <td className="px-4 py-3">
+                  <span className={cn(
+                    'px-2 py-0.5 rounded text-xs font-medium',
+                    order.status === 0 ? 'bg-primary/10 text-primary' :
+                    order.status === 1 ? 'bg-success/10 text-success' :
+                    order.status === 2 ? 'bg-warning/10 text-warning' :
+                    'bg-text-secondary/10 text-text-secondary'
+                  )}>
+                    {statusLabels[order.status] || 'Unknown'}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {(order.status === 0 || order.status === 2) && (
+                    <button
+                      onClick={() => cancelOrder(order.id)}
+                      disabled={isPending}
+                      className="px-3 py-1 text-xs rounded-md bg-danger/10 text-danger hover:bg-danger/20 transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

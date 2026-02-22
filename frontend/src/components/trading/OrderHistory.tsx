@@ -1,6 +1,7 @@
 import { useUserOrders, useCancelOrder } from '../../hooks/useOrderBook'
 import { formatPrice } from '../../lib/utils'
 import { cn } from '../../lib/utils'
+import { CONTRACTS } from '../../lib/config'
 import type { Order } from '../../hooks/useOrderBook'
 
 const ORDER_STATUS_LABELS: Record<number, string> = {
@@ -17,8 +18,10 @@ const ORDER_STATUS_COLORS: Record<number, string> = {
   3: 'text-text-secondary bg-surface-2',
 }
 
+const EXPLORER_URL = 'https://testnet.snowtrace.io'
+
 // Market orders use extreme prices: uint256.max/2 for LONG, 1 for SHORT
-const MARKET_ORDER_THRESHOLD = BigInt('1000000000000000000') // 10^18 — any price above this is clearly a market order
+const MARKET_ORDER_THRESHOLD = BigInt('1000000000000000000') // 10^18
 function isMarketOrder(order: Order): boolean {
   return order.price > MARKET_ORDER_THRESHOLD || order.price <= 1n
 }
@@ -32,30 +35,32 @@ function OrderRow({ order }: { order: Order }) {
       ? Number((order.filled * 100n) / order.amount)
       : 0
   const isMkt = isMarketOrder(order)
+  const sideLabel = order.side === 0 ? 'Long' : 'Short'
+  const typeLabel = isMkt ? `Market ${sideLabel}` : `Limit ${sideLabel}`
 
   return (
     <tr className="border-b border-border/50 hover:bg-surface-2/30 transition-colors">
-      <td className="px-3 py-2.5 text-xs text-text font-mono">
-        #{order.id.toString()}
+      <td className="px-3 py-2.5 text-xs font-mono">
+        <a
+          href={`${EXPLORER_URL}/address/${CONTRACTS.OrderBook}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:text-primary-hover transition-colors"
+        >
+          #{order.id.toString()}
+        </a>
       </td>
       <td className="px-3 py-2.5 text-xs">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={cn(
-              'px-2 py-0.5 rounded text-[10px] font-semibold',
-              order.side === 0
-                ? 'bg-long/10 text-long'
-                : 'bg-short/10 text-short'
-            )}
-          >
-            {order.side === 0 ? 'LONG' : 'SHORT'}
-          </span>
-          {isMkt && (
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-primary/10 text-primary">
-              MKT
-            </span>
+        <span
+          className={cn(
+            'px-2 py-0.5 rounded text-[10px] font-semibold',
+            order.side === 0
+              ? 'bg-long/10 text-long'
+              : 'bg-short/10 text-short'
           )}
-        </div>
+        >
+          {typeLabel}
+        </span>
       </td>
       <td className="px-3 py-2.5 text-xs text-text font-mono">
         {isMkt ? <span className="text-text-secondary italic">Market</span> : `$${formatPrice(order.price)}`}
@@ -143,7 +148,7 @@ export function OrderHistory() {
               ID
             </th>
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
-              Side
+              Type
             </th>
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
               Price

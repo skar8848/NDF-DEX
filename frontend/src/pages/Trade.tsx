@@ -8,6 +8,7 @@ import { TradeForm } from '../components/trading/TradeForm'
 import { PriceChart } from '../components/trading/PriceChart'
 import { PositionTable } from '../components/trading/PositionTable'
 import { OrderHistory } from '../components/trading/OrderHistory'
+import { TradeHistory } from '../components/trading/TradeHistory'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { useOraclePrice } from '../hooks/usePriceData'
 import { formatPrice, formatCountdown, cn } from '../lib/utils'
@@ -32,6 +33,7 @@ export default function Trade() {
   }
 
   const [bottomTab, setBottomTab] = useState<BottomTab>('positions')
+  const [midTab, setMidTab] = useState<'book' | 'trades'>('book')
   const [bottomHeight, setBottomHeight] = useState(DEFAULT_BOTTOM)
   const [externalPrice, setExternalPrice] = useState<string | null>(null)
   const isDragging = useRef(false)
@@ -160,7 +162,7 @@ export default function Trade() {
   return (
     <div className="h-full flex flex-col bg-background overflow-hidden">
       {/* Top bar: Market selector + info */}
-      <div className="flex items-center gap-3 px-3 py-2 border-b border-border bg-surface shrink-0">
+      <div className="flex items-center gap-5 px-3 py-2 border-b border-border bg-surface shrink-0">
         <MarketSelector
           markets={allMarkets}
           selectedMarketId={marketId}
@@ -174,14 +176,14 @@ export default function Trade() {
             <div className="flex flex-col">
               <span className="text-[10px]" style={{ color: '#8888a0' }}>Mark Price</span>
               <span className="text-sm font-bold font-mono" style={{ color: '#e4e4ed' }}>
-                {markPrice ? `$${formatPrice(markPrice)}` : '--'}
+                {markPrice ? `$${(Number(markPrice) / PRICE_PRECISION).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '--'}
               </span>
             </div>
 
             <div className="flex flex-col">
-              <span className="text-[10px]" style={{ color: '#8888a0' }}>Oracle Price</span>
+              <span className="text-[10px]" style={{ color: '#8888a0' }}>Oracle</span>
               <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
-                {oraclePrice ? `$${formatPrice(oraclePrice)}` : '--'}
+                {oraclePrice ? `$${(Number(oraclePrice) / PRICE_PRECISION).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '--'}
               </span>
             </div>
 
@@ -228,17 +230,39 @@ export default function Trade() {
           </ErrorBoundary>
         </div>
 
-        {/* Order Book */}
-        <div className="border-r border-border min-h-0 overflow-hidden">
-          <div className="px-3 py-2 border-b border-border">
-            <h3 className="text-xs font-semibold text-text">Order Book</h3>
+        {/* Order Book / Trades */}
+        <div className="border-r border-border min-h-0 overflow-hidden flex flex-col">
+          <div className="flex items-center gap-1 px-2 border-b border-border shrink-0">
+            {([
+              { id: 'book', label: 'Order Book' },
+              { id: 'trades', label: 'Trades' },
+            ] as const).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setMidTab(tab.id)}
+                className={cn(
+                  'px-2.5 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer',
+                  midTab === tab.id
+                    ? 'border-primary text-text'
+                    : 'border-transparent text-text-secondary hover:text-text'
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-          <div className="h-[calc(100%-33px)] overflow-hidden">
-            <OrderBookComponent
-              bids={orderBookLevels.bids}
-              asks={orderBookLevels.asks}
-              onPriceClick={(price) => setExternalPrice(price)}
-            />
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {midTab === 'book' ? (
+              <OrderBookComponent
+                bids={orderBookLevels.bids}
+                asks={orderBookLevels.asks}
+                onPriceClick={(price) => setExternalPrice(price)}
+              />
+            ) : (
+              <div className="h-full overflow-auto no-scrollbar">
+                <TradeHistory />
+              </div>
+            )}
           </div>
         </div>
 

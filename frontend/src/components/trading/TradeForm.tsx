@@ -8,8 +8,9 @@ import {
   useUSDCAllowance,
 } from '../../hooks/useOrderBook'
 import { useOraclePrice } from '../../hooks/usePriceData'
+import { useUserOpenPositions } from '../../hooks/usePositions'
 import { CONTRACTS, PRICE_PRECISION, COLLATERAL_PRECISION, PERCENT_BASE } from '../../lib/config'
-import { formatUSDC, parsePrice } from '../../lib/utils'
+import { formatUSDC, formatPrice, parsePrice } from '../../lib/utils'
 import { cn } from '../../lib/utils'
 import type { MarketInfo } from '../../hooks/useForwardMarket'
 
@@ -79,6 +80,22 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     try { return (oraclePriceData as [bigint, bigint])[0] } catch { return 0n }
   }, [oraclePriceData])
 
+  // Current open positions for this market
+  const { data: openPositionsData } = useUserOpenPositions()
+  const currentPosition = useMemo(() => {
+    if (!openPositionsData) return null
+    const positions = openPositionsData as { id: bigint; marketId: bigint; side: number; size: bigint; collateral: bigint; entryPrice: bigint }[]
+    const matching = positions.filter(p => p.marketId === marketId)
+    if (matching.length === 0) return null
+    let longSize = 0n
+    let shortSize = 0n
+    for (const p of matching) {
+      if (p.side === 0) longSize += p.size
+      else shortSize += p.size
+    }
+    return { longSize, shortSize }
+  }, [openPositionsData, marketId])
+
   useEffect(() => {
     if (isLimitSuccess || isMarketSuccess) {
       setPriceInput('')
@@ -99,6 +116,12 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     if (!isConnected) setDismissed1CT(false)
   }, [isConnected])
 
+  // Effective price for calculations (limit price or oracle for market)
+  const effectivePrice = useMemo(() => {
+    if (orderType === 'market') return oraclePrice
+    return priceInput ? parsePrice(priceInput) : 0n
+  }, [orderType, priceInput, oraclePrice])
+
   const collateralRequired = useMemo(() => {
     if (!market) return 0n
     const size = sizeInput ? BigInt(Math.floor(Number(sizeInput))) : 0n
@@ -115,6 +138,51 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
     }
   }, [priceInput, sizeInput, market, orderType, oraclePrice])
+
+  // Max affordable contracts
+  const maxSize = useMemo(() => {
+    if (!market || balance === 0n) return 0
+    const ltv = market.ltv > 0n ? market.ltv : BigInt(PERCENT_BASE)
+    let price = effectivePrice
+    if (orderType === 'market') price = oraclePrice * 2n
+    if (price === 0n) return 0
+    // collateral_per_1 = price * CP * PB / (PP * ltv)
+    const collatPer1 = price * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / (BigInt(PRICE_PRECISION) * ltv)
+    if (collatPer1 === 0n) return 0
+    return Number(balance / collatPer1)
+  }, [market, balance, effectivePrice, orderType, oraclePrice])
+
+  // Order value in USD
+  const orderValue = useMemo(() => {
+    const size = sizeInput ? Number(sizeInput) : 0
+    if (size === 0 || effectivePrice === 0n) return null
+    const priceUsd = Number(effectivePrice) / PRICE_PRECISION
+    return priceUsd * size
+  }, [sizeInput, effectivePrice])
+
+  // Estimated liquidation price
+  const liquidationPrice = useMemo(() => {
+    if (!market || effectivePrice === 0n) return null
+    const size = sizeInput ? BigInt(Math.floor(Number(sizeInput))) : 0n
+    if (size === 0n || collateralRequired === 0n) return null
+    const liqThreshold = market.liquidationThreshold > 0n ? market.liquidationThreshold : BigInt(PERCENT_BASE)
+    const PP = BigInt(PRICE_PRECISION)
+    const CP = BigInt(COLLATERAL_PRECISION)
+    const PB = BigInt(PERCENT_BASE)
+    // maintenance = entry * liqThreshold / PB (in price units)
+    const maintenancePart = effectivePrice * liqThreshold / PB
+    // collateral contribution = collateral * PP / (size * CP) (in price units)
+    const collatPart = collateralRequired * PP / (size * CP)
+    if (side === 'long') {
+      // liqPrice = entry + maintenancePart - collatPart
+      const liq = effectivePrice + maintenancePart - collatPart
+      return liq > 0n ? liq : 0n
+    } else {
+      // liqPrice = entry - maintenancePart + collatPart
+      const liq = effectivePrice - maintenancePart + collatPart
+      return liq > 0n ? liq : 0n
+    }
+  }, [market, effectivePrice, sizeInput, collateralRequired, side])
 
   const isPending = isLimitPending || isMarketPending
   const isConfirming = isLimitConfirming || isMarketConfirming
@@ -156,6 +224,21 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     }
     return null
   }, [orderType, priceInput, oraclePrice, side])
+
+  const sizeNum = sizeInput ? Number(sizeInput) : 0
+  const sliderValue = maxSize > 0 ? Math.min(sizeNum / maxSize, 1) : 0
+  const sliderPercent = Math.round(sliderValue * 100)
+
+  function handleSlider(e: React.ChangeEvent<HTMLInputElement>) {
+    const pct = Number(e.target.value)
+    const newSize = Math.floor((pct / 100) * maxSize)
+    setSizeInput(newSize > 0 ? String(newSize) : '')
+  }
+
+  function handleSliderPreset(pct: number) {
+    const newSize = Math.floor((pct / 100) * maxSize)
+    setSizeInput(newSize > 0 ? String(newSize) : '')
+  }
 
   return (
     <div className="px-3 py-3 space-y-2.5">
@@ -256,9 +339,16 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         </div>
       )}
 
-      {/* Size input */}
+      {/* Size input + slider */}
       <div>
-        <label className="block text-xs text-text-secondary mb-1">Size (contracts)</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs text-text-secondary">Size (contracts)</label>
+          {isConnected && maxSize > 0 && (
+            <span className="text-[10px] text-text-secondary">
+              Max: <span className="text-text font-mono">{maxSize}</span>
+            </span>
+          )}
+        </div>
         <div className="relative">
           <input
             type="number"
@@ -275,25 +365,113 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">Contracts</span>
         </div>
+
+        {/* Slider */}
+        {isConnected && maxSize > 0 && (
+          <div className="mt-2 space-y-1.5">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={sliderPercent}
+              onChange={handleSlider}
+              className={cn(
+                'w-full h-1 rounded-full appearance-none cursor-pointer',
+                '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-sm',
+                side === 'long'
+                  ? 'bg-long/20 [&::-webkit-slider-thumb]:bg-long'
+                  : 'bg-short/20 [&::-webkit-slider-thumb]:bg-short'
+              )}
+            />
+            <div className="flex justify-between gap-1">
+              {[25, 50, 75, 100].map((pct) => (
+                <button
+                  key={pct}
+                  onClick={() => handleSliderPreset(pct)}
+                  className={cn(
+                    'flex-1 py-0.5 text-[10px] font-medium rounded transition-colors cursor-pointer',
+                    sliderPercent >= pct
+                      ? side === 'long'
+                        ? 'bg-long/20 text-long'
+                        : 'bg-short/20 text-short'
+                      : 'bg-surface-2 text-text-secondary hover:text-text'
+                  )}
+                >
+                  {pct}%
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Summary box */}
       <div className="bg-surface-2 rounded-lg p-2.5 space-y-1.5">
+        {/* Available to trade */}
+        {isConnected && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-text-secondary">Available</span>
+            <span className="text-text font-mono">
+              <img src="/logos/USDC_Logo.png" alt="USDC" className="w-3 h-3 rounded-full inline mr-1 -mt-px" />
+              ${formatUSDC(balance)}
+            </span>
+          </div>
+        )}
+
+        {/* Current position */}
+        {isConnected && currentPosition && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-text-secondary">Position</span>
+            <span className="font-mono">
+              {currentPosition.longSize > 0n && (
+                <span className="text-long">{Number(currentPosition.longSize)}L</span>
+              )}
+              {currentPosition.longSize > 0n && currentPosition.shortSize > 0n && (
+                <span className="text-text-secondary"> / </span>
+              )}
+              {currentPosition.shortSize > 0n && (
+                <span className="text-short">{Number(currentPosition.shortSize)}S</span>
+              )}
+            </span>
+          </div>
+        )}
+
+        <div className="border-t border-border/50 my-1" />
+
+        {/* Order value */}
         <div className="flex items-center justify-between text-xs">
-          <span className="text-text-secondary">Collateral</span>
+          <span className="text-text-secondary">Order Value</span>
+          <span className="text-text font-mono">
+            {orderValue ? `$${orderValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}
+          </span>
+        </div>
+
+        {/* Margin required */}
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-text-secondary">Margin Required</span>
           <span className="text-text font-mono">
             {collateralRequired > 0n ? `$${formatUSDC(collateralRequired)}` : '--'}
           </span>
         </div>
+
+        {/* Liquidation price */}
         <div className="flex items-center justify-between text-xs">
-          <span className="text-text-secondary flex items-center gap-1">
-            <img src="/logos/USDC_Logo.png" alt="USDC" className="w-3.5 h-3.5 rounded-full" />
-            Balance
-          </span>
-          <span className="text-text font-mono">
-            {isConnected ? `$${formatUSDC(balance)}` : '--'}
+          <span className="text-text-secondary">Liq. Price</span>
+          <span className={cn('font-mono', liquidationPrice ? (side === 'long' ? 'text-short' : 'text-long') : 'text-text')}>
+            {liquidationPrice ? `$${formatPrice(liquidationPrice)}` : '--'}
           </span>
         </div>
+
+        <div className="border-t border-border/50 my-1" />
+
+        {/* Slippage */}
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-text-secondary">Slippage</span>
+          <span className="text-text font-mono">
+            {orderType === 'limit' ? '0%' : 'Variable'}
+          </span>
+        </div>
+
         {market && (
           <div className="flex items-center justify-between text-xs">
             <span className="text-text-secondary">LTV</span>
@@ -302,6 +480,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
             </span>
           </div>
         )}
+
         {isConnected && (
           <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
             <span className="text-text-secondary flex items-center gap-1">
