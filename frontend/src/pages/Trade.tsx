@@ -11,6 +11,7 @@ import { OrderHistory } from '../components/trading/OrderHistory'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { useOraclePrice } from '../hooks/usePriceData'
 import { formatPrice, formatCountdown, cn } from '../lib/utils'
+import { PRICE_PRECISION } from '../lib/config'
 
 type BottomTab = 'positions' | 'orders' | 'history'
 
@@ -189,13 +190,15 @@ export default function Trade() {
             <div className="flex flex-col">
               <span className="text-[10px]" style={{ color: '#8888a0' }}>Open Interest</span>
               <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
-                {(market.totalLongOI + market.totalShortOI).toString()}
+                {oraclePrice
+                  ? `$${(Number(market.totalLongOI + market.totalShortOI) * Number(oraclePrice) / PRICE_PRECISION).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+                  : '--'}
               </span>
             </div>
 
             <div className="flex flex-col">
               <span className="text-[10px]" style={{ color: '#8888a0' }}>Volume 24h</span>
-              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>$0</span>
+              <span className="text-sm font-mono" style={{ color: '#8888a0' }}>-</span>
             </div>
 
             <div className="w-px h-6 bg-border" />

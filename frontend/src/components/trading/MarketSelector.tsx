@@ -70,17 +70,14 @@ export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSe
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 px-4 py-2.5 bg-surface border border-border rounded-lg hover:border-primary/50 transition-colors cursor-pointer"
+        className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-surface-2 rounded-md transition-colors cursor-pointer"
       >
         {selectedMarket ? (
           <>
-            <AssetLogo asset={selectedMarket.baseAsset} size={32} />
-            <div className="flex flex-col items-start">
-              <span className="font-semibold text-sm" style={{ color: '#e4e4ed' }}>
-                {selectedMarket.baseAsset}/{selectedMarket.quoteAsset}
-              </span>
-              <MarketPriceLabel baseAsset={selectedMarket.baseAsset} />
-            </div>
+            <AssetLogo asset={selectedMarket.baseAsset} size={28} />
+            <span className="font-semibold text-sm" style={{ color: '#e4e4ed' }}>
+              {selectedMarket.baseAsset}/{selectedMarket.quoteAsset}
+            </span>
           </>
         ) : (
           <span className="text-text-secondary text-sm">Select Market</span>

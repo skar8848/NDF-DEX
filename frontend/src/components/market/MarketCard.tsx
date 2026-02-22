@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { formatPrice, formatCountdown } from '../../lib/utils'
 import { useOraclePrice } from '../../hooks/usePriceData'
+import { AssetLogo } from '../trading/MarketSelector'
 
 type MarketCardProps = {
   id: bigint
@@ -31,9 +32,7 @@ export function MarketCard({
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-sm font-bold text-primary">
-            {baseAsset.slice(0, 2)}
-          </div>
+          <AssetLogo asset={baseAsset} size={40} />
           <div>
             <h3 className="text-text font-semibold text-base group-hover:text-primary transition-colors">
               {baseAsset}/{quoteAsset}
