@@ -135,11 +135,7 @@ export function TradeHistory() {
     return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
   }
 
-  function formatTradeDate(timestamp: number | null) {
-    if (!timestamp) return ''
-    const d = new Date(timestamp * 1000)
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
+
 
   function formatTradePrice(price: bigint) {
     return (Number(price) / 1e8).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
