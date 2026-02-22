@@ -14,9 +14,11 @@ import { formatPrice, formatCountdown, cn } from '../lib/utils'
 
 type BottomTab = 'positions' | 'orders' | 'history'
 
-const MIN_BOTTOM = 120
-const MAX_BOTTOM = 500
-const DEFAULT_BOTTOM = 220
+const MIN_BOTTOM = 100
+const DEFAULT_BOTTOM = 200
+// Trade form needs ~400px (header 45px + form ~355px). Top bar ~45px.
+// So max bottom = viewport - 56px(header) - 45px(top bar) - 400px(trade form min)
+const TRADE_FORM_MIN_HEIGHT = 400
 
 export default function Trade() {
   const { marketId: marketIdParam } = useParams<{ marketId: string }>()
@@ -113,7 +115,9 @@ export default function Trade() {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging.current) return
       const delta = startY.current - e.clientY
-      const newHeight = Math.min(MAX_BOTTOM, Math.max(MIN_BOTTOM, startHeight.current + delta))
+      // Dynamic max: leave enough room for trade form + top bars
+      const maxBottom = window.innerHeight - 56 - 45 - TRADE_FORM_MIN_HEIGHT
+      const newHeight = Math.min(Math.max(maxBottom, MIN_BOTTOM), Math.max(MIN_BOTTOM, startHeight.current + delta))
       setBottomHeight(newHeight)
     }
     const handleMouseUp = () => {

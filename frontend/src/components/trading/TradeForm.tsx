@@ -117,153 +117,147 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
   }, [priceInput, sizeInput, orderType])
 
   return (
-    <div className="flex flex-col justify-between h-full px-3 py-3">
-      {/* Top section: form controls */}
-      <div className="space-y-2.5">
-        {/* Side tabs */}
-        <div className="grid grid-cols-2 gap-1 p-1 bg-surface-2 rounded-lg">
-          <button
-            onClick={() => setSide('long')}
-            className={cn(
-              'py-2 text-sm font-semibold rounded-md transition-colors cursor-pointer',
-              side === 'long' ? 'bg-long text-white' : 'text-text-secondary hover:text-text'
-            )}
-          >
-            Long
-          </button>
-          <button
-            onClick={() => setSide('short')}
-            className={cn(
-              'py-2 text-sm font-semibold rounded-md transition-colors cursor-pointer',
-              side === 'short' ? 'bg-short text-white' : 'text-text-secondary hover:text-text'
-            )}
-          >
-            Short
-          </button>
-        </div>
+    <div className="px-3 py-3 space-y-2.5">
+      {/* Side tabs */}
+      <div className="grid grid-cols-2 gap-1 p-1 bg-surface-2 rounded-lg">
+        <button
+          onClick={() => setSide('long')}
+          className={cn(
+            'py-2 text-sm font-semibold rounded-md transition-colors cursor-pointer',
+            side === 'long' ? 'bg-long text-white' : 'text-text-secondary hover:text-text'
+          )}
+        >
+          Long
+        </button>
+        <button
+          onClick={() => setSide('short')}
+          className={cn(
+            'py-2 text-sm font-semibold rounded-md transition-colors cursor-pointer',
+            side === 'short' ? 'bg-short text-white' : 'text-text-secondary hover:text-text'
+          )}
+        >
+          Short
+        </button>
+      </div>
 
-        {/* Order type */}
-        <div className="flex gap-1">
-          <button
-            onClick={() => setOrderType('limit')}
-            className={cn(
-              'px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer',
-              orderType === 'limit'
-                ? 'bg-surface-2 text-text border border-border'
-                : 'text-text-secondary hover:text-text'
-            )}
-          >
-            Limit
-          </button>
-          <button
-            onClick={() => setOrderType('market')}
-            className={cn(
-              'px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer',
-              orderType === 'market'
-                ? 'bg-surface-2 text-text border border-border'
-                : 'text-text-secondary hover:text-text'
-            )}
-          >
-            Market
-          </button>
-        </div>
+      {/* Order type */}
+      <div className="flex gap-1">
+        <button
+          onClick={() => setOrderType('limit')}
+          className={cn(
+            'px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer',
+            orderType === 'limit'
+              ? 'bg-surface-2 text-text border border-border'
+              : 'text-text-secondary hover:text-text'
+          )}
+        >
+          Limit
+        </button>
+        <button
+          onClick={() => setOrderType('market')}
+          className={cn(
+            'px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer',
+            orderType === 'market'
+              ? 'bg-surface-2 text-text border border-border'
+              : 'text-text-secondary hover:text-text'
+          )}
+        >
+          Market
+        </button>
+      </div>
 
-        {/* Price input (limit only) */}
-        {orderType === 'limit' && (
-          <div>
-            <label className="block text-xs text-text-secondary mb-1">Price (USD)</label>
-            <div className="relative">
-              <input
-                type="number"
-                placeholder="0.00"
-                value={priceInput}
-                onChange={(e) => setPriceInput(e.target.value)}
-                step="0.01"
-                min="0"
-                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-secondary/50 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">USD</span>
-            </div>
-          </div>
-        )}
-
-        {/* Size input */}
+      {/* Price input (limit only) */}
+      {orderType === 'limit' && (
         <div>
-          <label className="block text-xs text-text-secondary mb-1">Size (contracts)</label>
+          <label className="block text-xs text-text-secondary mb-1">Price (USD)</label>
           <div className="relative">
             <input
               type="number"
-              placeholder="0"
-              value={sizeInput}
-              onChange={(e) => setSizeInput(e.target.value)}
-              step="1"
+              placeholder="0.00"
+              value={priceInput}
+              onChange={(e) => setPriceInput(e.target.value)}
+              step="0.01"
               min="0"
               className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-secondary/50 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">Contracts</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">USD</span>
           </div>
+        </div>
+      )}
+
+      {/* Size input */}
+      <div>
+        <label className="block text-xs text-text-secondary mb-1">Size (contracts)</label>
+        <div className="relative">
+          <input
+            type="number"
+            placeholder="0"
+            value={sizeInput}
+            onChange={(e) => setSizeInput(e.target.value)}
+            step="1"
+            min="0"
+            className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-secondary/50 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">Contracts</span>
         </div>
       </div>
 
-      {/* Bottom section: summary + button */}
-      <div className="space-y-2.5">
-        {/* Summary box */}
-        <div className="bg-surface-2 rounded-lg p-2.5 space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-text-secondary">Collateral</span>
-            <span className="text-text font-mono">
-              {collateralRequired > 0n ? `$${formatUSDC(collateralRequired)}` : '--'}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-text-secondary flex items-center gap-1">
-              <img src="/logos/USDC_Logo.png" alt="USDC" className="w-3.5 h-3.5 rounded-full" />
-              Balance
-            </span>
-            <span className="text-text font-mono">
-              {isConnected ? `$${formatUSDC(balance)}` : '--'}
-            </span>
-          </div>
-          {market && (
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-text-secondary">LTV</span>
-              <span className="text-text font-mono">
-                {(Number(market.ltv) / (PERCENT_BASE / 100)).toFixed(0)}%
-              </span>
-            </div>
-          )}
+      {/* Summary box */}
+      <div className="bg-surface-2 rounded-lg p-2.5 space-y-1.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-text-secondary">Collateral</span>
+          <span className="text-text font-mono">
+            {collateralRequired > 0n ? `$${formatUSDC(collateralRequired)}` : '--'}
+          </span>
         </div>
-
-        {/* Action button */}
-        {!isConnected ? (
-          <div className="w-full py-2.5 text-center text-sm text-text-secondary bg-surface-2 rounded-lg border border-border">
-            Connect wallet to trade
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-text-secondary flex items-center gap-1">
+            <img src="/logos/USDC_Logo.png" alt="USDC" className="w-3.5 h-3.5 rounded-full" />
+            Balance
+          </span>
+          <span className="text-text font-mono">
+            {isConnected ? `$${formatUSDC(balance)}` : '--'}
+          </span>
+        </div>
+        {market && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-text-secondary">LTV</span>
+            <span className="text-text font-mono">
+              {(Number(market.ltv) / (PERCENT_BASE / 100)).toFixed(0)}%
+            </span>
           </div>
-        ) : needsApproval ? (
-          <button
-            onClick={handleApprove}
-            disabled={isApprovePending || isApproveConfirming}
-            className="w-full py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {isApprovePending ? 'Confirm in wallet...' : isApproveConfirming ? 'Approving...' : 'Approve USDC'}
-          </button>
-        ) : (
-          <button
-            onClick={handlePlaceOrder}
-            disabled={!isFormValid || isPending || isConfirming}
-            className={cn(
-              'w-full py-2.5 text-sm font-semibold rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
-              side === 'long' ? 'bg-long hover:bg-long/90' : 'bg-short hover:bg-short/90'
-            )}
-          >
-            {isPending
-              ? 'Confirm in wallet...'
-              : isConfirming
-              ? 'Placing order...'
-              : `${side === 'long' ? 'Long' : 'Short'} ${market?.baseAsset ?? ''}`}
-          </button>
         )}
       </div>
+
+      {/* Action button */}
+      {!isConnected ? (
+        <div className="w-full py-2.5 text-center text-sm text-text-secondary bg-surface-2 rounded-lg border border-border">
+          Connect wallet to trade
+        </div>
+      ) : needsApproval ? (
+        <button
+          onClick={handleApprove}
+          disabled={isApprovePending || isApproveConfirming}
+          className="w-full py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {isApprovePending ? 'Confirm in wallet...' : isApproveConfirming ? 'Approving...' : 'Approve USDC'}
+        </button>
+      ) : (
+        <button
+          onClick={handlePlaceOrder}
+          disabled={!isFormValid || isPending || isConfirming}
+          className={cn(
+            'w-full py-2.5 text-sm font-semibold rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
+            side === 'long' ? 'bg-long hover:bg-long/90' : 'bg-short hover:bg-short/90'
+          )}
+        >
+          {isPending
+            ? 'Confirm in wallet...'
+            : isConfirming
+            ? 'Placing order...'
+            : `${side === 'long' ? 'Long' : 'Short'} ${market?.baseAsset ?? ''}`}
+        </button>
+      )}
     </div>
   )
 }
