@@ -16,12 +16,14 @@ import type { MarketInfo } from '../../hooks/useForwardMarket'
 type TradeFormProps = {
   marketId: bigint
   market: MarketInfo | null
+  externalPrice?: string | null
+  onExternalPriceConsumed?: () => void
 }
 
 type OrderSide = 'long' | 'short'
 type OrderType = 'limit' | 'market'
 
-export function TradeForm({ marketId, market }: TradeFormProps) {
+export function TradeForm({ marketId, market, externalPrice, onExternalPriceConsumed }: TradeFormProps) {
   const { address, isConnected } = useAccount()
 
   const [side, setSide] = useState<OrderSide>('long')
@@ -66,6 +68,14 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
       setSizeInput('')
     }
   }, [isLimitSuccess, isMarketSuccess])
+
+  useEffect(() => {
+    if (externalPrice) {
+      setPriceInput(externalPrice)
+      setOrderType('limit')
+      onExternalPriceConsumed?.()
+    }
+  }, [externalPrice, onExternalPriceConsumed])
 
   const collateralRequired = useMemo(() => {
     if (!market) return 0n

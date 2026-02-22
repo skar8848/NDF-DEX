@@ -32,6 +32,7 @@ export default function Trade() {
 
   const [bottomTab, setBottomTab] = useState<BottomTab>('positions')
   const [bottomHeight, setBottomHeight] = useState(DEFAULT_BOTTOM)
+  const [externalPrice, setExternalPrice] = useState<string | null>(null)
   const isDragging = useRef(false)
   const startY = useRef(0)
   const startHeight = useRef(0)
@@ -219,6 +220,7 @@ export default function Trade() {
             <OrderBookComponent
               bids={orderBookLevels.bids}
               asks={orderBookLevels.asks}
+              onPriceClick={(price) => setExternalPrice(price)}
             />
           </div>
         </div>
@@ -228,7 +230,7 @@ export default function Trade() {
           <div className="px-3 py-2 border-b border-border">
             <h3 className="text-xs font-semibold text-text">Place Order</h3>
           </div>
-          <TradeForm marketId={marketId} market={market} />
+          <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} />
         </div>
       </div>
 
