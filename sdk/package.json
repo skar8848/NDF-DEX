@@ -1,0 +1,37 @@
+{
+  "name": "@tenor-protocol/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Tenor Protocol — a decentralized forwards exchange on Avalanche",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "keywords": [
+    "tenor",
+    "defi",
+    "forwards",
+    "avalanche",
+    "fuji",
+    "sdk"
+  ],
+  "license": "MIT"
+}
