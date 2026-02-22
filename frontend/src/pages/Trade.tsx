@@ -171,15 +171,15 @@ export default function Trade() {
             <div className="w-px h-6 bg-border" />
 
             <div className="flex flex-col">
-              <span className="text-[10px] text-text-secondary">Mark Price</span>
-              <span className="text-sm font-bold text-text font-mono">
+              <span className="text-[10px]" style={{ color: '#8888a0' }}>Mark Price</span>
+              <span className="text-sm font-bold font-mono" style={{ color: '#e4e4ed' }}>
                 {markPrice ? `$${formatPrice(markPrice)}` : '--'}
               </span>
             </div>
 
             <div className="flex flex-col">
-              <span className="text-[10px] text-text-secondary">Oracle Price</span>
-              <span className="text-sm text-text font-mono">
+              <span className="text-[10px]" style={{ color: '#8888a0' }}>Oracle Price</span>
+              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
                 {oraclePrice ? `$${formatPrice(oraclePrice)}` : '--'}
               </span>
             </div>
@@ -187,22 +187,22 @@ export default function Trade() {
             <div className="w-px h-6 bg-border" />
 
             <div className="flex flex-col">
-              <span className="text-[10px] text-text-secondary">Open Interest</span>
-              <span className="text-sm text-text font-mono">
+              <span className="text-[10px]" style={{ color: '#8888a0' }}>Open Interest</span>
+              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
                 {(market.totalLongOI + market.totalShortOI).toString()}
               </span>
             </div>
 
             <div className="flex flex-col">
-              <span className="text-[10px] text-text-secondary">Volume 24h</span>
-              <span className="text-sm text-text font-mono">$0</span>
+              <span className="text-[10px]" style={{ color: '#8888a0' }}>Volume 24h</span>
+              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>$0</span>
             </div>
 
             <div className="w-px h-6 bg-border" />
 
             <div className="flex flex-col">
-              <span className="text-[10px] text-text-secondary">Expiry</span>
-              <span className="text-sm text-text font-mono">
+              <span className="text-[10px]" style={{ color: '#8888a0' }}>Expiry</span>
+              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
                 {formatCountdown(market.expiration)}
               </span>
             </div>

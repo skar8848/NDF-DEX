@@ -76,7 +76,7 @@ export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSe
           <>
             <AssetLogo asset={selectedMarket.baseAsset} size={32} />
             <div className="flex flex-col items-start">
-              <span className="text-text font-semibold text-sm">
+              <span className="font-semibold text-sm" style={{ color: '#e4e4ed' }}>
                 {selectedMarket.baseAsset}/{selectedMarket.quoteAsset}
               </span>
               <MarketPriceLabel baseAsset={selectedMarket.baseAsset} />
@@ -123,7 +123,7 @@ export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSe
                   <AssetLogo asset={market.baseAsset} size={28} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-text text-sm font-medium">
+                      <span className="text-sm font-medium" style={{ color: '#e4e4ed' }}>
                         {market.baseAsset}/{market.quoteAsset}
                       </span>
                       {market.settled ? (
