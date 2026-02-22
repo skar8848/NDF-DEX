@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { formatPrice, formatCountdown } from '../../lib/utils'
+import { formatPrice, formatCountdown, formatExpiryDate } from '../../lib/utils'
 import { useOraclePrice } from '../../hooks/usePriceData'
 import { AssetLogo } from '../trading/MarketSelector'
 
@@ -35,7 +35,7 @@ export function MarketCard({
           <AssetLogo asset={baseAsset} size={40} />
           <div>
             <h3 className="text-text font-semibold text-base group-hover:text-primary transition-colors">
-              {baseAsset}/{quoteAsset}
+              {baseAsset}/{quoteAsset} <span className="font-normal text-text-secondary">{formatExpiryDate(expiration)}</span>
             </h3>
             <p className="text-text-secondary text-xs">Forward Contract</p>
           </div>

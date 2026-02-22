@@ -45,3 +45,16 @@ export function shortenAddress(address: string): string {
 export function cn(...classes: (string | undefined | false)[]): string {
   return classes.filter(Boolean).join(' ')
 }
+
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+export function formatExpiryDate(expiration: bigint): string {
+  const date = new Date(Number(expiration) * 1000)
+  const day = date.getDate()
+  const month = SHORT_MONTHS[date.getMonth()]
+  return `${day} ${month}`
+}
+
+export function formatMarketName(baseAsset: string, quoteAsset: string, expiration: bigint): string {
+  return `${baseAsset}/${quoteAsset} - ${formatExpiryDate(expiration)}`
+}

@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { cn } from '../../lib/utils'
-import { formatPrice } from '../../lib/utils'
+import { cn, formatPrice, formatExpiryDate } from '../../lib/utils'
 import { useOraclePrice } from '../../hooks/usePriceData'
 import type { MarketInfo } from '../../hooks/useForwardMarket'
 
@@ -77,6 +76,7 @@ export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSe
             <AssetLogo asset={selectedMarket.baseAsset} size={28} />
             <span className="font-semibold text-sm" style={{ color: '#e4e4ed' }}>
               {selectedMarket.baseAsset}/{selectedMarket.quoteAsset}
+              <span className="font-normal text-text-secondary ml-1.5">{formatExpiryDate(selectedMarket.expiration)}</span>
             </span>
           </>
         ) : (
@@ -122,6 +122,7 @@ export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSe
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium" style={{ color: '#e4e4ed' }}>
                         {market.baseAsset}/{market.quoteAsset}
+                        <span className="font-normal text-text-secondary ml-1">{formatExpiryDate(market.expiration)}</span>
                       </span>
                       {market.settled ? (
                         <span className="text-warning text-[10px] font-medium px-1.5 py-0.5 rounded bg-warning/10">

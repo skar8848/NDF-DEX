@@ -1,7 +1,7 @@
 import { useUserOpenPositions, useSettlePosition } from '../../hooks/usePositions'
 import { useAllMarkets } from '../../hooks/useForwardMarket'
 import { useOraclePrice } from '../../hooks/usePriceData'
-import { formatPrice, formatUSDC, cn } from '../../lib/utils'
+import { formatPrice, formatUSDC, formatExpiryDate, cn } from '../../lib/utils'
 import { PRICE_PRECISION, COLLATERAL_PRECISION } from '../../lib/config'
 import type { Position } from '../../hooks/usePositions'
 import type { MarketInfo } from '../../hooks/useForwardMarket'
@@ -43,7 +43,7 @@ function PositionRow({ position, market }: PositionRowProps) {
   return (
     <tr className="border-b border-border/50 hover:bg-surface-2/30 transition-colors">
       <td className="px-3 py-2.5 text-xs text-text font-medium">
-        {baseAsset}/{quoteAsset}
+        {baseAsset}/{quoteAsset}{market ? ` ${formatExpiryDate(market.expiration)}` : ''}
       </td>
       <td className="px-3 py-2.5 text-xs">
         <span
