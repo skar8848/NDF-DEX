@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useMarket, useAllMarkets, type MarketInfo } from '../hooks/useForwardMarket'
 import { useOrderBookData, type Order } from '../hooks/useOrderBook'
@@ -14,6 +14,10 @@ import { formatPrice, formatCountdown, cn } from '../lib/utils'
 
 type BottomTab = 'positions' | 'orders' | 'history'
 
+const MIN_BOTTOM = 120
+const MAX_BOTTOM = 500
+const DEFAULT_BOTTOM = 220
+
 export default function Trade() {
   const { marketId: marketIdParam } = useParams<{ marketId: string }>()
 
@@ -25,6 +29,10 @@ export default function Trade() {
   }
 
   const [bottomTab, setBottomTab] = useState<BottomTab>('positions')
+  const [bottomHeight, setBottomHeight] = useState(DEFAULT_BOTTOM)
+  const isDragging = useRef(false)
+  const startY = useRef(0)
+  const startHeight = useRef(0)
 
   const { data: marketData, isLoading: marketLoading } = useMarket(marketId)
   const { data: allMarketsData } = useAllMarkets()
@@ -34,7 +42,6 @@ export default function Trade() {
     if (!marketData) return null
     try {
       const m = marketData as MarketInfo
-      // Verify it has expected fields
       if (m.id === undefined || m.baseAsset === undefined) return null
       return m
     } catch {
@@ -83,7 +90,6 @@ export default function Trade() {
     }
   }, [bids, asks])
 
-  // Market info panel data
   const { data: priceData } = useOraclePrice(market?.baseAsset ?? '')
   const oraclePrice = useMemo(() => {
     if (!priceData) return null
@@ -93,6 +99,35 @@ export default function Trade() {
       return null
     }
   }, [priceData])
+
+  // Drag to resize bottom panel
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    isDragging.current = true
+    startY.current = e.clientY
+    startHeight.current = bottomHeight
+    document.body.style.cursor = 'row-resize'
+    document.body.style.userSelect = 'none'
+  }, [bottomHeight])
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return
+      const delta = startY.current - e.clientY
+      const newHeight = Math.min(MAX_BOTTOM, Math.max(MIN_BOTTOM, startHeight.current + delta))
+      setBottomHeight(newHeight)
+    }
+    const handleMouseUp = () => {
+      isDragging.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   if (marketLoading) {
     return (
@@ -184,8 +219,8 @@ export default function Trade() {
           </div>
         </div>
 
-        {/* Trade Form */}
-        <div className="min-h-0 overflow-y-auto">
+        {/* Trade Form - no scroll */}
+        <div className="min-h-0 overflow-hidden">
           <div className="px-3 py-2 border-b border-border">
             <h3 className="text-xs font-semibold text-text">Place Order</h3>
           </div>
@@ -193,8 +228,20 @@ export default function Trade() {
         </div>
       </div>
 
-      {/* Bottom panel: Positions / Orders / History */}
-      <div className="h-[240px] shrink-0 border-t border-border bg-surface flex flex-col">
+      {/* Resizable bottom panel */}
+      <div
+        className="shrink-0 border-t border-border bg-surface flex flex-col"
+        style={{ height: bottomHeight }}
+      >
+        {/* Drag handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className="h-1.5 cursor-row-resize bg-border/30 hover:bg-primary/30 transition-colors shrink-0 flex items-center justify-center"
+        >
+          <div className="w-8 h-0.5 bg-text-secondary/30 rounded-full" />
+        </div>
+
+        {/* Tabs */}
         <div className="flex items-center gap-1 px-3 border-b border-border shrink-0">
           {(
             [
@@ -207,7 +254,7 @@ export default function Trade() {
               key={tab.id}
               onClick={() => setBottomTab(tab.id)}
               className={cn(
-                'px-4 py-2.5 text-xs font-medium border-b-2 transition-colors cursor-pointer',
+                'px-4 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer',
                 bottomTab === tab.id
                   ? 'border-primary text-text'
                   : 'border-transparent text-text-secondary hover:text-text'

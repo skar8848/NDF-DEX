@@ -54,14 +54,12 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
     isConfirming: isApproveConfirming,
   } = useApproveUSDC()
 
-  // Fetch oracle price for market order collateral estimation
   const { data: oraclePriceData } = useOraclePrice(market?.baseAsset ?? '')
   const oraclePrice = useMemo(() => {
     if (!oraclePriceData) return 0n
     try { return (oraclePriceData as [bigint, bigint])[0] } catch { return 0n }
   }, [oraclePriceData])
 
-  // Reset form on success
   useEffect(() => {
     if (isLimitSuccess || isMarketSuccess) {
       setPriceInput('')
@@ -69,7 +67,6 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
     }
   }, [isLimitSuccess, isMarketSuccess])
 
-  // Calculate collateral required
   const collateralRequired = useMemo(() => {
     if (!market) return 0n
     const size = sizeInput ? BigInt(Math.floor(Number(sizeInput))) : 0n
@@ -78,7 +75,6 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
     const ltv = market.ltv > 0n ? market.ltv : BigInt(PERCENT_BASE)
 
     if (orderType === 'market') {
-      // Market orders use 2x oracle price for collateral (matches contract logic)
       if (oraclePrice === 0n) return 0n
       const collateral = (oraclePrice * 2n * size / BigInt(PRICE_PRECISION))
         * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
@@ -86,7 +82,6 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
     } else {
       const price = priceInput ? parsePrice(priceInput) : 0n
       if (price === 0n) return 0n
-      // Match contract formula: amount * price / PRICE_PRECISION * COLLATERAL_PRECISION * PERCENT_BASE / ltv
       const collateral = (price * size / BigInt(PRICE_PRECISION))
         * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
       return collateral
@@ -99,7 +94,6 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
   const isConfirming = isLimitConfirming || isMarketConfirming
 
   function handleApprove() {
-    // Approve max uint256
     const maxUint = 2n ** 256n - 1n
     approve(CONTRACTS.OrderBook, maxUint)
   }
@@ -131,9 +125,9 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
   }, [priceInput, sizeInput, orderType])
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full px-3 py-3 gap-2.5">
       {/* Side tabs */}
-      <div className="grid grid-cols-2 gap-1 p-1 bg-surface-2 rounded-lg mx-3 mt-3">
+      <div className="grid grid-cols-2 gap-1 p-1 bg-surface-2 rounded-lg">
         <button
           onClick={() => setSide('long')}
           className={cn(
@@ -159,7 +153,7 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
       </div>
 
       {/* Order type toggle */}
-      <div className="flex gap-1 px-3 mt-3">
+      <div className="flex gap-1">
         <button
           onClick={() => setOrderType('limit')}
           className={cn(
@@ -184,126 +178,108 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
         </button>
       </div>
 
-      {/* Form inputs */}
-      <div className="flex-1 px-3 mt-3 space-y-3">
-        {/* Price input (limit only) */}
-        {orderType === 'limit' && (
-          <div>
-            <label className="block text-xs text-text-secondary mb-1.5">Price (USD)</label>
-            <div className="relative">
-              <input
-                type="number"
-                placeholder="0.00"
-                value={priceInput}
-                onChange={(e) => setPriceInput(e.target.value)}
-                step="0.01"
-                min="0"
-                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-text-secondary/50 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">
-                USD
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Size input */}
+      {/* Price input (limit only) */}
+      {orderType === 'limit' && (
         <div>
-          <label className="block text-xs text-text-secondary mb-1.5">
-            Size (contracts)
-          </label>
+          <label className="block text-xs text-text-secondary mb-1">Price (USD)</label>
           <div className="relative">
             <input
               type="number"
-              placeholder="0"
-              value={sizeInput}
-              onChange={(e) => setSizeInput(e.target.value)}
-              step="1"
+              placeholder="0.00"
+              value={priceInput}
+              onChange={(e) => setPriceInput(e.target.value)}
+              step="0.01"
               min="0"
-              className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-text-secondary/50 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-secondary/50 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">
-              Contracts
+              USD
             </span>
           </div>
         </div>
+      )}
 
-        {/* Collateral info */}
-        <div className="bg-surface-2 rounded-lg p-3 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-text-secondary">Collateral Required</span>
-            <span className="text-text font-mono">
-              {collateralRequired > 0n ? `$${formatUSDC(collateralRequired)}` : '--'}
-            </span>
-          </div>
-          {market && (
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-text-secondary">LTV</span>
-              <span className="text-text font-mono">
-                {(Number(market.ltv) / (PERCENT_BASE / 100)).toFixed(0)}%
-              </span>
-            </div>
-          )}
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-text-secondary">Order Type</span>
-            <span className="text-text">
-              {orderType === 'market' ? 'Market (IOC)' : 'Limit'}
-            </span>
-          </div>
-          {orderType === 'market' && (
-            <p className="text-[10px] text-text-secondary/60 mt-1">
-              Fills instantly or cancels. Requires 2x oracle price collateral.
-            </p>
-          )}
+      {/* Size input */}
+      <div>
+        <label className="block text-xs text-text-secondary mb-1">Size (contracts)</label>
+        <div className="relative">
+          <input
+            type="number"
+            placeholder="0"
+            value={sizeInput}
+            onChange={(e) => setSizeInput(e.target.value)}
+            step="1"
+            min="0"
+            className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-secondary/50 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">
+            Contracts
+          </span>
         </div>
       </div>
 
-      {/* Bottom section */}
-      <div className="px-3 pb-3 mt-auto space-y-2">
-        {/* Balance */}
-        <div className="flex items-center justify-between text-xs px-1">
-          <span className="text-text-secondary">USDC Balance</span>
+      {/* Collateral + balance summary */}
+      <div className="bg-surface-2 rounded-lg p-2.5 space-y-1.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-text-secondary">Collateral</span>
+          <span className="text-text font-mono">
+            {collateralRequired > 0n ? `$${formatUSDC(collateralRequired)}` : '--'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-text-secondary flex items-center gap-1">
+            <img src="/logos/USDC_Logo.png" alt="USDC" className="w-3.5 h-3.5 rounded-full" />
+            Balance
+          </span>
           <span className="text-text font-mono">
             {isConnected ? `$${formatUSDC(balance)}` : '--'}
           </span>
         </div>
-
-        {/* Action buttons */}
-        {!isConnected ? (
-          <div className="w-full py-3 text-center text-sm text-text-secondary bg-surface-2 rounded-lg border border-border">
-            Connect wallet to trade
+        {market && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-text-secondary">LTV</span>
+            <span className="text-text font-mono">
+              {(Number(market.ltv) / (PERCENT_BASE / 100)).toFixed(0)}%
+            </span>
           </div>
-        ) : needsApproval ? (
-          <button
-            onClick={handleApprove}
-            disabled={isApprovePending || isApproveConfirming}
-            className="w-full py-3 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {isApprovePending
-              ? 'Confirm in wallet...'
-              : isApproveConfirming
-              ? 'Approving...'
-              : 'Approve USDC'}
-          </button>
-        ) : (
-          <button
-            onClick={handlePlaceOrder}
-            disabled={!isFormValid || isPending || isConfirming}
-            className={cn(
-              'w-full py-3 text-sm font-semibold rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
-              side === 'long'
-                ? 'bg-long hover:bg-long/90'
-                : 'bg-short hover:bg-short/90'
-            )}
-          >
-            {isPending
-              ? 'Confirm in wallet...'
-              : isConfirming
-              ? 'Placing order...'
-              : `${side === 'long' ? 'Long' : 'Short'} ${market?.baseAsset ?? ''}`}
-          </button>
         )}
       </div>
+
+      {/* Action button */}
+      {!isConnected ? (
+        <div className="w-full py-2.5 text-center text-sm text-text-secondary bg-surface-2 rounded-lg border border-border">
+          Connect wallet to trade
+        </div>
+      ) : needsApproval ? (
+        <button
+          onClick={handleApprove}
+          disabled={isApprovePending || isApproveConfirming}
+          className="w-full py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {isApprovePending
+            ? 'Confirm in wallet...'
+            : isApproveConfirming
+            ? 'Approving...'
+            : 'Approve USDC'}
+        </button>
+      ) : (
+        <button
+          onClick={handlePlaceOrder}
+          disabled={!isFormValid || isPending || isConfirming}
+          className={cn(
+            'w-full py-2.5 text-sm font-semibold rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
+            side === 'long'
+              ? 'bg-long hover:bg-long/90'
+              : 'bg-short hover:bg-short/90'
+          )}
+        >
+          {isPending
+            ? 'Confirm in wallet...'
+            : isConfirming
+            ? 'Placing order...'
+            : `${side === 'long' ? 'Long' : 'Short'} ${market?.baseAsset ?? ''}`}
+        </button>
+      )}
     </div>
   )
 }

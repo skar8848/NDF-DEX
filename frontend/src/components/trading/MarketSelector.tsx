@@ -5,6 +5,35 @@ import { formatPrice } from '../../lib/utils'
 import { useOraclePrice } from '../../hooks/usePriceData'
 import type { MarketInfo } from '../../hooks/useForwardMarket'
 
+const ASSET_LOGOS: Record<string, string> = {
+  ETH: '/logos/ETH_Logo.png',
+  BTC: '/logos/BTC_Logo.png',
+  AVAX: '/logos/AVAX_Logo.png',
+  USDC: '/logos/USDC_Logo.png',
+}
+
+function AssetLogo({ asset, size = 28 }: { asset: string; size?: number }) {
+  const src = ASSET_LOGOS[asset]
+  if (!src) {
+    return (
+      <div
+        className="rounded-full bg-surface-2 flex items-center justify-center text-xs font-bold text-primary shrink-0"
+        style={{ width: size, height: size }}
+      >
+        {asset.slice(0, 2)}
+      </div>
+    )
+  }
+  return (
+    <img
+      src={src}
+      alt={asset}
+      className="rounded-full shrink-0 object-cover"
+      style={{ width: size, height: size }}
+    />
+  )
+}
+
 type MarketSelectorProps = {
   markets: MarketInfo[]
   selectedMarketId: bigint
@@ -18,6 +47,8 @@ function MarketPriceLabel({ baseAsset }: { baseAsset: string }) {
   if (!price) return <span className="text-text-secondary text-xs">--</span>
   return <span className="text-text-secondary text-xs">${formatPrice(price)}</span>
 }
+
+export { AssetLogo, ASSET_LOGOS }
 
 export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -43,9 +74,7 @@ export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSe
       >
         {selectedMarket ? (
           <>
-            <div className="w-8 h-8 rounded-full bg-surface-2 flex items-center justify-center text-xs font-bold text-primary">
-              {selectedMarket.baseAsset.slice(0, 2)}
-            </div>
+            <AssetLogo asset={selectedMarket.baseAsset} size={32} />
             <div className="flex flex-col items-start">
               <span className="text-text font-semibold text-sm">
                 {selectedMarket.baseAsset}/{selectedMarket.quoteAsset}
@@ -91,9 +120,7 @@ export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSe
                     market.id === selectedMarketId && 'bg-surface-2'
                   )}
                 >
-                  <div className="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                    {market.baseAsset.slice(0, 2)}
-                  </div>
+                  <AssetLogo asset={market.baseAsset} size={28} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-text text-sm font-medium">
