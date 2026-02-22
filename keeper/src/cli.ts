@@ -524,8 +524,7 @@ async function cmdFees() {
 }
 
 async function cmdInsurance() {
-  const insuranceAddr = process.env.INSURANCE_FUND
-  if (!insuranceAddr) { console.log('  INSURANCE_FUND address not set'); return }
+  const insuranceAddr = config.addresses.insuranceFund
 
   const [balance, health] = await Promise.all([
     publicClient.readContract({
@@ -551,8 +550,7 @@ async function cmdInsurance() {
 }
 
 async function cmdVault(args: string[]) {
-  const vaultAddr = process.env.TENOR_VAULT
-  if (!vaultAddr) { console.log('  TENOR_VAULT address not set'); return }
+  const vaultAddr = config.addresses.tenorVault
 
   const subcmd = args[0]
 
@@ -617,8 +615,7 @@ async function cmdVault(args: string[]) {
 }
 
 async function cmdCollateral(args: string[]) {
-  const cmAddr = process.env.COLLATERAL_MANAGER
-  if (!cmAddr) { console.log('  COLLATERAL_MANAGER address not set'); return }
+  const cmAddr = config.addresses.collateralManager
 
   const subcmd = args[0]
 
