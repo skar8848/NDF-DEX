@@ -248,110 +248,116 @@ export default function Trade() {
         )}
       </div>
 
-      {/* Main grid: Chart + OrderBook + TradeForm */}
-      <div className="flex-1 grid grid-cols-[1fr_240px_280px] min-h-0">
-        {/* Price Chart */}
-        <div className="border-r border-border min-h-0 overflow-hidden">
-          <ErrorBoundary fallback={<div className="flex items-center justify-center h-full text-text-secondary text-sm">Chart unavailable</div>}>
-            {market ? (
-              <PriceChart baseAsset={market.baseAsset} />
-            ) : (
-              <div className="flex items-center justify-center h-full text-text-secondary text-sm">
-                Select a market to view chart
-              </div>
-            )}
-          </ErrorBoundary>
-        </div>
-
-        {/* Order Book / Trades */}
-        <div className="border-r border-border min-h-0 overflow-hidden flex flex-col">
-          <div className="flex items-center gap-1 px-2 border-b border-border shrink-0">
-            {([
-              { id: 'book', label: 'Order Book' },
-              { id: 'trades', label: 'Trades' },
-            ] as const).map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setMidTab(tab.id)}
-                className={cn(
-                  'px-2.5 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer',
-                  midTab === tab.id
-                    ? 'border-primary text-text'
-                    : 'border-transparent text-text-secondary hover:text-text'
+      {/* Main content: left section + trade form */}
+      <div className="flex-1 flex min-h-0">
+        {/* Left: Chart + OrderBook + Bottom panel */}
+        <div className="flex-1 flex flex-col min-h-0 min-w-0">
+          {/* Chart + OrderBook row */}
+          <div className="flex-1 flex min-h-0">
+            {/* Price Chart */}
+            <div className="flex-1 border-r border-border min-h-0 overflow-hidden">
+              <ErrorBoundary fallback={<div className="flex items-center justify-center h-full text-text-secondary text-sm">Chart unavailable</div>}>
+                {market ? (
+                  <PriceChart baseAsset={market.baseAsset} />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-text-secondary text-sm">
+                    Select a market to view chart
+                  </div>
                 )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1 min-h-0 overflow-hidden">
-            {midTab === 'book' ? (
-              <OrderBookComponent
-                bids={orderBookLevels.bids}
-                asks={orderBookLevels.asks}
-                markPrice={markPrice}
-                onPriceClick={(price) => setExternalPrice(price)}
-              />
-            ) : (
-              <div className="h-full overflow-auto no-scrollbar">
-                <TradeHistory />
+              </ErrorBoundary>
+            </div>
+
+            {/* Order Book / Trades */}
+            <div className="w-[240px] shrink-0 border-r border-border min-h-0 overflow-hidden flex flex-col">
+              <div className="flex items-center gap-1 px-2 border-b border-border shrink-0">
+                {([
+                  { id: 'book', label: 'Order Book' },
+                  { id: 'trades', label: 'Trades' },
+                ] as const).map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setMidTab(tab.id)}
+                    className={cn(
+                      'px-2.5 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer',
+                      midTab === tab.id
+                        ? 'border-primary text-text'
+                        : 'border-transparent text-text-secondary hover:text-text'
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
-            )}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {midTab === 'book' ? (
+                  <OrderBookComponent
+                    bids={orderBookLevels.bids}
+                    asks={orderBookLevels.asks}
+                    markPrice={markPrice}
+                    onPriceClick={(price) => setExternalPrice(price)}
+                  />
+                ) : (
+                  <div className="h-full overflow-auto no-scrollbar">
+                    <TradeHistory />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom panel: Positions / Orders / History */}
+          <div
+            className="shrink-0 border-t border-border bg-surface flex flex-col"
+            style={{ height: bottomHeight }}
+          >
+            {/* Drag handle */}
+            <div
+              onMouseDown={handleMouseDown}
+              className="h-1.5 cursor-row-resize bg-border/30 hover:bg-primary/30 transition-colors shrink-0 flex items-center justify-center"
+            >
+              <div className="w-8 h-0.5 bg-text-secondary/30 rounded-full" />
+            </div>
+
+            {/* Tabs */}
+            <div className="flex items-center gap-1 px-3 border-b border-border shrink-0">
+              {(
+                [
+                  { id: 'positions', label: 'Positions' },
+                  { id: 'orders', label: 'Open Orders' },
+                  { id: 'history', label: 'Order History' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setBottomTab(tab.id)}
+                  className={cn(
+                    'px-4 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer',
+                    bottomTab === tab.id
+                      ? 'border-primary text-text'
+                      : 'border-transparent text-text-secondary hover:text-text'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex-1 overflow-auto no-scrollbar">
+              <ErrorBoundary>
+                {bottomTab === 'positions' && <PositionTable />}
+                {bottomTab === 'orders' && <OrderHistory />}
+                {bottomTab === 'history' && <OrderHistory />}
+              </ErrorBoundary>
+            </div>
           </div>
         </div>
 
-        {/* Trade Form - no scroll */}
-        <div className="min-h-0 overflow-hidden">
+        {/* Trade Form - full height right column, scrollable */}
+        <div className="w-[280px] shrink-0 border-l border-border overflow-y-auto no-scrollbar">
           <div className="px-3 py-2 border-b border-border">
             <h3 className="text-xs font-semibold text-text">Place Order</h3>
           </div>
           <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} bestBid={bestBid} bestAsk={bestAsk} bookDepthAsk={bookDepthAsk} bookDepthBid={bookDepthBid} />
-        </div>
-      </div>
-
-      {/* Resizable bottom panel */}
-      <div
-        className="shrink-0 border-t border-border bg-surface flex flex-col"
-        style={{ height: bottomHeight }}
-      >
-        {/* Drag handle */}
-        <div
-          onMouseDown={handleMouseDown}
-          className="h-1.5 cursor-row-resize bg-border/30 hover:bg-primary/30 transition-colors shrink-0 flex items-center justify-center"
-        >
-          <div className="w-8 h-0.5 bg-text-secondary/30 rounded-full" />
-        </div>
-
-        {/* Tabs */}
-        <div className="flex items-center gap-1 px-3 border-b border-border shrink-0">
-          {(
-            [
-              { id: 'positions', label: 'Positions' },
-              { id: 'orders', label: 'Open Orders' },
-              { id: 'history', label: 'Order History' },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setBottomTab(tab.id)}
-              className={cn(
-                'px-4 py-2 text-xs font-medium border-b-2 transition-colors cursor-pointer',
-                bottomTab === tab.id
-                  ? 'border-primary text-text'
-                  : 'border-transparent text-text-secondary hover:text-text'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex-1 overflow-auto no-scrollbar">
-          <ErrorBoundary>
-            {bottomTab === 'positions' && <PositionTable />}
-            {bottomTab === 'orders' && <OrderHistory />}
-            {bottomTab === 'history' && <OrderHistory />}
-          </ErrorBoundary>
         </div>
       </div>
     </div>
