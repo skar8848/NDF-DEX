@@ -133,7 +133,7 @@ function printPositions(positions: any[], title: string) {
     const market = String(p.marketId).padStart(5)
     const side = (p.side === 0 ? 'LONG' : 'SHORT').padEnd(7)
     const entry = ('$' + fmtPrice(p.entryPrice)).padStart(13)
-    const size = fmtUsdc(p.size).padStart(12)
+    const size = String(p.size).padStart(12)
     const coll = ('$' + fmtUsdc(p.collateral)).padStart(12)
     const opened = fmtDate(p.timestamp)
     console.log(`  ${id}  ${trader}${market}  ${side}${entry}${size}${coll}   ${opened}`)
@@ -166,7 +166,7 @@ async function cmdPosition(args: string[]) {
   console.log(`  Trader:       ${p.trader}`)
   console.log(`  Side:         ${p.side === 0 ? 'LONG' : 'SHORT'}`)
   console.log(`  Entry Price:  $${fmtPrice(p.entryPrice)}`)
-  console.log(`  Size:         ${fmtUsdc(p.size)}`)
+  console.log(`  Size:         ${p.size} contracts`)
   console.log(`  Collateral:   $${fmtUsdc(p.collateral)}`)
   console.log(`  Health:       ${(Number(health) / 100).toFixed(2)}%`)
   console.log(`  Take Profit:  ${tp.takeProfitPrice > 0n ? '$' + fmtPrice(tp.takeProfitPrice) : 'Not set'}`)
@@ -196,20 +196,29 @@ async function cmdTrade(args: string[]) {
   const market = markets.find(m => m.baseAsset.toUpperCase() === asset)
   if (!market) die(`No market found for asset: ${asset}. Available: ${markets.map(m => m.baseAsset).join(', ')}`)
 
-  const amountRaw = parseUnits(String(amount), USDC_DECIMALS)
+  // amount = number of contracts (raw), not USDC
+  const amountRaw = BigInt(Math.floor(amount))
 
-  // Approve USDC spending on OrderBook
+  // Estimate collateral: amount * price / PRICE_PRECISION * COLLATERAL_PRECISION * PERCENT_BASE / ltv
+  const priceForCalc = isMarket
+    ? (await oracleContract.read.getPrice([asset]))[0]
+    : parseUnits(String(parseFloat(priceFlag!)), PRICE_DECIMALS)
+  const collateralEstimate = amountRaw * priceForCalc / config.PRICE_PRECISION
+    * config.COLLATERAL_PRECISION * config.PERCENT_BASE / market.ltv
+  console.log(`  Estimated collateral: $${fmtUsdc(collateralEstimate)}`)
+
+  // Approve USDC spending on OrderBook (enough for collateral)
   console.log(`  Approving USDC spend...`)
   const approveHash = await walletClient.writeContract({
     address: config.addresses.mockUsdc,
     abi: MockUsdcABI,
     functionName: 'approve',
-    args: [config.addresses.orderBook, amountRaw * 10n], // generous approval
+    args: [config.addresses.orderBook, collateralEstimate * 2n],
   })
   await waitTx(approveHash)
 
   if (isMarket) {
-    console.log(`  Placing MARKET order: ${side === 0 ? 'LONG' : 'SHORT'} ${asset} size=${amount}`)
+    console.log(`  Placing MARKET order: ${side === 0 ? 'LONG' : 'SHORT'} ${asset} x${amount} contracts`)
     const hash = await walletClient.writeContract({
       address: config.addresses.orderBook,
       abi: OrderBookABI,
@@ -222,7 +231,7 @@ async function cmdTrade(args: string[]) {
     if (isNaN(price) || price <= 0) die('Invalid price')
     const priceRaw = parseUnits(String(price), PRICE_DECIMALS)
 
-    console.log(`  Placing LIMIT order: ${side === 0 ? 'LONG' : 'SHORT'} ${asset} size=${amount} @ $${price}`)
+    console.log(`  Placing LIMIT order: ${side === 0 ? 'LONG' : 'SHORT'} ${asset} x${amount} @ $${price}`)
     const hash = await walletClient.writeContract({
       address: config.addresses.orderBook,
       abi: OrderBookABI,
@@ -247,10 +256,9 @@ async function cmdClose(args: string[]) {
     if (isNaN(pct) || pct < 1 || pct > 100) die('--percent must be between 1 and 100')
 
     if (pct < 100) {
-      // Fetch position to calculate partial size
       const pos = await positionManager.read.getPosition([positionId]) as any
       closeSize = (pos.size * BigInt(pct)) / 100n
-      console.log(`  Closing ${pct}% of position #${positionId} (size: ${fmtUsdc(closeSize)})`)
+      console.log(`  Closing ${pct}% of position #${positionId} (${closeSize} of ${pos.size} contracts)`)
     } else {
       console.log(`  Closing 100% of position #${positionId}`)
     }

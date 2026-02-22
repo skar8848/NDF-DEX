@@ -41,7 +41,6 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   const [dismissed1CT, setDismissed1CT] = useState(false)
   const [slippageBps, setSlippageBps] = useState(50) // 0.5% default
   const [showSlippageMenu, setShowSlippageMenu] = useState(false)
-  const [showTPSL, setShowTPSL] = useState(false)
   const [tpInput, setTpInput] = useState('')
   const [slInput, setSlInput] = useState('')
 
@@ -131,7 +130,6 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
       setSizeInput('')
       setTpInput('')
       setSlInput('')
-      setShowTPSL(false)
     }
   }, [isLimitSuccess, isMarketSuccess])
 
@@ -393,6 +391,41 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">USD</span>
           </div>
+          {/* Price slider ±20% around oracle */}
+          {oraclePrice > 0n && (() => {
+            const oracleNum = Number(oraclePrice) / PRICE_PRECISION
+            const sliderMin = oracleNum * 0.8
+            const sliderMax = oracleNum * 1.2
+            const priceNum = priceInput ? Number(priceInput) : oracleNum
+            const clampedVal = Math.max(sliderMin, Math.min(sliderMax, priceNum))
+            return (
+              <div className="mt-2">
+                <input
+                  type="range"
+                  min={sliderMin}
+                  max={sliderMax}
+                  step={oracleNum >= 100 ? 0.1 : 0.001}
+                  value={clampedVal}
+                  onChange={(e) => {
+                    const v = Number(e.target.value)
+                    setPriceInput(oracleNum >= 100 ? v.toFixed(2) : v.toFixed(4))
+                  }}
+                  className={cn(
+                    'w-full h-1 rounded-full appearance-none cursor-pointer',
+                    '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-sm',
+                    side === 'long'
+                      ? 'bg-long/20 [&::-webkit-slider-thumb]:bg-long'
+                      : 'bg-short/20 [&::-webkit-slider-thumb]:bg-short'
+                  )}
+                />
+                <div className="flex justify-between text-[9px] text-text-secondary mt-0.5">
+                  <span>${sliderMin.toFixed(2)}</span>
+                  <span className="text-text-secondary/50">Oracle: ${oracleNum.toFixed(2)}</span>
+                  <span>${sliderMax.toFixed(2)}</span>
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 
@@ -460,6 +493,70 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
             </div>
           </div>
         )}
+      </div>
+
+      {/* TP/SL Section — always visible */}
+      <div className="space-y-2">
+        <span className="text-xs text-text-secondary font-medium">TP / SL</span>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <label className="block text-[10px] text-long mb-0.5">Take Profit</label>
+            <input
+              type="number"
+              placeholder={side === 'long' ? 'Above entry' : 'Below entry'}
+              value={tpInput}
+              onChange={(e) => setTpInput(e.target.value)}
+              step="0.01"
+              min="0"
+              className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs text-text placeholder:text-text-secondary/40 focus:outline-none focus:border-long transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-[10px] text-short mb-0.5">Stop Loss</label>
+            <input
+              type="number"
+              placeholder={side === 'long' ? 'Below entry' : 'Above entry'}
+              value={slInput}
+              onChange={(e) => setSlInput(e.target.value)}
+              step="0.01"
+              min="0"
+              className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs text-text placeholder:text-text-secondary/40 focus:outline-none focus:border-short transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+        </div>
+        {/* Estimated gain/loss display */}
+        <div className="flex gap-2">
+          <div className="flex-1 text-[10px] font-mono">
+            {(() => {
+              if (!tpInput || effectivePrice === 0n || !sizeInput || collateralRequired === 0n) return <span className="text-text-secondary">--</span>
+              const tpPrice = parsePrice(tpInput)
+              if (tpPrice === 0n) return <span className="text-text-secondary">--</span>
+              const diff = side === 'long' ? tpPrice - effectivePrice : effectivePrice - tpPrice
+              const gain = Number(diff * BigInt(Math.floor(Number(sizeInput))) * BigInt(COLLATERAL_PRECISION) / BigInt(PRICE_PRECISION)) / COLLATERAL_PRECISION
+              const roe = (gain / (Number(collateralRequired) / COLLATERAL_PRECISION)) * 100
+              return (
+                <span className="text-long">
+                  +${gain.toFixed(2)} (+{roe.toFixed(1)}%)
+                </span>
+              )
+            })()}
+          </div>
+          <div className="flex-1 text-[10px] font-mono">
+            {(() => {
+              if (!slInput || effectivePrice === 0n || !sizeInput || collateralRequired === 0n) return <span className="text-text-secondary">--</span>
+              const slPrice = parsePrice(slInput)
+              if (slPrice === 0n) return <span className="text-text-secondary">--</span>
+              const diff = side === 'long' ? effectivePrice - slPrice : slPrice - effectivePrice
+              const loss = Number(diff * BigInt(Math.floor(Number(sizeInput))) * BigInt(COLLATERAL_PRECISION) / BigInt(PRICE_PRECISION)) / COLLATERAL_PRECISION
+              const roe = (loss / (Number(collateralRequired) / COLLATERAL_PRECISION)) * 100
+              return (
+                <span className="text-short">
+                  -${loss.toFixed(2)} (-{roe.toFixed(1)}%)
+                </span>
+              )
+            })()}
+          </div>
+        </div>
       </div>
 
       {/* Summary box */}
@@ -610,59 +707,6 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         )}
       </div>
 
-      {/* TP/SL Section */}
-      <div>
-        <button
-          onClick={() => setShowTPSL(!showTPSL)}
-          className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text transition-colors cursor-pointer"
-        >
-          <svg
-            className={cn('w-3 h-3 transition-transform', showTPSL && 'rotate-90')}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-          TP / SL
-          {(tpInput || slInput) && (
-            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-          )}
-        </button>
-
-        {showTPSL && (
-          <div className="mt-2 space-y-2">
-            <div>
-              <label className="block text-[10px] text-long mb-0.5">Take Profit (USD)</label>
-              <input
-                type="number"
-                placeholder={side === 'long' ? 'Above entry price' : 'Below entry price'}
-                value={tpInput}
-                onChange={(e) => setTpInput(e.target.value)}
-                step="0.01"
-                min="0"
-                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-secondary/40 focus:outline-none focus:border-long transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] text-short mb-0.5">Stop Loss (USD)</label>
-              <input
-                type="number"
-                placeholder={side === 'long' ? 'Below entry price' : 'Above entry price'}
-                value={slInput}
-                onChange={(e) => setSlInput(e.target.value)}
-                step="0.01"
-                min="0"
-                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-secondary/40 focus:outline-none focus:border-short transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-            </div>
-            <p className="text-[9px] text-text-secondary/60 leading-snug">
-              TP/SL will be set automatically after your position is opened. The keeper bot monitors and triggers them.
-            </p>
-          </div>
-        )}
-      </div>
 
       {/* Price warning */}
       {priceWarning && (

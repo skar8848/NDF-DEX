@@ -17,14 +17,14 @@ export const avalancheFuji = defineChain({
   testnet: true,
 })
 
-// Deployed on Avalanche Fuji Testnet — v3 Chainlink Oracle + TP/SL + closePosition
+// Deployed on Avalanche Fuji Testnet — v4 Chainlink Oracle + TP/SL + closePosition
 export const CONTRACTS = {
-  MockUSDC: '0x9d3BeD39165c91a8F056FCF317E6fd70dbEeCe6F' as `0x${string}`,
-  MockWETH: '0x8b4c8156b9740b0C8cd4CC73A63056fa2A470452' as `0x${string}`,
-  MockOracle: '0x9d0a00Fb789687dCDd09245Cd507faAed4db1bA1' as `0x${string}`, // ChainlinkOracle (same getPrice interface)
-  ForwardMarket: '0x57D34869d4c13043fA99fEd63EB95B252cb70685' as `0x${string}`,
-  OrderBook: '0xD3d69b216207AA3580EDC3C1a610DA8c3d86543b' as `0x${string}`,
-  PositionManager: '0xB2FA1e681616c63E242c17323D80BaDAa0B0Ed27' as `0x${string}`,
+  MockUSDC: '0xA41BCF380ff358c849619538fda0Dd38214E019d' as `0x${string}`,
+  MockWETH: '0xC2DFD7581C9D27ac195C3873f12b93e7eCd4B24c' as `0x${string}`,
+  MockOracle: '0x23196688CDc03348d712BBc2E74CeA4Eea1e60EB' as `0x${string}`, // ChainlinkOracle (same getPrice interface)
+  ForwardMarket: '0x281dc4C64D2BF3508bA2670897f321a31F5e1e65' as `0x${string}`,
+  OrderBook: '0x74AeE1AdBcE40B984beA4B09deAf581c6139cbC9' as `0x${string}`,
+  PositionManager: '0xAB6b565384773C70da8D9e254aFB4B59d710eaD7' as `0x${string}`,
 } as const
 
 export const PRICE_PRECISION = 1e8

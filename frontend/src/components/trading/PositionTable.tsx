@@ -96,16 +96,14 @@ function PositionRow({ position, market, selected, onToggle, onClose, onTPSL }: 
       <td className="px-3 py-2.5 text-xs text-text font-mono">${formatUSDC(position.collateral)}</td>
       <td className="px-3 py-2.5 text-xs font-mono">
         {pnlNum !== null ? (
-          <div className="flex flex-col">
-            <span className={cn(pnlNum >= 0 ? 'text-long' : 'text-short')}>
-              {pnlNum >= 0 ? '+' : ''}${pnlNum.toFixed(2)}
-            </span>
+          <span className={cn(pnlNum >= 0 ? 'text-long' : 'text-short')}>
+            {pnlNum >= 0 ? '+' : ''}${pnlNum.toFixed(2)}
             {roe !== null && (
-              <span className={cn('text-[10px]', roe >= 0 ? 'text-long/70' : 'text-short/70')}>
-                {roe >= 0 ? '+' : ''}{roe.toFixed(2)}% ROE
+              <span className="opacity-70 text-[10px] ml-1">
+                ({roe >= 0 ? '+' : ''}{roe.toFixed(2)}%)
               </span>
             )}
-          </div>
+          </span>
         ) : (
           <span className="text-text-secondary">--</span>
         )}
