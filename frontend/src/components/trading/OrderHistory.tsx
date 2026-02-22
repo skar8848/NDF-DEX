@@ -17,6 +17,12 @@ const ORDER_STATUS_COLORS: Record<number, string> = {
   3: 'text-text-secondary bg-surface-2',
 }
 
+// Market orders use extreme prices: uint256.max/2 for LONG, 1 for SHORT
+const MARKET_ORDER_THRESHOLD = BigInt('1000000000000000000') // 10^18 — any price above this is clearly a market order
+function isMarketOrder(order: Order): boolean {
+  return order.price > MARKET_ORDER_THRESHOLD || order.price <= 1n
+}
+
 function OrderRow({ order }: { order: Order }) {
   const { cancelOrder, isPending, isConfirming } = useCancelOrder()
 
@@ -25,6 +31,7 @@ function OrderRow({ order }: { order: Order }) {
     order.amount > 0n
       ? Number((order.filled * 100n) / order.amount)
       : 0
+  const isMkt = isMarketOrder(order)
 
   return (
     <tr className="border-b border-border/50 hover:bg-surface-2/30 transition-colors">
@@ -32,19 +39,26 @@ function OrderRow({ order }: { order: Order }) {
         #{order.id.toString()}
       </td>
       <td className="px-3 py-2.5 text-xs">
-        <span
-          className={cn(
-            'px-2 py-0.5 rounded text-[10px] font-semibold',
-            order.side === 0
-              ? 'bg-long/10 text-long'
-              : 'bg-short/10 text-short'
+        <div className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              'px-2 py-0.5 rounded text-[10px] font-semibold',
+              order.side === 0
+                ? 'bg-long/10 text-long'
+                : 'bg-short/10 text-short'
+            )}
+          >
+            {order.side === 0 ? 'LONG' : 'SHORT'}
+          </span>
+          {isMkt && (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-primary/10 text-primary">
+              MKT
+            </span>
           )}
-        >
-          {order.side === 0 ? 'LONG' : 'SHORT'}
-        </span>
+        </div>
       </td>
       <td className="px-3 py-2.5 text-xs text-text font-mono">
-        ${formatPrice(order.price)}
+        {isMkt ? <span className="text-text-secondary italic">Market</span> : `$${formatPrice(order.price)}`}
       </td>
       <td className="px-3 py-2.5 text-xs text-text font-mono">
         {order.amount.toString()}

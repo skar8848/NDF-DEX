@@ -7,6 +7,7 @@ import {
   useUSDCBalance,
   useUSDCAllowance,
 } from '../../hooks/useOrderBook'
+import { useOraclePrice } from '../../hooks/usePriceData'
 import { CONTRACTS, PRICE_PRECISION, COLLATERAL_PRECISION, PERCENT_BASE } from '../../lib/config'
 import { formatUSDC, parsePrice } from '../../lib/utils'
 import { cn } from '../../lib/utils'
@@ -53,6 +54,13 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
     isConfirming: isApproveConfirming,
   } = useApproveUSDC()
 
+  // Fetch oracle price for market order collateral estimation
+  const { data: oraclePriceData } = useOraclePrice(market?.baseAsset ?? '')
+  const oraclePrice = useMemo(() => {
+    if (!oraclePriceData) return 0n
+    try { return (oraclePriceData as [bigint, bigint])[0] } catch { return 0n }
+  }, [oraclePriceData])
+
   // Reset form on success
   useEffect(() => {
     if (isLimitSuccess || isMarketSuccess) {
@@ -62,22 +70,28 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
   }, [isLimitSuccess, isMarketSuccess])
 
   // Calculate collateral required
-  // collateral = (price * size * ltv) / (PRICE_PRECISION * PERCENT_BASE)
-  // Simplified: the contract handles actual collateral calculation,
-  // but we estimate for display. Collateral = (price * size) / PRICE_PRECISION * (ltv / PERCENT_BASE)
-  // In USDC terms (6 decimals)
   const collateralRequired = useMemo(() => {
     if (!market) return 0n
-    const price = priceInput ? parsePrice(priceInput) : 0n
     const size = sizeInput ? BigInt(Math.floor(Number(sizeInput))) : 0n
-    if (price === 0n || size === 0n) return 0n
+    if (size === 0n) return 0n
 
-    // Match contract formula: amount * price / PRICE_PRECISION * COLLATERAL_PRECISION * PERCENT_BASE / ltv
     const ltv = market.ltv > 0n ? market.ltv : BigInt(PERCENT_BASE)
-    const collateral = (price * size / BigInt(PRICE_PRECISION))
-      * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
-    return collateral
-  }, [priceInput, sizeInput, market])
+
+    if (orderType === 'market') {
+      // Market orders use 2x oracle price for collateral (matches contract logic)
+      if (oraclePrice === 0n) return 0n
+      const collateral = (oraclePrice * 2n * size / BigInt(PRICE_PRECISION))
+        * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
+      return collateral
+    } else {
+      const price = priceInput ? parsePrice(priceInput) : 0n
+      if (price === 0n) return 0n
+      // Match contract formula: amount * price / PRICE_PRECISION * COLLATERAL_PRECISION * PERCENT_BASE / ltv
+      const collateral = (price * size / BigInt(PRICE_PRECISION))
+        * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
+      return collateral
+    }
+  }, [priceInput, sizeInput, market, orderType, oraclePrice])
 
   const needsApproval = collateralRequired > 0n && allowance < collateralRequired
 
@@ -232,8 +246,15 @@ export function TradeForm({ marketId, market }: TradeFormProps) {
           )}
           <div className="flex items-center justify-between text-xs">
             <span className="text-text-secondary">Order Type</span>
-            <span className="text-text capitalize">{orderType}</span>
+            <span className="text-text">
+              {orderType === 'market' ? 'Market (IOC)' : 'Limit'}
+            </span>
           </div>
+          {orderType === 'market' && (
+            <p className="text-[10px] text-text-secondary/60 mt-1">
+              Fills instantly or cancels. Requires 2x oracle price collateral.
+            </p>
+          )}
         </div>
       </div>
 
