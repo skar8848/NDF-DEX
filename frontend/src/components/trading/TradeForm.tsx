@@ -130,6 +130,53 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     setPrevPositionCount(matching.length)
   }, [openPositionsData, marketId])
 
+  useEffect(() => {
+    if (isLimitSuccess || isMarketSuccess) {
+      setPriceInput('')
+      setSizeInput('')
+      setTpInput('')
+      setSlInput('')
+      setTpGainInput('')
+      setSlLossInput('')
+    }
+  }, [isLimitSuccess, isMarketSuccess])
+
+  useEffect(() => {
+    if (externalPrice) {
+      setPriceInput(externalPrice)
+      setOrderType('limit')
+      onExternalPriceConsumed?.()
+    }
+  }, [externalPrice, onExternalPriceConsumed])
+
+  // Reset dismissed state when wallet disconnects
+  useEffect(() => {
+    if (!isConnected) setDismissed1CT(false)
+  }, [isConnected])
+
+  // Effective price for calculations (limit price or oracle for market)
+  const effectivePrice = useMemo(() => {
+    if (orderType === 'market') return oraclePrice
+    return priceInput ? parsePrice(priceInput) : 0n
+  }, [orderType, priceInput, oraclePrice])
+
+  const collateralRequired = useMemo(() => {
+    if (!market) return 0n
+    const size = sizeInput ? BigInt(Math.floor(Number(sizeInput))) : 0n
+    if (size === 0n) return 0n
+    const ltv = market.ltv > 0n ? market.ltv : BigInt(PERCENT_BASE)
+    if (orderType === 'market') {
+      if (oraclePrice === 0n) return 0n
+      return (oraclePrice * 2n * size / BigInt(PRICE_PRECISION))
+        * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
+    } else {
+      const price = priceInput ? parsePrice(priceInput) : 0n
+      if (price === 0n) return 0n
+      return (price * size / BigInt(PRICE_PRECISION))
+        * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
+    }
+  }, [priceInput, sizeInput, market, orderType, oraclePrice])
+
   // TP: when gain input changes, compute TP price
   useEffect(() => {
     if (tpLastEdited !== 'gain' || !tpGainInput || effectivePrice === 0n || !sizeInput) return
@@ -141,7 +188,6 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     if (tpGainMode === 'pct' && collateralRequired > 0n) {
       gainUsd = (gainVal / 100) * (Number(collateralRequired) / COLLATERAL_PRECISION)
     }
-    // gain = diff * size * CP / PP → diff = gain * PP / (size * CP)
     const diff = (gainUsd * PRICE_PRECISION) / (size * COLLATERAL_PRECISION)
     const entryNum = Number(effectivePrice) / PRICE_PRECISION
     const tpPrice = side === 'long' ? entryNum + diff : entryNum - diff
@@ -194,53 +240,6 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
       setSlLossInput(loss > 0 ? loss.toFixed(2) : '')
     }
   }, [slInput, slLastEdited, effectivePrice, sizeInput, collateralRequired, slLossMode])
-
-  useEffect(() => {
-    if (isLimitSuccess || isMarketSuccess) {
-      setPriceInput('')
-      setSizeInput('')
-      setTpInput('')
-      setSlInput('')
-      setTpGainInput('')
-      setSlLossInput('')
-    }
-  }, [isLimitSuccess, isMarketSuccess])
-
-  useEffect(() => {
-    if (externalPrice) {
-      setPriceInput(externalPrice)
-      setOrderType('limit')
-      onExternalPriceConsumed?.()
-    }
-  }, [externalPrice, onExternalPriceConsumed])
-
-  // Reset dismissed state when wallet disconnects
-  useEffect(() => {
-    if (!isConnected) setDismissed1CT(false)
-  }, [isConnected])
-
-  // Effective price for calculations (limit price or oracle for market)
-  const effectivePrice = useMemo(() => {
-    if (orderType === 'market') return oraclePrice
-    return priceInput ? parsePrice(priceInput) : 0n
-  }, [orderType, priceInput, oraclePrice])
-
-  const collateralRequired = useMemo(() => {
-    if (!market) return 0n
-    const size = sizeInput ? BigInt(Math.floor(Number(sizeInput))) : 0n
-    if (size === 0n) return 0n
-    const ltv = market.ltv > 0n ? market.ltv : BigInt(PERCENT_BASE)
-    if (orderType === 'market') {
-      if (oraclePrice === 0n) return 0n
-      return (oraclePrice * 2n * size / BigInt(PRICE_PRECISION))
-        * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
-    } else {
-      const price = priceInput ? parsePrice(priceInput) : 0n
-      if (price === 0n) return 0n
-      return (price * size / BigInt(PRICE_PRECISION))
-        * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
-    }
-  }, [priceInput, sizeInput, market, orderType, oraclePrice])
 
   // Max affordable contracts
   const maxSize = useMemo(() => {
