@@ -11,9 +11,9 @@ export const config = {
   keeperPrivateKey: env('KEEPER_PRIVATE_KEY') as `0x${string}`,
 
   addresses: {
-    positionManager: env('POSITION_MANAGER', '0xEC53377E2af877728C51d870b087C3A11f08DFb2') as `0x${string}`,
-    forwardMarket: env('FORWARD_MARKET', '0x567f4510e306C6aFB339cF802b8D6a9d0b3fdea8') as `0x${string}`,
-    mockOracle: env('MOCK_ORACLE', '0xF5Cd6da71aDDB47C13e2D77A52FdD2364E301ACC') as `0x${string}`,
+    positionManager: env('POSITION_MANAGER', '0x7382edf36a1F21c10034420dda830731f76c50Ba') as `0x${string}`,
+    forwardMarket: env('FORWARD_MARKET', '0x105C4379B18FA68629d687B0778e7431675B29Aa') as `0x${string}`,
+    mockOracle: env('MOCK_ORACLE', '0xD1f5765cA1B513DF995055D17a5b3e9Ba1C32043') as `0x${string}`,
   },
 
   pollIntervalMs: Number(env('POLL_INTERVAL_MS', '5000')),
