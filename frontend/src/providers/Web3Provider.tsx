@@ -1,4 +1,4 @@
-import { WagmiProvider, http } from 'wagmi'
+import { WagmiProvider, http, fallback } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rainbowkit'
 import '@rainbow-me/rainbowkit/styles.css'
@@ -10,7 +10,11 @@ const config = getDefaultConfig({
   projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '21fef48091f12692cad574a6f7753643',
   chains: [avalancheFuji],
   transports: {
-    [avalancheFuji.id]: http('https://api.avax-test.network/ext/bc/C/rpc'),
+    [avalancheFuji.id]: fallback([
+      http('https://avalanche-fuji-c-chain-rpc.publicnode.com'),
+      http('https://avalanche-fuji.drpc.org'),
+      http('https://api.avax-test.network/ext/bc/C/rpc'),
+    ]),
   },
 })
 

@@ -9,7 +9,7 @@ export const avalancheFuji = defineChain({
     symbol: 'AVAX',
   },
   rpcUrls: {
-    default: { http: ['https://api.avax-test.network/ext/bc/C/rpc'] },
+    default: { http: ['https://avalanche-fuji-c-chain-rpc.publicnode.com'] },
   },
   blockExplorers: {
     default: { name: 'SnowTrace', url: 'https://testnet.snowtrace.io' },
