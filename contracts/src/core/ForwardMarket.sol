@@ -30,7 +30,7 @@ contract ForwardMarket is IForwardMarket {
         uint256 ltv,
         uint256 liquidationThreshold,
         uint256 minCollateral
-    ) external returns (uint256 marketId) {
+    ) external onlyOwner returns (uint256 marketId) {
         require(expiration > block.timestamp, "ForwardMarket: expiration in past");
         require(ltv > 0 && ltv <= 10000, "ForwardMarket: invalid ltv");
         require(liquidationThreshold > 0 && liquidationThreshold <= 10000, "ForwardMarket: invalid threshold");

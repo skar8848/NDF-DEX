@@ -2,12 +2,15 @@
 pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {OrderLib} from "../libraries/OrderLib.sol";
 import {MathLib} from "../libraries/MathLib.sol";
 import {ForwardMarket} from "./ForwardMarket.sol";
 import {PositionManager} from "./PositionManager.sol";
 
-contract OrderBook {
+contract OrderBook is ReentrancyGuard {
+    using SafeERC20 for IERC20;
     ForwardMarket public forwardMarket;
     PositionManager public positionManager;
     IERC20 public collateralToken; // USDC
@@ -85,7 +88,7 @@ contract OrderBook {
         OrderLib.Side side,
         uint256 price,
         uint256 amount
-    ) external {
+    ) external nonReentrant {
         OrderLib.MarketInfo memory market = forwardMarket.getMarket(marketId);
         require(!market.settled, "OrderBook: market settled");
         require(block.timestamp < market.expiration, "OrderBook: market expired");
@@ -98,7 +101,7 @@ contract OrderBook {
         require(collateral >= market.minCollateral, "OrderBook: below min collateral");
 
         // Transfer collateral from trader
-        collateralToken.transferFrom(msg.sender, address(this), collateral);
+        collateralToken.safeTransferFrom(msg.sender, address(this), collateral);
 
         uint256 orderId = _nextOrderId++;
         orders[orderId] = OrderLib.Order({
@@ -135,7 +138,7 @@ contract OrderBook {
         uint256 marketId,
         OrderLib.Side side,
         uint256 amount
-    ) external {
+    ) external nonReentrant {
         OrderLib.MarketInfo memory market = forwardMarket.getMarket(marketId);
         require(!market.settled, "OrderBook: market settled");
         require(block.timestamp < market.expiration, "OrderBook: market expired");
@@ -155,7 +158,7 @@ contract OrderBook {
             * MathLib.COLLATERAL_PRECISION * MathLib.PERCENT_BASE / market.ltv;
         if (collateral < market.minCollateral) collateral = market.minCollateral;
 
-        collateralToken.transferFrom(msg.sender, address(this), collateral);
+        collateralToken.safeTransferFrom(msg.sender, address(this), collateral);
 
         uint256 orderId = _nextOrderId++;
         orders[orderId] = OrderLib.Order({
@@ -185,7 +188,7 @@ contract OrderBook {
             uint256 refund = order.collateral - usedCollateral;
             order.collateral = usedCollateral;
             if (refund > 0) {
-                collateralToken.transfer(msg.sender, refund);
+                collateralToken.safeTransfer(msg.sender, refund);
             }
             if (order.filled == 0) {
                 order.status = OrderLib.OrderStatus.CANCELLED;
@@ -195,7 +198,7 @@ contract OrderBook {
         }
     }
 
-    function cancelOrder(uint256 orderId) external {
+    function cancelOrder(uint256 orderId) external nonReentrant {
         OrderLib.Order storage order = orders[orderId];
         require(order.trader == msg.sender, "OrderBook: not your order");
         require(
@@ -210,7 +213,7 @@ contract OrderBook {
         order.status = OrderLib.OrderStatus.CANCELLED;
 
         if (refund > 0) {
-            collateralToken.transfer(msg.sender, refund);
+            collateralToken.safeTransfer(msg.sender, refund);
         }
 
         // Remove from order book arrays
@@ -278,7 +281,7 @@ contract OrderBook {
             uint256 mktId = orders[longId].marketId;
             positionManager.openPosition(mktId, orders[longId].trader, OrderLib.Side.LONG, matchPrice, matchAmount, longCollat);
             positionManager.openPosition(mktId, orders[shortId].trader, OrderLib.Side.SHORT, matchPrice, matchAmount, shortCollat);
-            collateralToken.transfer(address(positionManager), longCollat + shortCollat);
+            collateralToken.safeTransfer(address(positionManager), longCollat + shortCollat);
         }
 
         // Update fill amounts and collateral (use gross collateral for accounting)
@@ -297,7 +300,7 @@ contract OrderBook {
         if (takerFeeBps == 0) return 0;
         fee = collat * takerFeeBps / 10000;
         if (fee > 0) {
-            collateralToken.transfer(feeCollector, fee);
+            collateralToken.safeTransfer(feeCollector, fee);
             totalFeesCollected += fee;
             emit FeesCollected(orderId, fee);
         }

@@ -23,6 +23,10 @@ contract ChainlinkOracle is IPriceOracle {
 
     address public owner;
 
+    /// @notice Maximum allowed age of a Chainlink price update (in seconds).
+    ///         Defaults to 1 hour (3600 s).
+    uint256 public maxStaleness = 3600;
+
     /// @dev asset string (e.g. "ETH") => Chainlink aggregator address
     mapping(string => address) public feeds;
 
@@ -35,6 +39,7 @@ contract ChainlinkOracle is IPriceOracle {
     event FeedRegistered(string indexed asset, address feed);
     event FallbackPriceSet(string indexed asset, uint256 price, uint256 timestamp);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event MaxStalenessUpdated(uint256 oldMaxStaleness, uint256 newMaxStaleness);
 
     // ── Modifiers ────────────────────────────────────────────────────────
 
@@ -92,6 +97,14 @@ contract ChainlinkOracle is IPriceOracle {
         owner = newOwner;
     }
 
+    /// @notice Update the maximum staleness threshold for Chainlink feeds.
+    /// @param _maxStaleness New staleness window in seconds (must be > 0).
+    function setMaxStaleness(uint256 _maxStaleness) external onlyOwner {
+        require(_maxStaleness > 0, "ChainlinkOracle: maxStaleness must be > 0");
+        emit MaxStalenessUpdated(maxStaleness, _maxStaleness);
+        maxStaleness = _maxStaleness;
+    }
+
     // ── IPriceOracle ─────────────────────────────────────────────────────
 
     /// @notice Returns the latest price for `asset`.
@@ -109,6 +122,7 @@ contract ChainlinkOracle is IPriceOracle {
 
             (, int256 answer,, uint256 updatedAt,) = aggregator.latestRoundData();
             require(answer > 0, "ChainlinkOracle: invalid price from feed");
+            require(block.timestamp - updatedAt <= maxStaleness, "ChainlinkOracle: stale price");
 
             uint8 feedDecimals = aggregator.decimals();
 

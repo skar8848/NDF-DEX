@@ -2,12 +2,15 @@
 pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {OrderLib} from "../libraries/OrderLib.sol";
 import {MathLib} from "../libraries/MathLib.sol";
 import {ForwardMarket} from "./ForwardMarket.sol";
 import {IPriceOracle} from "../oracle/PriceOracle.sol";
 
-contract PositionManager {
+contract PositionManager is ReentrancyGuard {
+    using SafeERC20 for IERC20;
     ForwardMarket public forwardMarket;
     IPriceOracle public oracle;
     IERC20 public collateralToken;
@@ -127,7 +130,7 @@ contract PositionManager {
     // ─── Close Position (Early Exit) ─────────────────────────────────
 
     /// @notice Close a position (full or partial). closeSize = 0 means full close.
-    function closePosition(uint256 positionId, uint256 closeSize) external {
+    function closePosition(uint256 positionId, uint256 closeSize) external nonReentrant {
         OrderLib.PositionInfo storage pos = positions[positionId];
         require(pos.isOpen, "PositionManager: position closed");
 
@@ -185,7 +188,7 @@ contract PositionManager {
         }
 
         if (payout > 0) {
-            collateralToken.transfer(pos.trader, payout);
+            collateralToken.safeTransfer(pos.trader, payout);
         }
 
         emit PositionClosedEarly(positionId, markPrice, pnl, msg.sender);
@@ -214,18 +217,18 @@ contract PositionManager {
 
     // ─── Existing Functions ──────────────────────────────────────────
 
-    function addCollateral(uint256 positionId, uint256 amount) external {
+    function addCollateral(uint256 positionId, uint256 amount) external nonReentrant {
         OrderLib.PositionInfo storage pos = positions[positionId];
         require(pos.isOpen, "PositionManager: position closed");
         require(pos.trader == msg.sender, "PositionManager: not your position");
 
-        collateralToken.transferFrom(msg.sender, address(this), amount);
+        collateralToken.safeTransferFrom(msg.sender, address(this), amount);
         pos.collateral += amount;
 
         emit CollateralAdded(positionId, amount);
     }
 
-    function removeCollateral(uint256 positionId, uint256 amount) external {
+    function removeCollateral(uint256 positionId, uint256 amount) external nonReentrant {
         OrderLib.PositionInfo storage pos = positions[positionId];
         require(pos.isOpen, "PositionManager: position closed");
         require(pos.trader == msg.sender, "PositionManager: not your position");
@@ -242,12 +245,12 @@ contract PositionManager {
         require(health >= MathLib.PERCENT_BASE, "PositionManager: would be liquidatable");
 
         pos.collateral = newCollateral;
-        collateralToken.transfer(msg.sender, amount);
+        collateralToken.safeTransfer(msg.sender, amount);
 
         emit CollateralRemoved(positionId, amount);
     }
 
-    function liquidate(uint256 positionId) external {
+    function liquidate(uint256 positionId) external nonReentrant {
         OrderLib.PositionInfo storage pos = positions[positionId];
         require(pos.isOpen, "PositionManager: position closed");
 
@@ -287,16 +290,16 @@ contract PositionManager {
         uint256 traderRefund = remaining - liquidatorBonus;
 
         if (liquidatorBonus > 0) {
-            collateralToken.transfer(msg.sender, liquidatorBonus);
+            collateralToken.safeTransfer(msg.sender, liquidatorBonus);
         }
         if (traderRefund > 0) {
-            collateralToken.transfer(pos.trader, traderRefund);
+            collateralToken.safeTransfer(pos.trader, traderRefund);
         }
 
         emit PositionLiquidated(positionId, msg.sender, pnl);
     }
 
-    function settlePosition(uint256 positionId) external {
+    function settlePosition(uint256 positionId) external nonReentrant {
         OrderLib.PositionInfo storage pos = positions[positionId];
         require(pos.isOpen, "PositionManager: position closed");
 
@@ -326,7 +329,7 @@ contract PositionManager {
         }
 
         if (payout > 0) {
-            collateralToken.transfer(pos.trader, payout);
+            collateralToken.safeTransfer(pos.trader, payout);
         }
 
         emit PositionSettled(positionId, pnl);
