@@ -64,6 +64,7 @@ function App() {
                   background: '#12121a',
                   border: '1px solid #2a2a3e',
                   color: '#e4e4ed',
+                  textAlign: 'center' as const,
                 },
               }}
             />

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from 'wagmi'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from 'wagmi'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { MockUSDCABI } from '../../lib/abis'
@@ -15,8 +15,10 @@ const navLinks = [
 
 export function Header() {
   const location = useLocation()
+  const { isConnected } = useAccount()
   const chainId = useChainId()
-  const isWrongNetwork = chainId !== 43113
+  const { switchChain } = useSwitchChain()
+  const isCorrectNetwork = isConnected && chainId === 43113
 
   return (
     <header className="border-b border-border bg-surface px-6 py-3 flex items-center justify-between">
@@ -53,17 +55,37 @@ export function Header() {
 
       <div className="flex items-center gap-3">
         {/* Network indicator */}
-        {isWrongNetwork ? (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger/10 border border-danger/20">
-            <div className="w-2 h-2 rounded-full bg-danger animate-pulse" />
-            <span className="text-xs font-medium text-danger">Wrong Network</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 border border-border">
-            <AvalancheLogo />
-            <span className="text-xs font-medium text-text-secondary">Fuji</span>
-          </div>
-        )}
+        <button
+          onClick={() => {
+            if (!isCorrectNetwork && isConnected) switchChain({ chainId: 43113 })
+          }}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-colors',
+            isCorrectNetwork
+              ? 'bg-surface-2 border-border cursor-default'
+              : isConnected
+                ? 'bg-danger/10 border-danger/20 hover:bg-danger/20 cursor-pointer'
+                : 'bg-surface-2 border-border cursor-default'
+          )}
+        >
+          {isCorrectNetwork ? (
+            <>
+              <div className="w-2 h-2 rounded-full bg-success" />
+              <AvalancheLogo />
+              <span className="text-xs font-medium text-text-secondary">Fuji</span>
+            </>
+          ) : isConnected ? (
+            <>
+              <div className="w-2 h-2 rounded-full bg-danger animate-pulse" />
+              <span className="text-xs font-medium text-danger">Switch to Fuji</span>
+            </>
+          ) : (
+            <>
+              <AvalancheLogo />
+              <span className="text-xs font-medium text-text-secondary">Fuji</span>
+            </>
+          )}
+        </button>
 
         <FaucetButton />
         <ConnectButton showBalance={false} />

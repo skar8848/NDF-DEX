@@ -2,25 +2,33 @@ import { useState } from 'react'
 import { useCreateMarket } from '../../hooks/useForwardMarket'
 import { parseUSDC } from '../../lib/utils'
 
+type ExpiryUnit = 'hours' | 'days'
+
 export function CreateMarket({ onClose }: { onClose: () => void }) {
   const [baseAsset, setBaseAsset] = useState('ETH')
   const [quoteAsset] = useState('USDC')
-  const [daysToExpiry, setDaysToExpiry] = useState('30')
-  const [ltv, setLtv] = useState('8000')
-  const [liqThreshold, setLiqThreshold] = useState('8500')
+  const [expiryValue, setExpiryValue] = useState('30')
+  const [expiryUnit, setExpiryUnit] = useState<ExpiryUnit>('days')
+  const [ltvPercent, setLtvPercent] = useState('80')
+  const [liqPercent, setLiqPercent] = useState('85')
   const [minCollateral, setMinCollateral] = useState('10')
 
   const { createMarket, isPending, isConfirming, isSuccess } = useCreateMarket()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const expiration = BigInt(Math.floor(Date.now() / 1000) + parseInt(daysToExpiry) * 86400)
+    const seconds = expiryUnit === 'hours'
+      ? parseInt(expiryValue) * 3600
+      : parseInt(expiryValue) * 86400
+    const expiration = BigInt(Math.floor(Date.now() / 1000) + seconds)
+    const ltvBps = BigInt(Math.round(parseFloat(ltvPercent) * 100))
+    const liqBps = BigInt(Math.round(parseFloat(liqPercent) * 100))
     createMarket(
       baseAsset,
       quoteAsset,
       expiration,
-      BigInt(ltv),
-      BigInt(liqThreshold),
+      ltvBps,
+      liqBps,
       parseUSDC(minCollateral)
     )
   }
@@ -48,35 +56,68 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="block text-xs text-text-secondary mb-1">Days to Expiry</label>
-            <input
-              type="number"
-              value={daysToExpiry}
-              onChange={(e) => setDaysToExpiry(e.target.value)}
-              className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-text text-sm focus:outline-none focus:border-primary"
-              min="1"
-              max="365"
-            />
+            <label className="block text-xs text-text-secondary mb-1">Expiry</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={expiryValue}
+                onChange={(e) => setExpiryValue(e.target.value)}
+                className="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-text text-sm focus:outline-none focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                min="1"
+              />
+              <div className="flex bg-surface-2 border border-border rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setExpiryUnit('hours')}
+                  className={`px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
+                    expiryUnit === 'hours' ? 'bg-primary text-white' : 'text-text-secondary hover:text-text'
+                  }`}
+                >
+                  Hours
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpiryUnit('days')}
+                  className={`px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
+                    expiryUnit === 'days' ? 'bg-primary text-white' : 'text-text-secondary hover:text-text'
+                  }`}
+                >
+                  Days
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-text-secondary mb-1">LTV (bps)</label>
-              <input
-                type="number"
-                value={ltv}
-                onChange={(e) => setLtv(e.target.value)}
-                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-text text-sm focus:outline-none focus:border-primary"
-              />
+              <label className="block text-xs text-text-secondary mb-1">LTV (%)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={ltvPercent}
+                  onChange={(e) => setLtvPercent(e.target.value)}
+                  className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 pr-8 text-text text-sm focus:outline-none focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  min="1"
+                  max="100"
+                  step="1"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">%</span>
+              </div>
             </div>
             <div>
-              <label className="block text-xs text-text-secondary mb-1">Liq Threshold (bps)</label>
-              <input
-                type="number"
-                value={liqThreshold}
-                onChange={(e) => setLiqThreshold(e.target.value)}
-                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-text text-sm focus:outline-none focus:border-primary"
-              />
+              <label className="block text-xs text-text-secondary mb-1">Liq Threshold (%)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={liqPercent}
+                  onChange={(e) => setLiqPercent(e.target.value)}
+                  className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 pr-8 text-text text-sm focus:outline-none focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  min="1"
+                  max="100"
+                  step="1"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">%</span>
+              </div>
             </div>
           </div>
 
@@ -86,7 +127,7 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
               type="number"
               value={minCollateral}
               onChange={(e) => setMinCollateral(e.target.value)}
-              className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-text text-sm focus:outline-none focus:border-primary"
+              className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-text text-sm focus:outline-none focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
 
@@ -94,14 +135,14 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-lg border border-border text-text-secondary text-sm hover:bg-surface-2 transition-colors"
+              className="flex-1 px-4 py-2.5 rounded-lg border border-border text-text-secondary text-sm hover:bg-surface-2 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending || isConfirming}
-              className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 cursor-pointer"
             >
               {isPending ? 'Confirming...' : isConfirming ? 'Creating...' : isSuccess ? 'Created!' : 'Create Market'}
             </button>
