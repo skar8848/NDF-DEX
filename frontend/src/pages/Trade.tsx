@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
+import { usePublicClient } from 'wagmi'
+import { parseAbiItem } from 'viem'
 import { useMarket, useAllMarkets, useSettleMarket, type MarketInfo } from '../hooks/useForwardMarket'
 import { useOrderBookData, type Order } from '../hooks/useOrderBook'
 import { MarketSelector } from '../components/trading/MarketSelector'
@@ -12,7 +14,14 @@ import { TradeHistory } from '../components/trading/TradeHistory'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { useOraclePrice } from '../hooks/usePriceData'
 import { formatCountdown, cn } from '../lib/utils'
-import { PRICE_PRECISION } from '../lib/config'
+import { PRICE_PRECISION, CONTRACTS } from '../lib/config'
+
+const OrderMatchedEventNew = parseAbiItem(
+  'event OrderMatched(uint256 indexed bidOrderId, uint256 indexed askOrderId, uint256 price, uint256 amount, uint256 positionIdLong, uint256 positionIdShort, uint256 takerFee)'
+)
+const OrderMatchedEventOld = parseAbiItem(
+  'event OrderMatched(uint256 indexed bidOrderId, uint256 indexed askOrderId, uint256 price, uint256 amount, uint256 positionIdLong, uint256 positionIdShort)'
+)
 
 type BottomTab = 'positions' | 'orders' | 'history'
 
@@ -42,9 +51,57 @@ export default function Trade() {
 
   const { settleMarket, isPending: isSettlePending, isConfirming: isSettleConfirming } = useSettleMarket()
 
+  const publicClient = usePublicClient()
   const { data: marketData, isLoading: marketLoading } = useMarket(marketId)
   const { data: allMarketsData } = useAllMarkets()
   const { data: orderBookData } = useOrderBookData(marketId)
+
+  // 24h volume in contracts from OrderMatched events
+  const [volume24h, setVolume24h] = useState<bigint | null>(null)
+
+  useEffect(() => {
+    if (!publicClient) return
+    let cancelled = false
+
+    async function fetchVolume() {
+      try {
+        const currentBlock = await publicClient!.getBlockNumber()
+        // ~2s block time on Fuji → 24h ≈ 43200 blocks
+        const fromBlock = currentBlock > 43200n ? currentBlock - 43200n : 0n
+
+        let logs: any[] = []
+        try {
+          logs = await publicClient!.getLogs({
+            address: CONTRACTS.OrderBook,
+            event: OrderMatchedEventNew,
+            fromBlock,
+            toBlock: 'latest',
+          })
+        } catch { /* ignore */ }
+        if (logs.length === 0) {
+          try {
+            logs = await publicClient!.getLogs({
+              address: CONTRACTS.OrderBook,
+              event: OrderMatchedEventOld,
+              fromBlock,
+              toBlock: 'latest',
+            })
+          } catch { /* ignore */ }
+        }
+
+        if (!cancelled) {
+          const total = logs.reduce((sum: bigint, log: any) => sum + (log.args.amount ?? 0n), 0n)
+          setVolume24h(total)
+        }
+      } catch {
+        if (!cancelled) setVolume24h(0n)
+      }
+    }
+
+    fetchVolume()
+    const interval = setInterval(fetchVolume, 30000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [publicClient])
 
   const market = useMemo(() => {
     if (!marketData) return null
@@ -217,7 +274,9 @@ export default function Trade() {
 
             <div className="flex flex-col">
               <span className="text-[10px]" style={{ color: '#8888a0' }}>Volume 24h</span>
-              <span className="text-sm font-mono" style={{ color: '#8888a0' }}>-</span>
+              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
+                {volume24h !== null ? `${Number(volume24h).toLocaleString()} contracts` : '--'}
+              </span>
             </div>
 
             <div className="w-px h-6 bg-border" />
