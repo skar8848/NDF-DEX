@@ -171,12 +171,12 @@ export function useClosePosition() {
     if (error) toast.error(`Close failed: ${error.message.slice(0, 80)}`, { id: 'close-position' })
   }, [error])
 
-  const closePosition = (positionId: bigint) => {
+  const closePosition = (positionId: bigint, closeSize: bigint = 0n) => {
     writeContract({
       address: CONTRACTS.PositionManager,
       abi: PositionManagerABI,
       functionName: 'closePosition',
-      args: [positionId],
+      args: [positionId, closeSize],
     })
   }
 

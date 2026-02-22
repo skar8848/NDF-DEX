@@ -72,7 +72,7 @@ contract ClosePositionTest is Test {
         uint256 aliceBefore = usdc.balanceOf(alice);
 
         vm.prank(alice);
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
 
         uint256 aliceAfter = usdc.balanceOf(alice);
 
@@ -94,7 +94,7 @@ contract ClosePositionTest is Test {
         uint256 aliceBefore = usdc.balanceOf(alice);
 
         vm.prank(alice);
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
 
         uint256 aliceAfter = usdc.balanceOf(alice);
 
@@ -121,7 +121,7 @@ contract ClosePositionTest is Test {
 
         // Keeper triggers close
         vm.prank(keeper);
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
 
         uint256 aliceAfter = usdc.balanceOf(alice);
 
@@ -144,7 +144,7 @@ contract ClosePositionTest is Test {
 
         // Keeper triggers close
         vm.prank(keeper);
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
 
         OrderLib.PositionInfo memory pos = positionManager.getPosition(longPosId);
         assertFalse(pos.isOpen);
@@ -164,7 +164,7 @@ contract ClosePositionTest is Test {
 
         vm.prank(keeper);
         vm.expectRevert("PositionManager: TP/SL not triggered");
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
     }
 
     function test_revert_keeperCloseNoTPSL() public {
@@ -173,7 +173,7 @@ contract ClosePositionTest is Test {
         // No TP/SL set at all
         vm.prank(keeper);
         vm.expectRevert("PositionManager: TP/SL not triggered");
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
     }
 
     // ─── setTPSL validations ─────────────────────────────────────────
@@ -239,7 +239,7 @@ contract ClosePositionTest is Test {
 
         // Alice closes her long position
         vm.prank(alice);
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
 
         // Alice's position is closed
         OrderLib.PositionInfo memory alicePos = positionManager.getPosition(longPosId);
@@ -271,7 +271,7 @@ contract ClosePositionTest is Test {
         oracle.setPrice("ETH", 2700e8);
 
         vm.prank(alice);
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
 
         assertEq(positionManager.getOpenPositionCount(), 1);
 
@@ -316,7 +316,7 @@ contract ClosePositionTest is Test {
         oracle.setPrice("ETH", 2100e8);
 
         vm.prank(keeper);
-        positionManager.closePosition(shortPosId);
+        positionManager.closePosition(shortPosId, 0);
 
         OrderLib.PositionInfo memory pos = positionManager.getPosition(shortPosId);
         assertFalse(pos.isOpen);
@@ -333,7 +333,7 @@ contract ClosePositionTest is Test {
         oracle.setPrice("ETH", 2900e8);
 
         vm.prank(keeper);
-        positionManager.closePosition(shortPosId);
+        positionManager.closePosition(shortPosId, 0);
 
         OrderLib.PositionInfo memory pos = positionManager.getPosition(shortPosId);
         assertFalse(pos.isOpen);
@@ -345,11 +345,11 @@ contract ClosePositionTest is Test {
         (uint256 longPosId,) = _createMatchedPositions();
 
         vm.prank(alice);
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
 
         vm.prank(alice);
         vm.expectRevert("PositionManager: position closed");
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
     }
 
     function test_revert_closeSettledMarket() public {
@@ -362,6 +362,73 @@ contract ClosePositionTest is Test {
 
         vm.prank(alice);
         vm.expectRevert("PositionManager: use settlePosition");
-        positionManager.closePosition(longPosId);
+        positionManager.closePosition(longPosId, 0);
+    }
+
+    // ─── Partial close ────────────────────────────────────────────────
+
+    function _createLargeMatchedPositions() internal returns (uint256 longPosId, uint256 shortPosId) {
+        vm.prank(alice);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 10);
+        vm.prank(bob);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 10);
+        longPosId = 1;
+        shortPosId = 2;
+    }
+
+    function test_partialClose() public {
+        (uint256 longPosId,) = _createLargeMatchedPositions();
+
+        OrderLib.PositionInfo memory posBefore = positionManager.getPosition(longPosId);
+        uint256 originalSize = posBefore.size;
+        uint256 originalCollateral = posBefore.collateral;
+
+        oracle.setPrice("ETH", 2700e8);
+
+        // Close half the position
+        uint256 halfSize = originalSize / 2;
+        vm.prank(alice);
+        positionManager.closePosition(longPosId, halfSize);
+
+        // Position should still be open with reduced size
+        OrderLib.PositionInfo memory posAfter = positionManager.getPosition(longPosId);
+        assertTrue(posAfter.isOpen);
+        assertEq(posAfter.size, originalSize - halfSize);
+        assertEq(posAfter.collateral, originalCollateral - (originalCollateral * halfSize / originalSize));
+
+        // Still tracked as open
+        assertEq(positionManager.getOpenPositionCount(), 2);
+    }
+
+    function test_partialClose_thenFullClose() public {
+        (uint256 longPosId,) = _createLargeMatchedPositions();
+
+        OrderLib.PositionInfo memory posBefore = positionManager.getPosition(longPosId);
+        uint256 halfSize = posBefore.size / 2;
+
+        oracle.setPrice("ETH", 2700e8);
+
+        // Close half
+        vm.prank(alice);
+        positionManager.closePosition(longPosId, halfSize);
+        assertTrue(positionManager.getPosition(longPosId).isOpen);
+
+        // Close remaining (0 = full close of whatever's left)
+        vm.prank(alice);
+        positionManager.closePosition(longPosId, 0);
+        assertFalse(positionManager.getPosition(longPosId).isOpen);
+
+        // Removed from open list
+        assertEq(positionManager.getOpenPositionCount(), 1);
+    }
+
+    function test_revert_closeSizeExceedsPosition() public {
+        (uint256 longPosId,) = _createMatchedPositions();
+
+        OrderLib.PositionInfo memory pos = positionManager.getPosition(longPosId);
+
+        vm.prank(alice);
+        vm.expectRevert("PositionManager: close size exceeds position");
+        positionManager.closePosition(longPosId, pos.size + 1);
     }
 }

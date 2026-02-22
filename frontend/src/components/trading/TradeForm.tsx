@@ -8,7 +8,7 @@ import {
   useUSDCAllowance,
 } from '../../hooks/useOrderBook'
 import { useOraclePrice } from '../../hooks/usePriceData'
-import { useUserOpenPositions } from '../../hooks/usePositions'
+import { useUserOpenPositions, useSetTPSL } from '../../hooks/usePositions'
 import { CONTRACTS, PRICE_PRECISION, COLLATERAL_PRECISION, PERCENT_BASE } from '../../lib/config'
 import { formatUSDC, formatPrice, parsePrice } from '../../lib/utils'
 import { cn } from '../../lib/utils'
@@ -41,6 +41,9 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   const [dismissed1CT, setDismissed1CT] = useState(false)
   const [slippageBps, setSlippageBps] = useState(50) // 0.5% default
   const [showSlippageMenu, setShowSlippageMenu] = useState(false)
+  const [showTPSL, setShowTPSL] = useState(false)
+  const [tpInput, setTpInput] = useState('')
+  const [slInput, setSlInput] = useState('')
 
   const { data: balanceData } = useUSDCBalance()
   const { data: allowanceData, isLoading: allowanceLoading } = useUSDCAllowance()
@@ -67,6 +70,8 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     isConfirming: isApproveConfirming,
   } = useApproveUSDC()
 
+  const { setTPSL } = useSetTPSL()
+
   const is1CTEnabled = allowance >= ONE_CT_THRESHOLD
 
   // Show 1CT prompt: connected, allowance loaded, not yet approved, not dismissed
@@ -88,6 +93,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
 
   // Current open positions for this market
   const { data: openPositionsData } = useUserOpenPositions()
+  const [prevPositionCount, setPrevPositionCount] = useState(0)
   const currentPosition = useMemo(() => {
     if (!openPositionsData) return null
     const positions = openPositionsData as unknown as { id: bigint; marketId: bigint; side: number; size: bigint; collateral: bigint; entryPrice: bigint }[]
@@ -102,10 +108,30 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     return { longSize, shortSize }
   }, [openPositionsData, marketId])
 
+  // Auto-set TP/SL on newly created positions
+  useEffect(() => {
+    if (!openPositionsData) return
+    const positions = openPositionsData as unknown as { id: bigint; marketId: bigint }[]
+    const matching = positions.filter(p => p.marketId === marketId)
+    if (matching.length > prevPositionCount && prevPositionCount > 0) {
+      // New position appeared — check if we have TP/SL to set
+      const tp = tpInput ? parsePrice(tpInput) : 0n
+      const sl = slInput ? parsePrice(slInput) : 0n
+      if (tp > 0n || sl > 0n) {
+        const newest = matching[matching.length - 1]
+        setTPSL(newest.id, tp, sl)
+      }
+    }
+    setPrevPositionCount(matching.length)
+  }, [openPositionsData, marketId])
+
   useEffect(() => {
     if (isLimitSuccess || isMarketSuccess) {
       setPriceInput('')
       setSizeInput('')
+      setTpInput('')
+      setSlInput('')
+      setShowTPSL(false)
     }
   }, [isLimitSuccess, isMarketSuccess])
 
@@ -580,6 +606,60 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
                 {isApprovePending || isApproveConfirming ? 'Enabling...' : 'Enable'}
               </button>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* TP/SL Section */}
+      <div>
+        <button
+          onClick={() => setShowTPSL(!showTPSL)}
+          className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text transition-colors cursor-pointer"
+        >
+          <svg
+            className={cn('w-3 h-3 transition-transform', showTPSL && 'rotate-90')}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          TP / SL
+          {(tpInput || slInput) && (
+            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+          )}
+        </button>
+
+        {showTPSL && (
+          <div className="mt-2 space-y-2">
+            <div>
+              <label className="block text-[10px] text-long mb-0.5">Take Profit (USD)</label>
+              <input
+                type="number"
+                placeholder={side === 'long' ? 'Above entry price' : 'Below entry price'}
+                value={tpInput}
+                onChange={(e) => setTpInput(e.target.value)}
+                step="0.01"
+                min="0"
+                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-secondary/40 focus:outline-none focus:border-long transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-short mb-0.5">Stop Loss (USD)</label>
+              <input
+                type="number"
+                placeholder={side === 'long' ? 'Below entry price' : 'Above entry price'}
+                value={slInput}
+                onChange={(e) => setSlInput(e.target.value)}
+                step="0.01"
+                min="0"
+                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-secondary/40 focus:outline-none focus:border-short transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+            <p className="text-[9px] text-text-secondary/60 leading-snug">
+              TP/SL will be set automatically after your position is opened. The keeper bot monitors and triggers them.
+            </p>
           </div>
         )}
       </div>

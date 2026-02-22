@@ -20,7 +20,7 @@ export function NetworkGuard({ children }: { children: React.ReactNode }) {
 
         <h2 className="text-xl font-bold text-text mb-2">Wrong Network</h2>
         <p className="text-text-secondary text-sm mb-6">
-          NDF-DEX runs on <span className="text-text font-medium">Avalanche Fuji Testnet</span>.
+          Tenor runs on <span className="text-text font-medium">Avalanche Fuji Testnet</span>.
           Please switch your network to continue.
         </p>
 

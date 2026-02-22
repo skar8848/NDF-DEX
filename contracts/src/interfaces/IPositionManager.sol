@@ -26,7 +26,7 @@ interface IPositionManager {
     function addCollateral(uint256 positionId, uint256 amount) external;
     function removeCollateral(uint256 positionId, uint256 amount) external;
     function liquidate(uint256 positionId) external;
-    function closePosition(uint256 positionId) external;
+    function closePosition(uint256 positionId, uint256 closeSize) external;
     function setTPSL(uint256 positionId, uint256 tp, uint256 sl) external;
     function getTPSL(uint256 positionId) external view returns (OrderLib.TPSLOrder memory);
     function getOpenPositionIds(uint256 offset, uint256 limit) external view returns (uint256[] memory);

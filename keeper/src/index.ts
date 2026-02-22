@@ -46,7 +46,7 @@ async function runCycle() {
   if (liqCount > 0) log.info('LOOP', `Liquidated ${liqCount} positions`)
 }
 
-async function main() {
+export async function main() {
   log.info('KEEPER', '═══════════════════════════════════════')
   log.info('KEEPER', '  Tenor DEX Keeper Bot Starting...')
   log.info('KEEPER', '═══════════════════════════════════════')
@@ -68,7 +68,11 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  log.error('FATAL', 'Keeper crashed', err)
-  process.exit(1)
-})
+// Auto-run only when executed directly (not imported by CLI)
+const isDirectRun = process.argv[1]?.includes('index')
+if (isDirectRun) {
+  main().catch((err) => {
+    log.error('FATAL', 'Keeper crashed', err)
+    process.exit(1)
+  })
+}

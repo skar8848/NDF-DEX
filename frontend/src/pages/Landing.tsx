@@ -13,9 +13,9 @@ export function Landing() {
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 no-underline">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center font-bold text-white text-sm">
-              NF
+              T
             </div>
-            <span className="text-lg font-bold text-text">NDF-DEX</span>
+            <span className="text-lg font-bold text-text">Tenor</span>
           </Link>
 
           <nav className="hidden sm:flex items-center gap-6">
@@ -143,10 +143,10 @@ export function Landing() {
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center font-bold text-white text-[10px]">
-                NF
+                T
               </div>
               <span className="text-sm text-text-secondary">
-                NDF-DEX &middot; Built on Avalanche for the Build Games Hackathon
+                Tenor &middot; Built on Avalanche
               </span>
             </div>
             <div className="flex items-center gap-6">

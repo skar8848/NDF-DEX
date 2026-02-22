@@ -5,7 +5,7 @@ import '@rainbow-me/rainbowkit/styles.css'
 import { avalancheFuji } from '../lib/config'
 
 const config = getDefaultConfig({
-  appName: 'NDF-DEX',
+  appName: 'Tenor',
   // Get a project ID at https://cloud.walletconnect.com
   projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '21fef48091f12692cad574a6f7753643',
   chains: [avalancheFuji],

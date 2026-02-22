@@ -5,6 +5,9 @@ contracts/broadcast/
 
 # Frontend
 frontend/node_modules/
+
+# Keeper
+keeper/node_modules/
 frontend/dist/
 frontend/.vite/
 
@@ -19,3 +22,4 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+keeper/.env

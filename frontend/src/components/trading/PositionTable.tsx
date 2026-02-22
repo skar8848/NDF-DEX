@@ -25,6 +25,11 @@ function usePnl(position: Position, market: MarketInfo | undefined) {
   return (diff * position.size * BigInt(COLLATERAL_PRECISION)) / BigInt(PRICE_PRECISION)
 }
 
+function useRoe(pnl: bigint | null, collateral: bigint) {
+  if (pnl === null || collateral === 0n) return null
+  return Number(pnl * 10000n / collateral) / 100 // percentage with 2 decimals
+}
+
 function TPSLDisplay({ positionId }: { positionId: bigint }) {
   const { data } = useTPSL(positionId)
   const tpsl = data as { takeProfitPrice: bigint; stopLossPrice: bigint } | undefined
@@ -58,6 +63,7 @@ function PositionRow({ position, market, selected, onToggle, onClose, onTPSL }: 
   const quoteAsset = market?.quoteAsset ?? '?'
   const pnl = usePnl(position, market)
   const pnlNum = pnl !== null ? Number(pnl) / COLLATERAL_PRECISION : null
+  const roe = useRoe(pnl, position.collateral)
   const isSettled = market?.settled ?? false
 
   return (
@@ -90,9 +96,16 @@ function PositionRow({ position, market, selected, onToggle, onClose, onTPSL }: 
       <td className="px-3 py-2.5 text-xs text-text font-mono">${formatUSDC(position.collateral)}</td>
       <td className="px-3 py-2.5 text-xs font-mono">
         {pnlNum !== null ? (
-          <span className={cn(pnlNum >= 0 ? 'text-long' : 'text-short')}>
-            {pnlNum >= 0 ? '+' : ''}${pnlNum.toFixed(2)}
-          </span>
+          <div className="flex flex-col">
+            <span className={cn(pnlNum >= 0 ? 'text-long' : 'text-short')}>
+              {pnlNum >= 0 ? '+' : ''}${pnlNum.toFixed(2)}
+            </span>
+            {roe !== null && (
+              <span className={cn('text-[10px]', roe >= 0 ? 'text-long/70' : 'text-short/70')}>
+                {roe >= 0 ? '+' : ''}{roe.toFixed(2)}% ROE
+              </span>
+            )}
+          </div>
         ) : (
           <span className="text-text-secondary">--</span>
         )}
@@ -127,8 +140,9 @@ export function PositionTable() {
   const { data: marketsData } = useAllMarkets()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const { batchSettle, isSettling } = useBatchSettle()
-  const { closePosition } = useClosePosition()
+  const { closePosition, isPending: isClosePending } = useClosePosition()
   const [tpslPositionId, setTpslPositionId] = useState<Position | null>(null)
+  const [closeModalPosition, setCloseModalPosition] = useState<Position | null>(null)
 
   const positions = (positionsData as Position[] | undefined) ?? []
   const markets = (marketsData as MarketInfo[] | undefined) ?? []
@@ -222,7 +236,7 @@ export function PositionTable() {
               market={getMarket(position)}
               selected={selectedIds.has(position.id.toString())}
               onToggle={() => toggleId(position.id.toString())}
-              onClose={() => closePosition(position.id)}
+              onClose={() => setCloseModalPosition(position)}
               onTPSL={() => setTpslPositionId(position)}
             />
           ))}
@@ -235,6 +249,143 @@ export function PositionTable() {
           onClose={() => setTpslPositionId(null)}
         />
       )}
+
+      {closeModalPosition && (
+        <ClosePositionModal
+          position={closeModalPosition}
+          market={getMarket(closeModalPosition)}
+          onClose={() => setCloseModalPosition(null)}
+          onConfirm={(positionId, closeSize) => {
+            closePosition(positionId, closeSize)
+            setCloseModalPosition(null)
+          }}
+          isPending={isClosePending}
+        />
+      )}
+    </div>
+  )
+}
+
+type CloseModalProps = {
+  position: Position
+  market: MarketInfo | undefined
+  onClose: () => void
+  onConfirm: (positionId: bigint, closeSize: bigint) => void
+  isPending: boolean
+}
+
+function ClosePositionModal({ position, market, onClose, onConfirm, isPending }: CloseModalProps) {
+  const [percent, setPercent] = useState(100)
+  const pnl = usePnl(position, market)
+  const pnlNum = pnl !== null ? Number(pnl) / COLLATERAL_PRECISION : null
+  const roe = useRoe(pnl, position.collateral)
+
+  const closeSize = BigInt(Math.floor(Number(position.size) * percent / 100))
+  const isFullClose = percent === 100
+
+  // Proportional PnL for partial close
+  const partialPnl = pnlNum !== null ? pnlNum * percent / 100 : null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-surface border border-border rounded-xl p-5 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-text">Close Position #{Number(position.id)}</h3>
+          <button onClick={onClose} className="text-text-secondary hover:text-text transition-colors cursor-pointer">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {/* Position info */}
+          <div className="bg-surface-2 rounded-lg p-3 space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="text-text-secondary">Market</span>
+              <span className="text-text">{market?.baseAsset ?? '?'}/{market?.quoteAsset ?? '?'}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-text-secondary">Side</span>
+              <span className={position.side === 0 ? 'text-long' : 'text-short'}>
+                {position.side === 0 ? 'LONG' : 'SHORT'}
+              </span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-text-secondary">Size</span>
+              <span className="text-text font-mono">{position.size.toString()} contracts</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-text-secondary">PnL</span>
+              {pnlNum !== null ? (
+                <span className={cn('font-mono', pnlNum >= 0 ? 'text-long' : 'text-short')}>
+                  {pnlNum >= 0 ? '+' : ''}${pnlNum.toFixed(2)}
+                  {roe !== null && <span className="text-[10px] ml-1 opacity-70">({roe >= 0 ? '+' : ''}{roe.toFixed(1)}%)</span>}
+                </span>
+              ) : (
+                <span className="text-text-secondary">--</span>
+              )}
+            </div>
+          </div>
+
+          {/* Close size slider */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs text-text-secondary">Close Amount</label>
+              <span className="text-xs text-text font-mono font-semibold">{percent}%</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="100"
+              value={percent}
+              onChange={(e) => setPercent(Number(e.target.value))}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-short/20 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-short [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-sm"
+            />
+            <div className="flex justify-between gap-1 mt-1.5">
+              {[25, 50, 75, 100].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPercent(p)}
+                  className={cn(
+                    'flex-1 py-0.5 text-[10px] font-medium rounded transition-colors cursor-pointer',
+                    percent >= p
+                      ? 'bg-short/20 text-short'
+                      : 'bg-surface-2 text-text-secondary hover:text-text'
+                  )}
+                >
+                  {p}%
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="bg-surface-2 rounded-lg p-3 space-y-1.5">
+            <div className="flex justify-between text-xs">
+              <span className="text-text-secondary">Closing</span>
+              <span className="text-text font-mono">{closeSize.toString()} / {position.size.toString()} contracts</span>
+            </div>
+            {partialPnl !== null && (
+              <div className="flex justify-between text-xs">
+                <span className="text-text-secondary">Est. PnL</span>
+                <span className={cn('font-mono', partialPnl >= 0 ? 'text-long' : 'text-short')}>
+                  {partialPnl >= 0 ? '+' : ''}${partialPnl.toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Confirm button */}
+          <button
+            onClick={() => onConfirm(position.id, isFullClose ? 0n : closeSize)}
+            disabled={isPending || closeSize === 0n}
+            className="w-full py-2.5 text-sm font-semibold rounded-lg bg-short hover:bg-short/90 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {isPending ? 'Confirm in wallet...' : isFullClose ? 'Close Entire Position' : `Close ${percent}%`}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

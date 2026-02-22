@@ -1744,6 +1744,11 @@ export const PositionManagerABI = [
         "name": "positionId",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "closeSize",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],

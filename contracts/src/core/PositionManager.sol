@@ -126,12 +126,17 @@ contract PositionManager {
 
     // ─── Close Position (Early Exit) ─────────────────────────────────
 
-    function closePosition(uint256 positionId) external {
+    /// @notice Close a position (full or partial). closeSize = 0 means full close.
+    function closePosition(uint256 positionId, uint256 closeSize) external {
         OrderLib.PositionInfo storage pos = positions[positionId];
         require(pos.isOpen, "PositionManager: position closed");
 
         OrderLib.MarketInfo memory market = forwardMarket.getMarket(pos.marketId);
         require(!market.settled, "PositionManager: use settlePosition");
+
+        // Default to full close
+        uint256 sizeToClose = closeSize == 0 ? pos.size : closeSize;
+        require(sizeToClose <= pos.size, "PositionManager: close size exceeds position");
 
         (uint256 markPrice,) = oracle.getPrice(market.baseAsset);
         bool isLong = pos.side == OrderLib.Side.LONG;
@@ -146,25 +151,37 @@ contract PositionManager {
             require(tpTriggered || slTriggered, "PositionManager: TP/SL not triggered");
         }
 
-        // Calculate PnL at mark price
-        int256 pnl = MathLib.calculatePnL(pos.entryPrice, markPrice, pos.size, isLong);
+        // Calculate PnL on the portion being closed
+        int256 pnl = MathLib.calculatePnL(pos.entryPrice, markPrice, sizeToClose, isLong);
 
-        // Close position
-        pos.isOpen = false;
-        _removeFromOpenList(positionId);
+        // Proportional collateral for the closed portion
+        uint256 collatForClose = pos.collateral * sizeToClose / pos.size;
+
+        // Update position
+        if (sizeToClose == pos.size) {
+            // Full close
+            pos.isOpen = false;
+            pos.size = 0;
+            pos.collateral = 0;
+            _removeFromOpenList(positionId);
+        } else {
+            // Partial close — reduce size and collateral
+            pos.size -= sizeToClose;
+            pos.collateral -= collatForClose;
+        }
 
         // Update open interest
-        forwardMarket.updateOI(pos.marketId, pos.side, pos.size, false);
+        forwardMarket.updateOI(pos.marketId, pos.side, sizeToClose, false);
 
         // Calculate payout (from protocol pool)
         uint256 payout;
         if (pnl >= 0) {
-            payout = pos.collateral + uint256(pnl);
+            payout = collatForClose + uint256(pnl);
             uint256 balance = collateralToken.balanceOf(address(this));
             if (payout > balance) payout = balance;
         } else {
             uint256 loss = MathLib.abs(pnl);
-            payout = pos.collateral > loss ? pos.collateral - loss : 0;
+            payout = collatForClose > loss ? collatForClose - loss : 0;
         }
 
         if (payout > 0) {

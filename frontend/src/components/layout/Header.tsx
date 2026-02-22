@@ -11,6 +11,7 @@ const navLinks = [
   { to: '/trade/1', label: 'Trade' },
   { to: '/markets', label: 'Markets' },
   { to: '/portfolio', label: 'Portfolio' },
+  { to: '/vault', label: 'Vault' },
 ]
 
 export function Header() {
@@ -25,16 +26,18 @@ export function Header() {
       <div className="flex items-center gap-8">
         <Link to="/" className="flex items-center gap-2 no-underline">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center font-bold text-white text-sm">
-            NF
+            T
           </div>
-          <span className="text-lg font-bold text-text">NDF-DEX</span>
+          <span className="text-lg font-bold text-text">Tenor</span>
         </Link>
 
         <nav className="flex gap-1">
           {navLinks.map((link) => {
             const isActive = link.to.startsWith('/trade')
               ? location.pathname.startsWith('/trade')
-              : location.pathname === link.to
+              : link.to.startsWith('/vault')
+                ? location.pathname.startsWith('/vault')
+                : location.pathname === link.to
             return (
               <Link
                 key={link.to}

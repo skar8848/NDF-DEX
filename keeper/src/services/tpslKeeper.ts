@@ -44,7 +44,7 @@ export async function checkAndTriggerTPSL(
         address: config.addresses.positionManager,
         abi: positionManager.abi,
         functionName: 'closePosition',
-        args: [pos.id],
+        args: [pos.id, 0n], // 0 = full close
       })
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
       return receipt
