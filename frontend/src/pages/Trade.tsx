@@ -117,8 +117,8 @@ export default function Trade() {
       if (!isDragging.current) return
       const delta = startY.current - e.clientY
       // Dynamic max: leave enough room for trade form + top bars
-      const maxBottom = window.innerHeight - 56 - 45 - TRADE_FORM_MIN_HEIGHT
-      const newHeight = Math.min(Math.max(maxBottom, MIN_BOTTOM), Math.max(MIN_BOTTOM, startHeight.current + delta))
+      const maxBottom = Math.max(MIN_BOTTOM, window.innerHeight - 56 - 45 - TRADE_FORM_MIN_HEIGHT)
+      const newHeight = Math.max(MIN_BOTTOM, Math.min(maxBottom, startHeight.current + delta))
       setBottomHeight(newHeight)
     }
     const handleMouseUp = () => {
