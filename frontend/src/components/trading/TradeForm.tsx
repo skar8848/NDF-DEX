@@ -22,12 +22,14 @@ type TradeFormProps = {
   market: MarketInfo | null
   externalPrice?: string | null
   onExternalPriceConsumed?: () => void
+  bestBid?: bigint | null
+  bestAsk?: bigint | null
 }
 
 type OrderSide = 'long' | 'short'
 type OrderType = 'limit' | 'market'
 
-export function TradeForm({ marketId, market, externalPrice, onExternalPriceConsumed }: TradeFormProps) {
+export function TradeForm({ marketId, market, externalPrice, onExternalPriceConsumed, bestBid, bestAsk }: TradeFormProps) {
   const { address, isConnected } = useAccount()
 
   const [side, setSide] = useState<OrderSide>('long')
@@ -212,18 +214,19 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   }, [priceInput, sizeInput, orderType])
 
   const priceWarning = useMemo(() => {
-    if (orderType !== 'limit' || !priceInput || oraclePrice === 0n) return null
+    if (orderType !== 'limit' || !priceInput) return null
     const limitPrice = parsePrice(priceInput)
     if (limitPrice === 0n) return null
-    const markUsd = Number(oraclePrice) / PRICE_PRECISION
-    if (side === 'long' && limitPrice > oraclePrice) {
-      return `Your buy price is above the mark price ($${markUsd.toFixed(2)})`
+    if (side === 'long' && bestAsk && limitPrice > bestAsk) {
+      const askUsd = Number(bestAsk) / PRICE_PRECISION
+      return `Your buy price is above the best ask ($${askUsd.toFixed(2)}) — will fill immediately`
     }
-    if (side === 'short' && limitPrice < oraclePrice) {
-      return `Your sell price is below the mark price ($${markUsd.toFixed(2)})`
+    if (side === 'short' && bestBid && limitPrice < bestBid) {
+      const bidUsd = Number(bestBid) / PRICE_PRECISION
+      return `Your sell price is below the best bid ($${bidUsd.toFixed(2)}) — will fill immediately`
     }
     return null
-  }, [orderType, priceInput, oraclePrice, side])
+  }, [orderType, priceInput, bestBid, bestAsk, side])
 
   const sizeNum = sizeInput ? Number(sizeInput) : 0
   const sliderValue = maxSize > 0 ? Math.min(sizeNum / maxSize, 1) : 0

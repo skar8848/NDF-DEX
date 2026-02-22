@@ -106,15 +106,19 @@ export default function Trade() {
     }
   }, [priceData])
 
-  // Mark price = mid of best bid / best ask
-  const markPrice = useMemo(() => {
+  // Best bid / best ask / mid / spread
+  const { bestBid, bestAsk, markPrice, spread } = useMemo(() => {
     const activeBids = orderBookLevels.bids.filter(o => o.amount - o.filled > 0n)
     const activeAsks = orderBookLevels.asks.filter(o => o.amount - o.filled > 0n)
-    if (activeBids.length === 0 || activeAsks.length === 0) return null
-    const bestBid = activeBids.reduce((max, o) => o.price > max ? o.price : max, 0n)
-    const bestAsk = activeAsks.reduce((min, o) => o.price < min ? o.price : min, activeAsks[0].price)
-    if (bestAsk <= bestBid) return null
-    return (bestBid + bestAsk) / 2n
+    if (activeBids.length === 0 || activeAsks.length === 0) {
+      return { bestBid: null, bestAsk: null, markPrice: null, spread: null }
+    }
+    const bb = activeBids.reduce((max, o) => o.price > max ? o.price : max, 0n)
+    const ba = activeAsks.reduce((min, o) => o.price < min ? o.price : min, activeAsks[0].price)
+    if (ba <= bb) return { bestBid: bb, bestAsk: ba, markPrice: null, spread: null }
+    const mid = (bb + ba) / 2n
+    const sp = ba - bb
+    return { bestBid: bb, bestAsk: ba, markPrice: mid, spread: sp }
   }, [orderBookLevels])
 
   // Drag to resize bottom panel
@@ -174,9 +178,16 @@ export default function Trade() {
             <div className="w-px h-6 bg-border" />
 
             <div className="flex flex-col">
-              <span className="text-[10px]" style={{ color: '#8888a0' }}>Mark Price</span>
+              <span className="text-[10px]" style={{ color: '#8888a0' }}>Mark / Mid</span>
               <span className="text-sm font-bold font-mono" style={{ color: '#e4e4ed' }}>
-                {markPrice ? `$${(Number(markPrice) / PRICE_PRECISION).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '--'}
+                {markPrice ? `$${(Number(markPrice) / PRICE_PRECISION).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}
+              </span>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-[10px]" style={{ color: '#8888a0' }}>Spread</span>
+              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
+                {spread ? `$${(Number(spread) / PRICE_PRECISION).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}
               </span>
             </div>
 
@@ -271,7 +282,7 @@ export default function Trade() {
           <div className="px-3 py-2 border-b border-border">
             <h3 className="text-xs font-semibold text-text">Place Order</h3>
           </div>
-          <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} />
+          <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} bestBid={bestBid} bestAsk={bestAsk} />
         </div>
       </div>
 

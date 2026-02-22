@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react'
+import { usePublicClient } from 'wagmi'
+import { parseAbiItem } from 'viem'
 import { useUserOrders, useCancelOrder } from '../../hooks/useOrderBook'
 import { formatPrice } from '../../lib/utils'
 import { cn } from '../../lib/utils'
@@ -20,13 +23,17 @@ const ORDER_STATUS_COLORS: Record<number, string> = {
 
 const EXPLORER_URL = 'https://testnet.snowtrace.io'
 
+const OrderMatchedEvent = parseAbiItem(
+  'event OrderMatched(uint256 indexed bidOrderId, uint256 indexed askOrderId, uint256 price, uint256 amount, uint256 positionIdLong, uint256 positionIdShort, uint256 takerFee)'
+)
+
 // Market orders use extreme prices: uint256.max/2 for LONG, 1 for SHORT
-const MARKET_ORDER_THRESHOLD = BigInt('1000000000000000000') // 10^18
+const MARKET_ORDER_THRESHOLD = BigInt('1000000000000000000')
 function isMarketOrder(order: Order): boolean {
   return order.price > MARKET_ORDER_THRESHOLD || order.price <= 1n
 }
 
-function OrderRow({ order }: { order: Order }) {
+function OrderRow({ order, fillPrice }: { order: Order; fillPrice: bigint | null }) {
   const { cancelOrder, isPending, isConfirming } = useCancelOrder()
 
   const isOpen = order.status === 0 || order.status === 2
@@ -37,6 +44,9 @@ function OrderRow({ order }: { order: Order }) {
   const isMkt = isMarketOrder(order)
   const sideLabel = order.side === 0 ? 'Long' : 'Short'
   const typeLabel = isMkt ? `Market ${sideLabel}` : `Limit ${sideLabel}`
+
+  // For price display: use fill price for market orders, order price for limit
+  const displayPrice = isMkt ? fillPrice : order.price
 
   return (
     <tr className="border-b border-border/50 hover:bg-surface-2/30 transition-colors">
@@ -63,7 +73,7 @@ function OrderRow({ order }: { order: Order }) {
         </span>
       </td>
       <td className="px-3 py-2.5 text-xs text-text font-mono">
-        {isMkt ? <span className="text-text-secondary italic">Market</span> : `$${formatPrice(order.price)}`}
+        {displayPrice ? `$${formatPrice(displayPrice)}` : '--'}
       </td>
       <td className="px-3 py-2.5 text-xs text-text font-mono">
         {order.amount.toString()}
@@ -112,6 +122,59 @@ function OrderRow({ order }: { order: Order }) {
 export function OrderHistory() {
   const { data: ordersData, isLoading } = useUserOrders()
   const orders = (ordersData as Order[] | undefined) ?? []
+  const publicClient = usePublicClient()
+
+  // Fetch fill prices for market orders from OrderMatched events
+  const [fillPrices, setFillPrices] = useState<Record<string, bigint>>({})
+
+  useEffect(() => {
+    if (!publicClient || orders.length === 0) return
+
+    const marketOrders = orders.filter(o => isMarketOrder(o) && o.filled > 0n)
+    if (marketOrders.length === 0) return
+
+    let cancelled = false
+
+    async function fetchFillPrices() {
+      try {
+        const currentBlock = await publicClient!.getBlockNumber()
+        const fromBlock = currentBlock > 10000n ? currentBlock - 10000n : 0n
+
+        const prices: Record<string, bigint> = {}
+
+        for (const order of marketOrders) {
+          // Search as bid (long) or ask (short)
+          const logs = order.side === 0
+            ? await publicClient!.getLogs({
+                address: CONTRACTS.OrderBook,
+                event: OrderMatchedEvent,
+                args: { bidOrderId: order.id },
+                fromBlock,
+                toBlock: 'latest',
+              })
+            : await publicClient!.getLogs({
+                address: CONTRACTS.OrderBook,
+                event: OrderMatchedEvent,
+                args: { askOrderId: order.id },
+                fromBlock,
+                toBlock: 'latest',
+              })
+
+          if (logs.length > 0) {
+            // Use the last match price (most recent fill)
+            prices[order.id.toString()] = logs[logs.length - 1].args.price!
+          }
+        }
+
+        if (!cancelled) setFillPrices(prices)
+      } catch (err) {
+        console.error('Failed to fetch fill prices:', err)
+      }
+    }
+
+    fetchFillPrices()
+    return () => { cancelled = true }
+  }, [publicClient, orders])
 
   // Sort by timestamp descending (most recent first)
   const sortedOrders = [...orders].sort((a, b) => {
@@ -169,7 +232,11 @@ export function OrderHistory() {
         </thead>
         <tbody>
           {sortedOrders.map((order) => (
-            <OrderRow key={order.id.toString()} order={order} />
+            <OrderRow
+              key={order.id.toString()}
+              order={order}
+              fillPrice={fillPrices[order.id.toString()] ?? null}
+            />
           ))}
         </tbody>
       </table>
