@@ -117,7 +117,7 @@ export default function Trade() {
   const allMarkets = useMemo(() => {
     if (!allMarketsData) return []
     try {
-      return (allMarketsData as MarketInfo[]) ?? []
+      return (allMarketsData as unknown as MarketInfo[]) ?? []
     } catch {
       return []
     }
