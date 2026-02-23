@@ -1,6 +1,6 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { useAccount } from 'wagmi'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { OrderBookABI, MockUSDCABI } from '../lib/abis'
 import { CONTRACTS } from '../lib/config'
@@ -46,20 +46,22 @@ export function useUserOrders() {
 export function usePlaceLimitOrder() {
   const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+  const labelRef = useRef('Limit order')
 
   useEffect(() => {
-    if (hash) toast.loading('Limit order submitted...', { id: 'limit-order' })
+    if (hash) toast.loading(`${labelRef.current} submitted...`, { id: 'limit-order' })
   }, [hash])
 
   useEffect(() => {
-    if (isSuccess) toast.success('Limit order placed successfully!', { id: 'limit-order' })
+    if (isSuccess) toast.success(`${labelRef.current} placed successfully!`, { id: 'limit-order' })
   }, [isSuccess])
 
   useEffect(() => {
     if (error) toast.error(`Order failed: ${error.message.slice(0, 80)}`, { id: 'limit-order' })
   }, [error])
 
-  const placeLimitOrder = (marketId: bigint, side: number, price: bigint, amount: bigint) => {
+  const placeLimitOrder = (marketId: bigint, side: number, price: bigint, amount: bigint, orderLabel?: string) => {
+    labelRef.current = orderLabel ?? 'Limit order'
     writeContract({
       address: CONTRACTS.OrderBook,
       abi: OrderBookABI,

@@ -154,11 +154,14 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     if (!isConnected) setDismissed1CT(false)
   }, [isConnected])
 
-  // Effective price for calculations (limit price or oracle for market)
+  // Effective price for calculations (best book price for market, user input for limit)
   const effectivePrice = useMemo(() => {
-    if (orderType === 'market') return oraclePrice
+    if (orderType === 'market') {
+      const bookPrice = side === 'long' ? bestAsk : bestBid
+      return (bookPrice && bookPrice > 0n) ? bookPrice : oraclePrice
+    }
     return priceInput ? parsePrice(priceInput) : 0n
-  }, [orderType, priceInput, oraclePrice])
+  }, [orderType, priceInput, oraclePrice, side, bestAsk, bestBid])
 
   const collateralRequired = useMemo(() => {
     if (!market) return 0n
@@ -166,8 +169,13 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     if (size === 0n) return 0n
     const ltv = market.ltv > 0n ? market.ltv : BigInt(PERCENT_BASE)
     if (orderType === 'market') {
-      if (oraclePrice === 0n) return 0n
-      return (oraclePrice * 2n * size / BigInt(PRICE_PRECISION))
+      const bookPrice = side === 'long' ? bestAsk : bestBid
+      const refPrice = (bookPrice && bookPrice > 0n) ? bookPrice : oraclePrice
+      if (refPrice === 0n) return 0n
+      const priceWithSlippage = side === 'long'
+        ? refPrice + (refPrice * BigInt(slippageBps) / 10000n)
+        : refPrice - (refPrice * BigInt(slippageBps) / 10000n)
+      return (priceWithSlippage * size / BigInt(PRICE_PRECISION))
         * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
     } else {
       const price = priceInput ? parsePrice(priceInput) : 0n
@@ -175,7 +183,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
       return (price * size / BigInt(PRICE_PRECISION))
         * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / ltv
     }
-  }, [priceInput, sizeInput, market, orderType, oraclePrice])
+  }, [priceInput, sizeInput, market, orderType, oraclePrice, side, bestAsk, bestBid, slippageBps])
 
   // TP: when gain input changes, compute TP price
   useEffect(() => {
@@ -246,13 +254,19 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     if (!market || balance === 0n) return 0
     const ltv = market.ltv > 0n ? market.ltv : BigInt(PERCENT_BASE)
     let price = effectivePrice
-    if (orderType === 'market') price = oraclePrice * 2n
+    if (orderType === 'market') {
+      const bookPrice = side === 'long' ? bestAsk : bestBid
+      const refPrice = (bookPrice && bookPrice > 0n) ? bookPrice : oraclePrice
+      price = side === 'long'
+        ? refPrice + (refPrice * BigInt(slippageBps) / 10000n)
+        : refPrice - (refPrice * BigInt(slippageBps) / 10000n)
+    }
     if (price === 0n) return 0
     // collateral_per_1 = price * CP * PB / (PP * ltv)
     const collatPer1 = price * BigInt(COLLATERAL_PRECISION) * BigInt(PERCENT_BASE) / (BigInt(PRICE_PRECISION) * ltv)
     if (collatPer1 === 0n) return 0
     return Number(balance / collatPer1)
-  }, [market, balance, effectivePrice, orderType, oraclePrice])
+  }, [market, balance, effectivePrice, orderType, oraclePrice, side, bestAsk, bestBid, slippageBps])
 
   // Order value in USD
   const orderValue = useMemo(() => {
@@ -306,7 +320,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
           ? refPrice + (refPrice * BigInt(slippageBps) / 10000n)
           : refPrice - (refPrice * BigInt(slippageBps) / 10000n)
         if (maxPrice > 0n) {
-          placeLimitOrder(marketId, sideEnum, maxPrice, size)
+          placeLimitOrder(marketId, sideEnum, maxPrice, size, 'Market order')
           return
         }
       }
