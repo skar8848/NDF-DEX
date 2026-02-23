@@ -38,6 +38,8 @@ function OrderRow({ order, fillPrice, fee, isTaker }: { order: Order; fillPrice:
       ? Number((order.filled * 100n) / order.amount)
       : 0
   const sideLabel = order.side === 0 ? 'Long' : 'Short'
+  const isMarket = order.timeInForce === 1 // IOC = market order
+  const typeLabel = isMarket ? `Market ${sideLabel}` : `Limit ${sideLabel}`
 
   // Always show fill price when available (VWAP from events), fallback to order price
   const displayPrice = fillPrice ?? order.price
@@ -56,7 +58,7 @@ function OrderRow({ order, fillPrice, fee, isTaker }: { order: Order; fillPrice:
               : 'bg-short/10 text-short'
           )}
         >
-          {sideLabel}
+          {typeLabel}
         </span>
       </td>
       <td className="px-3 py-2.5 text-xs text-text font-mono">

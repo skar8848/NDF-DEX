@@ -300,11 +300,12 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     }
   }, [market, effectivePrice, sizeInput, collateralRequired, side])
 
-  // Estimated taker fee in USD (5bps of collateral, not notional)
+  // Estimated taker fee / maker rebate in USD (based on collateral)
   const estimatedFee = useMemo(() => {
     if (collateralRequired === 0n) return null
-    return (Number(collateralRequired) / COLLATERAL_PRECISION) * 0.0005
-  }, [collateralRequired])
+    const col = Number(collateralRequired) / COLLATERAL_PRECISION
+    return orderType === 'market' ? col * 0.0005 : col * 0.0002 // 5bps taker, 2bps maker
+  }, [collateralRequired, orderType])
 
   const insufficientBalance = isConnected && collateralRequired > 0n && collateralRequired > balance
 
@@ -328,7 +329,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
           ? refPrice + (refPrice * BigInt(slippageBps) / 10000n)
           : refPrice - (refPrice * BigInt(slippageBps) / 10000n)
         if (maxPrice > 0n) {
-          placeLimitOrder(marketId, sideEnum, maxPrice, size, 'Market order')
+          placeLimitOrder(marketId, sideEnum, maxPrice, size, 'Market order', 1) // IOC
           return
         }
       }
@@ -798,11 +799,13 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         </div>
       )}
 
-      {/* Taker fee */}
+      {/* Fee / Rebate */}
       <div className="flex items-center justify-between text-xs px-1">
-        <span className="text-text-secondary">Taker Fee (0.05%)</span>
-        <span className="text-text-secondary font-mono">
-          {estimatedFee ? `$${estimatedFee.toFixed(2)}` : '--'}
+        <span className="text-text-secondary">
+          {orderType === 'market' ? 'Taker Fee (0.05%)' : 'Maker Rebate (0.02%)'}
+        </span>
+        <span className={cn('font-mono', orderType === 'market' ? 'text-text-secondary' : 'text-long')}>
+          {estimatedFee ? `${orderType === 'limit' ? '+' : ''}$${estimatedFee.toFixed(2)}` : '--'}
         </span>
       </div>
 

@@ -60,14 +60,23 @@ export function usePlaceLimitOrder() {
     if (error) toast.error(`Order failed: ${error.message.slice(0, 80)}`, { id: 'limit-order' })
   }, [error])
 
-  const placeLimitOrder = (marketId: bigint, side: number, price: bigint, amount: bigint, orderLabel?: string) => {
+  const placeLimitOrder = (marketId: bigint, side: number, price: bigint, amount: bigint, orderLabel?: string, timeInForce?: number) => {
     labelRef.current = orderLabel ?? 'Limit order'
-    writeContract({
-      address: CONTRACTS.OrderBook,
-      abi: OrderBookABI,
-      functionName: 'placeLimitOrder',
-      args: [marketId, side, price, amount],
-    })
+    if (timeInForce !== undefined) {
+      writeContract({
+        address: CONTRACTS.OrderBook,
+        abi: OrderBookABI,
+        functionName: 'placeLimitOrderAdvanced',
+        args: [marketId, side, price, amount, timeInForce],
+      })
+    } else {
+      writeContract({
+        address: CONTRACTS.OrderBook,
+        abi: OrderBookABI,
+        functionName: 'placeLimitOrder',
+        args: [marketId, side, price, amount],
+      })
+    }
   }
 
   return { placeLimitOrder, isPending, isConfirming, isSuccess, hash }
