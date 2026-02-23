@@ -73,7 +73,6 @@ export function Vault() {
   // Contract reads
   const { data: sharePrice } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'sharePrice', query: { refetchInterval: 5000 } })
   const { data: totalValue } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'totalValue', query: { refetchInterval: 5000 } })
-  const { data: totalSupply } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'totalSupply', query: { refetchInterval: 5000 } })
   const { data: myShares } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'balanceOf', args: address ? [address] : undefined, query: { enabled: !!address, refetchInterval: 5000 } })
   const { data: withdrawalDelay } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'withdrawalDelay' })
   const { data: withdrawRequest } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'withdrawRequests', args: address ? [address] : undefined, query: { enabled: !!address, refetchInterval: 5000 } })
