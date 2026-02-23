@@ -34,7 +34,7 @@ function isMarketOrder(order: Order): boolean {
   return order.price > MARKET_ORDER_THRESHOLD || order.price <= 1n
 }
 
-function OrderRow({ order, fillPrice }: { order: Order; fillPrice: bigint | null }) {
+function OrderRow({ order, fillPrice, fee }: { order: Order; fillPrice: bigint | null; fee: bigint }) {
   const { cancelOrder, isPending, isConfirming } = useCancelOrder()
 
   const isOpen = order.status === 0 || order.status === 2
@@ -92,6 +92,9 @@ function OrderRow({ order, fillPrice }: { order: Order; fillPrice: bigint | null
           </span>
         </div>
       </td>
+      <td className="px-3 py-2.5 text-xs font-mono text-text-secondary">
+        {fee > 0n ? `$${(Number(fee) / 1e6).toFixed(2)}` : '—'}
+      </td>
       <td className="px-3 py-2.5 text-xs">
         <span
           className={cn(
@@ -132,8 +135,9 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
     ? allOrders.filter(o => (o.status === 0 || o.status === 2) && !isMarketOrder(o))
     : allOrders
 
-  // Fetch weighted average fill prices from OrderMatched events
+  // Fetch weighted average fill prices + fees from OrderMatched events
   const [fillPrices, setFillPrices] = useState<Record<string, bigint>>({})
+  const [orderFees, setOrderFees] = useState<Record<string, bigint>>({})
 
   useEffect(() => {
     if (!publicClient || orders.length === 0) return
@@ -173,25 +177,29 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
         const filledIds = new Set(filledOrders.map(o => o.id.toString()))
         const filledSides = new Map(filledOrders.map(o => [o.id.toString(), o.side]))
 
-        // Accumulate VWAP per order from all matched logs
+        // Accumulate VWAP + fees per order from all matched logs
         const accum: Record<string, { totalValue: bigint; totalAmount: bigint }> = {}
+        const fees: Record<string, bigint> = {}
         for (const log of logs) {
           const bidId = log.args.bidOrderId!.toString()
           const askId = log.args.askOrderId!.toString()
           const p = BigInt(log.args.price!)
           const a = BigInt(log.args.amount!)
+          const fee = BigInt(log.args.takerFee ?? 0n)
 
           // Match bid side (long orders)
           if (filledIds.has(bidId) && filledSides.get(bidId) === 0) {
             if (!accum[bidId]) accum[bidId] = { totalValue: 0n, totalAmount: 0n }
             accum[bidId].totalValue += p * a
             accum[bidId].totalAmount += a
+            fees[bidId] = (fees[bidId] ?? 0n) + fee
           }
           // Match ask side (short orders)
           if (filledIds.has(askId) && filledSides.get(askId) === 1) {
             if (!accum[askId]) accum[askId] = { totalValue: 0n, totalAmount: 0n }
             accum[askId].totalValue += p * a
             accum[askId].totalAmount += a
+            fees[askId] = (fees[askId] ?? 0n) + fee
           }
         }
 
@@ -200,7 +208,10 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
           if (totalAmount > 0n) prices[id] = totalValue / totalAmount
         }
 
-        if (!cancelled) setFillPrices(prices)
+        if (!cancelled) {
+          setFillPrices(prices)
+          setOrderFees(fees)
+        }
       } catch (err) {
         console.error('Failed to fetch fill prices:', err)
       }
@@ -257,6 +268,9 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
               Filled
             </th>
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
+              Fee
+            </th>
+            <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
               Status
             </th>
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
@@ -270,6 +284,7 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
               key={order.id.toString()}
               order={order}
               fillPrice={fillPrices[order.id.toString()] ?? null}
+              fee={orderFees[order.id.toString()] ?? 0n}
             />
           ))}
         </tbody>
