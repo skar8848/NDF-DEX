@@ -16,6 +16,7 @@ export type Order = {
   collateral: bigint
   timestamp: bigint
   status: number // 0=OPEN, 1=FILLED, 2=PARTIAL, 3=CANCELLED
+  timeInForce: number // 0=GTC, 1=IOC, 2=FOK, 3=POST_ONLY
 }
 
 export function useOrderBookData(marketId: bigint) {
