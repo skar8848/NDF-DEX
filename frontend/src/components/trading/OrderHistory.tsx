@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePublicClient } from 'wagmi'
 import { parseAbiItem } from 'viem'
 import { useUserOrders, useCancelOrder } from '../../hooks/useOrderBook'
@@ -46,10 +46,8 @@ function OrderRow({ order, fillPrice, fee }: { order: Order; fillPrice: bigint |
   const sideLabel = order.side === 0 ? 'Long' : 'Short'
   const typeLabel = isMkt ? `Market ${sideLabel}` : `Limit ${sideLabel}`
 
-  // For price: show avg fill price if available, otherwise order price (for limit)
-  const displayPrice = isMkt
-    ? fillPrice       // market orders: fill price from events
-    : (fillPrice ?? order.price)  // limit orders: fill price if available, else order price
+  // Always show fill price when available (VWAP from events), fallback to order price
+  const displayPrice = fillPrice ?? order.price
 
   return (
     <tr className="border-b border-border/50 hover:bg-surface-2/30 transition-colors">
@@ -139,10 +137,20 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
   const [fillPrices, setFillPrices] = useState<Record<string, bigint>>({})
   const [orderFees, setOrderFees] = useState<Record<string, bigint>>({})
 
-  useEffect(() => {
-    if (!publicClient || orders.length === 0) return
+  // Stable key: only re-fetch when the set of filled order IDs actually changes
+  // (avoids cancellation race when orders array ref changes every 5s refetch)
+  const ordersRef = useRef(orders)
+  ordersRef.current = orders
+  const filledOrderKey = useMemo(() =>
+    orders.filter(o => o.filled > 0n).map(o => o.id.toString()).sort().join(','),
+    [orders]
+  )
 
-    const filledOrders = orders.filter(o => o.filled > 0n)
+  useEffect(() => {
+    if (!publicClient || !filledOrderKey) return
+
+    const currentOrders = ordersRef.current
+    const filledOrders = currentOrders.filter(o => o.filled > 0n)
     if (filledOrders.length === 0) return
 
     let cancelled = false
@@ -219,7 +227,7 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
 
     fetchFillPrices()
     return () => { cancelled = true }
-  }, [publicClient, orders])
+  }, [publicClient, filledOrderKey])
 
   // Sort by timestamp descending (most recent first)
   const sortedOrders = [...orders].sort((a, b) => {

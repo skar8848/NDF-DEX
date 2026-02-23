@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { usePublicClient } from 'wagmi'
+import { usePublicClient, useAccount } from 'wagmi'
 import { parseAbiItem } from 'viem'
 import { useMarket, useAllMarkets, useSettleMarket, type MarketInfo } from '../hooks/useForwardMarket'
 import { useOrderBookData, type Order } from '../hooks/useOrderBook'
@@ -33,6 +33,7 @@ const TRADE_FORM_MIN_HEIGHT = 400
 
 export default function Trade() {
   const { marketId: marketIdParam } = useParams<{ marketId: string }>()
+  const { address } = useAccount()
 
   let marketId: bigint
   try {
@@ -181,6 +182,17 @@ export default function Trade() {
     const sp = ba - bb
     return { bestBid: bb, bestAsk: ba, markPrice: mid, spread: sp, bookDepthBid: depthBid, bookDepthAsk: depthAsk }
   }, [orderBookLevels])
+
+  // Best bid/ask excluding user's own orders (for market order pricing — contract has self-trade protection)
+  const { tradeBestBid, tradeBestAsk } = useMemo(() => {
+    if (!address) return { tradeBestBid: bestBid, tradeBestAsk: bestAsk }
+    const addr = address.toLowerCase()
+    const activeBids = bids.filter((o: Order) => (o.status === 0 || o.status === 2) && o.amount - o.filled > 0n && o.trader.toLowerCase() !== addr)
+    const activeAsks = asks.filter((o: Order) => (o.status === 0 || o.status === 2) && o.amount - o.filled > 0n && o.trader.toLowerCase() !== addr)
+    const tb = activeBids.length > 0 ? activeBids.reduce((max, o) => o.price > max ? o.price : max, 0n) : null
+    const ta = activeAsks.length > 0 ? activeAsks.reduce((min, o) => o.price < min ? o.price : min, activeAsks[0].price) : null
+    return { tradeBestBid: tb, tradeBestAsk: ta }
+  }, [bids, asks, address, bestBid, bestAsk])
 
   // Drag to resize bottom panel
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -416,7 +428,7 @@ export default function Trade() {
           <div className="px-3 py-2 border-b border-border">
             <h3 className="text-xs font-semibold text-text">Place Order</h3>
           </div>
-          <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} bestBid={bestBid} bestAsk={bestAsk} bookDepthAsk={bookDepthAsk} bookDepthBid={bookDepthBid} />
+          <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} bestBid={tradeBestBid} bestAsk={tradeBestAsk} bookDepthAsk={bookDepthAsk} bookDepthBid={bookDepthBid} />
         </div>
       </div>
     </div>
