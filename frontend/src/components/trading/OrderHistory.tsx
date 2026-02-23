@@ -28,13 +28,8 @@ const OrderMatchedEventOld = parseAbiItem(
   'event OrderMatched(uint256 indexed bidOrderId, uint256 indexed askOrderId, uint256 price, uint256 amount, uint256 positionIdLong, uint256 positionIdShort)'
 )
 
-// Market orders use extreme prices: uint256.max/2 for LONG, 1 for SHORT
-const MARKET_ORDER_THRESHOLD = BigInt('1000000000000000000')
-function isMarketOrder(order: Order): boolean {
-  return order.price > MARKET_ORDER_THRESHOLD || order.price <= 1n
-}
 
-function OrderRow({ order, fillPrice, fee }: { order: Order; fillPrice: bigint | null; fee: bigint }) {
+function OrderRow({ order, fillPrice, fee, isTaker }: { order: Order; fillPrice: bigint | null; fee: bigint; isTaker: boolean }) {
   const { cancelOrder, isPending, isConfirming } = useCancelOrder()
 
   const isOpen = order.status === 0 || order.status === 2
@@ -42,9 +37,7 @@ function OrderRow({ order, fillPrice, fee }: { order: Order; fillPrice: bigint |
     order.amount > 0n
       ? Number((order.filled * 100n) / order.amount)
       : 0
-  const isMkt = isMarketOrder(order)
   const sideLabel = order.side === 0 ? 'Long' : 'Short'
-  const typeLabel = isMkt ? `Market ${sideLabel}` : `Limit ${sideLabel}`
 
   // Always show fill price when available (VWAP from events), fallback to order price
   const displayPrice = fillPrice ?? order.price
@@ -63,7 +56,7 @@ function OrderRow({ order, fillPrice, fee }: { order: Order; fillPrice: bigint |
               : 'bg-short/10 text-short'
           )}
         >
-          {typeLabel}
+          {sideLabel}
         </span>
       </td>
       <td className="px-3 py-2.5 text-xs text-text font-mono">
@@ -90,8 +83,12 @@ function OrderRow({ order, fillPrice, fee }: { order: Order; fillPrice: bigint |
           </span>
         </div>
       </td>
-      <td className="px-3 py-2.5 text-xs font-mono text-text-secondary">
-        {fee > 0n ? `$${(Number(fee) / 1e6).toFixed(2)}` : '—'}
+      <td className={cn('px-3 py-2.5 text-xs font-mono', fee > 0n ? (isTaker ? 'text-short' : 'text-long') : 'text-text-secondary')}>
+        {fee > 0n
+          ? isTaker
+            ? `-$${(Number(fee) / 1e6).toFixed(2)}`
+            : `+$${(Number(fee) / 1e6).toFixed(2)}`
+          : '—'}
       </td>
       <td className="px-3 py-2.5 text-xs">
         <span
@@ -130,12 +127,13 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
 
   // Apply filter
   const orders = filter === 'open'
-    ? allOrders.filter(o => (o.status === 0 || o.status === 2) && !isMarketOrder(o))
+    ? allOrders.filter(o => o.status === 0 || o.status === 2)
     : allOrders
 
   // Fetch weighted average fill prices + fees from OrderMatched events
   const [fillPrices, setFillPrices] = useState<Record<string, bigint>>({})
   const [orderFees, setOrderFees] = useState<Record<string, bigint>>({})
+  const [orderIsTaker, setOrderIsTaker] = useState<Record<string, boolean>>({})
 
   // Stable key: only re-fetch when the set of filled order IDs actually changes
   // (avoids cancellation race when orders array ref changes every 5s refetch)
@@ -188,26 +186,35 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
         // Accumulate VWAP + fees per order from all matched logs
         const accum: Record<string, { totalValue: bigint; totalAmount: bigint }> = {}
         const fees: Record<string, bigint> = {}
+        const takerMap: Record<string, boolean> = {}
         for (const log of logs) {
           const bidId = log.args.bidOrderId!.toString()
           const askId = log.args.askOrderId!.toString()
+          const bidNum = BigInt(log.args.bidOrderId!)
+          const askNum = BigInt(log.args.askOrderId!)
           const p = BigInt(log.args.price!)
           const a = BigInt(log.args.amount!)
-          const fee = BigInt(log.args.takerFee ?? 0n)
+          const takerFee = BigInt(log.args.takerFee ?? 0n)
+          // Taker = higher order ID (placed last, triggered matching)
+          const takerIsBid = bidNum > askNum
+          // Maker rebate = takerFee * 2/5 (2bps rebate on 5bps taker fee)
+          const makerRebate = takerFee * 2n / 5n
 
           // Match bid side (long orders)
           if (filledIds.has(bidId) && filledSides.get(bidId) === 0) {
             if (!accum[bidId]) accum[bidId] = { totalValue: 0n, totalAmount: 0n }
             accum[bidId].totalValue += p * a
             accum[bidId].totalAmount += a
-            fees[bidId] = (fees[bidId] ?? 0n) + fee
+            takerMap[bidId] = takerIsBid
+            fees[bidId] = (fees[bidId] ?? 0n) + (takerIsBid ? takerFee : makerRebate)
           }
           // Match ask side (short orders)
           if (filledIds.has(askId) && filledSides.get(askId) === 1) {
             if (!accum[askId]) accum[askId] = { totalValue: 0n, totalAmount: 0n }
             accum[askId].totalValue += p * a
             accum[askId].totalAmount += a
-            fees[askId] = (fees[askId] ?? 0n) + fee
+            takerMap[askId] = !takerIsBid
+            fees[askId] = (fees[askId] ?? 0n) + (!takerIsBid ? takerFee : makerRebate)
           }
         }
 
@@ -219,6 +226,7 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
         if (!cancelled) {
           setFillPrices(prices)
           setOrderFees(fees)
+          setOrderIsTaker(takerMap)
         }
       } catch (err) {
         console.error('Failed to fetch fill prices:', err)
@@ -293,6 +301,7 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
               order={order}
               fillPrice={fillPrices[order.id.toString()] ?? null}
               fee={orderFees[order.id.toString()] ?? 0n}
+              isTaker={orderIsTaker[order.id.toString()] ?? true}
             />
           ))}
         </tbody>

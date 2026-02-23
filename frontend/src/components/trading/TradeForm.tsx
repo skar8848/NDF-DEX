@@ -300,11 +300,11 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     }
   }, [market, effectivePrice, sizeInput, collateralRequired, side])
 
-  // Estimated taker fee in USD
+  // Estimated taker fee in USD (5bps of collateral, not notional)
   const estimatedFee = useMemo(() => {
-    if (!orderValue) return null
-    return orderValue * 0.0005 // 5bps
-  }, [orderValue])
+    if (collateralRequired === 0n) return null
+    return (Number(collateralRequired) / COLLATERAL_PRECISION) * 0.0005
+  }, [collateralRequired])
 
   const insufficientBalance = isConnected && collateralRequired > 0n && collateralRequired > balance
 
