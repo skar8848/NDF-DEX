@@ -288,6 +288,19 @@ export default function Trade() {
               </span>
             </div>
 
+            <div className="flex flex-col">
+              <span className="text-[10px]" style={{ color: '#8888a0' }}>Contract</span>
+              <a
+                href={`https://testnet.snowtrace.io/address/${CONTRACTS.OrderBook}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-mono hover:text-primary transition-colors"
+                style={{ color: '#e4e4ed' }}
+              >
+                {CONTRACTS.OrderBook.slice(0, 6)}...{CONTRACTS.OrderBook.slice(-4)}
+              </a>
+            </div>
+
             {/* Settle button for expired, unsettled markets */}
             {!market.settled && BigInt(Math.floor(Date.now() / 1000)) >= market.expiration && (
               <button

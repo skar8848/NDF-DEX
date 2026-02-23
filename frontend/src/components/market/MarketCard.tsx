@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { formatPrice, formatCountdown, formatExpiryDate } from '../../lib/utils'
 import { useOraclePrice } from '../../hooks/usePriceData'
 import { AssetLogo } from '../trading/MarketSelector'
-import { CONTRACTS } from '../../lib/config'
 
 type MarketCardProps = {
   id: bigint
@@ -58,20 +57,7 @@ export function MarketCard({
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 text-xs">
-        <div className="bg-surface-2 rounded-lg p-2.5">
-          <p className="text-text-secondary mb-0.5">OrderBook</p>
-          <p
-            className="text-text font-medium font-mono cursor-pointer hover:text-primary transition-colors"
-            title={CONTRACTS.OrderBook}
-            onClick={(e) => {
-              e.preventDefault()
-              navigator.clipboard.writeText(CONTRACTS.OrderBook)
-            }}
-          >
-            {CONTRACTS.OrderBook.slice(0, 6)}...{CONTRACTS.OrderBook.slice(-4)}
-          </p>
-        </div>
+      <div className="grid grid-cols-2 gap-3 text-xs">
         <div className="bg-surface-2 rounded-lg p-2.5">
           <p className="text-text-secondary mb-0.5">Expiry</p>
           <p className="text-text font-medium">{formatCountdown(expiration)}</p>
