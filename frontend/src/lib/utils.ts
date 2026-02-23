@@ -58,3 +58,22 @@ export function formatExpiryDate(expiration: bigint): string {
 export function formatMarketName(baseAsset: string, quoteAsset: string, expiration: bigint): string {
   return `${baseAsset}/${quoteAsset} - ${formatExpiryDate(expiration)}`
 }
+
+/**
+ * Paginated getLogs — Fuji RPC limits to 2048 blocks per query.
+ * Fetches logs in chunks of CHUNK_SIZE and concatenates results.
+ */
+const LOG_CHUNK_SIZE = 2000n
+
+export async function paginatedGetLogs(
+  client: { getLogs: (args: any) => Promise<any[]> },
+  params: { address: `0x${string}`; event: any; fromBlock: bigint; toBlock: bigint; args?: any }
+): Promise<any[]> {
+  const allLogs: any[] = []
+  for (let from = params.fromBlock; from <= params.toBlock; from += LOG_CHUNK_SIZE) {
+    const to = from + LOG_CHUNK_SIZE - 1n > params.toBlock ? params.toBlock : from + LOG_CHUNK_SIZE - 1n
+    const chunk = await client.getLogs({ ...params, fromBlock: from, toBlock: to })
+    allLogs.push(...chunk)
+  }
+  return allLogs
+}

@@ -13,7 +13,7 @@ import { OrderHistory } from '../components/trading/OrderHistory'
 import { TradeHistory } from '../components/trading/TradeHistory'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { useOraclePrice } from '../hooks/usePriceData'
-import { formatCountdown, cn } from '../lib/utils'
+import { formatCountdown, cn, paginatedGetLogs } from '../lib/utils'
 import { PRICE_PRECISION, CONTRACTS } from '../lib/config'
 
 const OrderMatchedEventNew = parseAbiItem(
@@ -71,20 +71,20 @@ export default function Trade() {
 
         let logs: any[] = []
         try {
-          logs = await publicClient!.getLogs({
+          logs = await paginatedGetLogs(publicClient!, {
             address: CONTRACTS.OrderBook,
             event: OrderMatchedEventNew,
             fromBlock,
-            toBlock: 'latest',
+            toBlock: currentBlock,
           })
         } catch { /* ignore */ }
         if (logs.length === 0) {
           try {
-            logs = await publicClient!.getLogs({
+            logs = await paginatedGetLogs(publicClient!, {
               address: CONTRACTS.OrderBook,
               event: OrderMatchedEventOld,
               fromBlock,
-              toBlock: 'latest',
+              toBlock: currentBlock,
             })
           } catch { /* ignore */ }
         }

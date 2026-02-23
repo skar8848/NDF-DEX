@@ -4,6 +4,7 @@ import { parseUnits, formatUnits, parseAbiItem } from 'viem'
 import { createChart, AreaSeries, LineSeries } from 'lightweight-charts'
 import type { IChartApi, Time } from 'lightweight-charts'
 import { CONTRACTS } from '../lib/config'
+import { paginatedGetLogs } from '../lib/utils'
 import { PositionManagerABI, OrderBookABI } from '../lib/abis'
 import { useAllMarkets, type MarketInfo } from '../hooks/useForwardMarket'
 import { toast } from 'sonner'
@@ -143,23 +144,24 @@ export function Vault() {
     async function fetchEventData() {
       try {
         const currentBlock = await publicClient!.getBlockNumber()
-        const fromBlock = currentBlock > 200000n ? currentBlock - 200000n : 0n
+        const fromBlock = currentBlock > 50000n ? currentBlock - 50000n : 0n
 
         // 1. USDC Transfer events to/from vault (for TVL history)
+        // Paginated — Fuji RPC limits to 2048 blocks per query
         const [logsIn, logsOut] = await Promise.all([
-          publicClient!.getLogs({
+          paginatedGetLogs(publicClient!, {
             address: CONTRACTS.MockUSDC,
             event: USDCTransferEvent,
             args: { to: vaultAddr },
             fromBlock,
-            toBlock: 'latest',
+            toBlock: currentBlock,
           }),
-          publicClient!.getLogs({
+          paginatedGetLogs(publicClient!, {
             address: CONTRACTS.MockUSDC,
             event: USDCTransferEvent,
             args: { from: vaultAddr },
             fromBlock,
-            toBlock: 'latest',
+            toBlock: currentBlock,
           }),
         ])
 
@@ -211,11 +213,11 @@ export function Vault() {
         }
 
         // 2. Deposited events for share price history + user deposits
-        const depositLogs = await publicClient!.getLogs({
+        const depositLogs = await paginatedGetLogs(publicClient!, {
           address: vaultAddr,
           event: DepositedEvent,
           fromBlock,
-          toBlock: 'latest',
+          toBlock: currentBlock,
         })
 
         if (cancelled) return
@@ -261,12 +263,12 @@ export function Vault() {
         setUserTotalDeposited(myTotalDep)
 
         // 3. TLP Transfer events from 0x0 (mints) for depositors
-        const mintLogs = await publicClient!.getLogs({
+        const mintLogs = await paginatedGetLogs(publicClient!, {
           address: vaultAddr,
           event: TLPTransferEvent,
           args: { from: '0x0000000000000000000000000000000000000000' as `0x${string}` },
           fromBlock,
-          toBlock: 'latest',
+          toBlock: currentBlock,
         })
 
         if (cancelled) return

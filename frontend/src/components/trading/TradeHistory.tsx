@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { usePublicClient } from 'wagmi'
 import { parseAbiItem } from 'viem'
 import { CONTRACTS } from '../../lib/config'
-import { cn } from '../../lib/utils'
+import { cn, paginatedGetLogs } from '../../lib/utils'
 
 const EXPLORER_URL = 'https://testnet.snowtrace.io'
 
@@ -39,26 +39,25 @@ export function TradeHistory() {
     async function fetchTrades() {
       try {
         const currentBlock = await publicClient!.getBlockNumber()
-        // Fetch last ~5000 blocks (roughly a few hours on Fuji)
         const fromBlock = currentBlock > 5000n ? currentBlock - 5000n : 0n
 
-        // Try new event first, fallback to old (pre-fee contract)
+        // Paginated getLogs (Fuji RPC limits to 2048 blocks per query)
         let logs: any[] = []
         try {
-          logs = await publicClient!.getLogs({
+          logs = await paginatedGetLogs(publicClient!, {
             address: CONTRACTS.OrderBook,
             event: OrderMatchedEventNew,
             fromBlock,
-            toBlock: 'latest',
+            toBlock: currentBlock,
           })
         } catch { /* ignore */ }
         if (logs.length === 0) {
           try {
-            logs = await publicClient!.getLogs({
+            logs = await paginatedGetLogs(publicClient!, {
               address: CONTRACTS.OrderBook,
               event: OrderMatchedEventOld,
               fromBlock,
-              toBlock: 'latest',
+              toBlock: currentBlock,
             })
           } catch { /* ignore */ }
         }

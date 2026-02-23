@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePublicClient } from 'wagmi'
 import { parseAbiItem } from 'viem'
 import { useUserOrders, useCancelOrder } from '../../hooks/useOrderBook'
-import { formatPrice } from '../../lib/utils'
+import { formatPrice, paginatedGetLogs } from '../../lib/utils'
 import { cn } from '../../lib/utils'
 import { CONTRACTS } from '../../lib/config'
 import type { Order } from '../../hooks/useOrderBook'
@@ -158,25 +158,25 @@ export function OrderHistory({ filter = 'all' }: OrderHistoryProps) {
     async function fetchFillPrices() {
       try {
         const currentBlock = await publicClient!.getBlockNumber()
-        const fromBlock = currentBlock > 100000n ? currentBlock - 100000n : 0n
+        const fromBlock = currentBlock > 10000n ? currentBlock - 10000n : 0n
 
-        // Single getLogs call for ALL OrderMatched events (no per-order loop)
+        // Paginated getLogs (Fuji RPC limits to 2048 blocks per query)
         let logs: any[] = []
         try {
-          logs = await publicClient!.getLogs({
+          logs = await paginatedGetLogs(publicClient!, {
             address: CONTRACTS.OrderBook,
             event: OrderMatchedEventNew,
             fromBlock,
-            toBlock: 'latest',
+            toBlock: currentBlock,
           })
         } catch { /* ignore */ }
         if (logs.length === 0) {
           try {
-            logs = await publicClient!.getLogs({
+            logs = await paginatedGetLogs(publicClient!, {
               address: CONTRACTS.OrderBook,
               event: OrderMatchedEventOld,
               fromBlock,
-              toBlock: 'latest',
+              toBlock: currentBlock,
             })
           } catch { /* ignore */ }
         }
