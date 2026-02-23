@@ -300,6 +300,14 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     }
   }, [market, effectivePrice, sizeInput, collateralRequired, side])
 
+  // Estimated taker fee in USD
+  const estimatedFee = useMemo(() => {
+    if (!orderValue) return null
+    return orderValue * 0.0005 // 5bps
+  }, [orderValue])
+
+  const insufficientBalance = isConnected && collateralRequired > 0n && collateralRequired > balance
+
   const isPending = isLimitPending || isMarketPending
   const isConfirming = isLimitConfirming || isMarketConfirming
 
@@ -792,8 +800,10 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
 
       {/* Taker fee */}
       <div className="flex items-center justify-between text-xs px-1">
-        <span className="text-text-secondary">Taker Fee</span>
-        <span className="text-text-secondary font-mono">0.05%</span>
+        <span className="text-text-secondary">Taker Fee (0.05%)</span>
+        <span className="text-text-secondary font-mono">
+          {estimatedFee ? `$${estimatedFee.toFixed(2)}` : '--'}
+        </span>
       </div>
 
       {/* Action button */}
@@ -809,13 +819,15 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
       ) : (
         <button
           onClick={handlePlaceOrder}
-          disabled={!isFormValid || isPending || isConfirming}
+          disabled={!isFormValid || isPending || isConfirming || insufficientBalance}
           className={cn(
             'w-full py-2.5 text-sm font-semibold rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
-            side === 'long' ? 'bg-long hover:bg-long/90' : 'bg-short hover:bg-short/90'
+            insufficientBalance ? 'bg-surface-2 !text-short' : side === 'long' ? 'bg-long hover:bg-long/90' : 'bg-short hover:bg-short/90'
           )}
         >
-          {isPending
+          {insufficientBalance
+            ? 'Insufficient Balance'
+            : isPending
             ? 'Confirm in wallet...'
             : isConfirming
             ? 'Placing order...'
