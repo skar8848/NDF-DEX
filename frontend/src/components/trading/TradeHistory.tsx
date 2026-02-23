@@ -153,6 +153,9 @@ export function TradeHistory() {
               Size
             </th>
             <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
+              Fee
+            </th>
+            <th className="px-3 py-2 text-left text-[10px] font-medium text-text-secondary uppercase tracking-wider">
               Time
             </th>
           </tr>
@@ -173,6 +176,9 @@ export function TradeHistory() {
                 </td>
                 <td className="px-3 py-1.5 text-xs text-text font-mono">
                   {trade.amount.toString()}
+                </td>
+                <td className="px-3 py-1.5 text-xs font-mono text-text-secondary">
+                  {trade.takerFee > 0n ? `$${(Number(trade.takerFee) / 1e6).toFixed(2)}` : '—'}
                 </td>
                 <td className="px-3 py-1.5 text-xs font-mono text-text-secondary">
                   {formatTradeTime(trade.timestamp)}
