@@ -23,12 +23,12 @@ html {
 
 html.dark {
   color-scheme: dark;
-  --color-background: #060612;
-  --color-surface: #0c0c1d;
-  --color-surface-2: #141428;
-  --color-border: rgba(255, 255, 255, 0.15);
-  --color-text: #f0f0f0;
-  --color-text-secondary: #8b8fa3;
+  --color-background: #000000;
+  --color-surface: #0a0a0a;
+  --color-surface-2: #141414;
+  --color-border: #ffffff;
+  --color-text: #ffffff;
+  --color-text-secondary: #999999;
   --color-primary: #f97316;
   --color-primary-hover: #fb923c;
   --color-accent: #ea580c;

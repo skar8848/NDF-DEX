@@ -324,11 +324,11 @@ export function Vault() {
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
       height: 250,
-      layout: { background: { color: isDark ? '#0c0c1d' : '#ffffff' }, textColor: isDark ? '#8b8fa3' : '#6b7280' },
-      grid: { vertLines: { color: isDark ? 'rgba(255,255,255,0.06)' : '#eeeeef' }, horzLines: { color: isDark ? 'rgba(255,255,255,0.06)' : '#eeeeef' } },
-      timeScale: { borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#1a1a1a', timeVisible: true },
-      rightPriceScale: { borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#1a1a1a' },
-      crosshair: { horzLine: { color: isDark ? 'rgba(255,255,255,0.2)' : '#d1d5db' }, vertLine: { color: isDark ? 'rgba(255,255,255,0.2)' : '#d1d5db' } },
+      layout: { background: { color: isDark ? '#000000' : '#ffffff' }, textColor: isDark ? '#999999' : '#6b7280' },
+      grid: { vertLines: { color: isDark ? 'rgba(255,255,255,0.08)' : '#eeeeef' }, horzLines: { color: isDark ? 'rgba(255,255,255,0.08)' : '#eeeeef' } },
+      timeScale: { borderColor: isDark ? '#ffffff' : '#1a1a1a', timeVisible: true },
+      rightPriceScale: { borderColor: isDark ? '#ffffff' : '#1a1a1a' },
+      crosshair: { horzLine: { color: isDark ? 'rgba(255,255,255,0.3)' : '#d1d5db' }, vertLine: { color: isDark ? 'rgba(255,255,255,0.3)' : '#d1d5db' } },
     })
     chartRef.current = chart
 

@@ -59,9 +59,9 @@ function ThemedToaster() {
       richColors
       toastOptions={{
         style: {
-          background: theme === 'dark' ? '#0c0c1d' : '#ffffff',
-          border: theme === 'dark' ? '1px solid rgba(255,255,255,0.15)' : '1px solid #1a1a1a',
-          color: theme === 'dark' ? '#f0f0f0' : '#111111',
+          background: theme === 'dark' ? '#0a0a0a' : '#ffffff',
+          border: theme === 'dark' ? '1px solid #ffffff' : '1px solid #1a1a1a',
+          color: theme === 'dark' ? '#ffffff' : '#111111',
           textAlign: 'center' as const,
         },
       }}
