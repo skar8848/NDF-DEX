@@ -173,43 +173,41 @@ export function OrderBookComponent({ bids, asks, markPrice, onPriceClick }: Orde
           </div>
         ) : (
           <>
-          {displayBids.map((level) => {
-            const cumulativePercent = Number(level.cumulative * 100n / maxCumulative)
-            const individualPercent = Number(level.totalAmount * 100n / maxCumulative)
+            {displayBids.map((level) => {
+              const cumulativePercent = Number(level.cumulative * 100n / maxCumulative)
+              const individualPercent = Number(level.totalAmount * 100n / maxCumulative)
 
-            return (
-              <div
-                key={level.price.toString()}
-                onClick={() => handlePriceClick(level.price)}
-                className="relative grid grid-cols-3 gap-1 px-3 py-[3px] cursor-pointer hover:bg-long/5 transition-colors group"
-              >
-                {/* Cumulative depth bar (lighter) */}
+              return (
                 <div
-                  className="absolute right-0 top-0 bottom-0 bg-long/8 transition-all duration-300"
-                  style={{ width: `${Math.min(cumulativePercent, 100)}%` }}
-                />
-                {/* Individual level bar (darker) */}
-                <div
-                  className="absolute right-0 top-0 bottom-0 bg-long/20 transition-all duration-300"
-                  style={{ width: `${Math.min(individualPercent, 100)}%` }}
-                />
-                <span className="relative z-10 text-long font-mono group-hover:underline">
-                  {formatPrice(level.price)}
-                </span>
-                <span className="relative z-10 text-right text-text font-mono">
-                  {level.totalAmount.toString()}
-                </span>
-                <span className="relative z-10 text-right text-text-secondary font-mono">
-                  {level.cumulative.toString()}
-                </span>
+                  key={level.price.toString()}
+                  onClick={() => handlePriceClick(level.price)}
+                  className="relative grid grid-cols-3 gap-1 px-3 py-[3px] cursor-pointer hover:bg-long/5 transition-colors group"
+                >
+                  <div
+                    className="absolute right-0 top-0 bottom-0 bg-long/8 transition-all duration-300"
+                    style={{ width: `${Math.min(cumulativePercent, 100)}%` }}
+                  />
+                  <div
+                    className="absolute right-0 top-0 bottom-0 bg-long/20 transition-all duration-300"
+                    style={{ width: `${Math.min(individualPercent, 100)}%` }}
+                  />
+                  <span className="relative z-10 text-long font-mono group-hover:underline">
+                    {formatPrice(level.price)}
+                  </span>
+                  <span className="relative z-10 text-right text-text font-mono">
+                    {level.totalAmount.toString()}
+                  </span>
+                  <span className="relative z-10 text-right text-text-secondary font-mono">
+                    {level.cumulative.toString()}
+                  </span>
+                </div>
+              )
+            })}
+            {hiddenBids > 0 && (
+              <div className="px-3 py-1 text-[9px] text-text-secondary text-center">
+                +{hiddenBids} more level{hiddenBids > 1 ? 's' : ''} below
               </div>
-            )
-          })
-          {hiddenBids > 0 && (
-            <div className="px-3 py-1 text-[9px] text-text-secondary text-center">
-              +{hiddenBids} more level{hiddenBids > 1 ? 's' : ''} below
-            </div>
-          )}
+            )}
           </>
         )}
       </div>
