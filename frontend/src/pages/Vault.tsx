@@ -417,342 +417,384 @@ export function Vault() {
   ) ?? []
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 space-y-6">
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold text-text">TLP Vault</h1>
-        <p className="text-sm text-text-secondary">Deposit USDC, earn yield from trading fees. TLP share price increases as revenue flows in.</p>
-      </div>
+    <div className="max-w-6xl mx-auto py-8 px-4">
+      {/* ── 2-COLUMN LAYOUT ── */}
+      <div className="flex gap-6">
 
-      {/* Stat cards: Share Price | TVL | APR 30d | Your P&L */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-surface border border-border rounded-xl p-4">
-          <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Share Price</div>
-          <div className="text-lg font-bold font-mono text-text">${sharePriceNum.toFixed(4)}</div>
-        </div>
-        <div className="bg-surface border border-border rounded-xl p-4">
-          <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">TVL</div>
-          <div className="text-lg font-bold font-mono text-text">${totalValue ? fmtUsdc(totalValue as bigint) : '0.00'}</div>
-        </div>
-        <div className="bg-surface border border-border rounded-xl p-4">
-          <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">APR (30d)</div>
-          <div className="text-lg font-bold font-mono text-primary">{apr !== null ? `${apr.toFixed(1)}%` : '—'}</div>
-        </div>
-        <div className="bg-surface border border-border rounded-xl p-4">
-          <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Your P&L</div>
-          <div className={`text-lg font-bold font-mono ${userPnl >= 0 ? 'text-long' : 'text-short'}`}>
-            {isConnected ? `${userPnl >= 0 ? '+' : ''}$${userPnl.toFixed(2)}` : '—'}
+        {/* ════════ LEFT COLUMN ════════ */}
+        <div className="flex-1 min-w-0 space-y-5">
+
+          {/* Header: title + description */}
+          <div className="bg-surface border border-border rounded-xl p-6">
+            <h1 className="text-2xl font-bold text-text mb-1">TLP Vault</h1>
+            <p className="text-sm text-text-secondary">
+              Deposit USDC, earn yield from trading fees. TLP share price increases as revenue flows in.
+            </p>
           </div>
-        </div>
-      </div>
 
-      {/* Chart with toggle */}
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
-        <div className="flex items-center gap-4 px-4 py-3 border-b border-border">
-          <button
-            onClick={() => setChartMode('tvl')}
-            className={`flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-colors ${chartMode === 'tvl' ? 'text-primary' : 'text-text-secondary hover:text-text'}`}
-          >
-            <span className={`w-2 h-2 rounded-full ${chartMode === 'tvl' ? 'bg-primary' : 'bg-border'}`} />
-            TVL
-          </button>
-          <button
-            onClick={() => setChartMode('sharePrice')}
-            className={`flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-colors ${chartMode === 'sharePrice' ? 'text-primary' : 'text-text-secondary hover:text-text'}`}
-          >
-            <span className={`w-2 h-2 rounded-full ${chartMode === 'sharePrice' ? 'bg-primary' : 'bg-border'}`} />
-            Share Price
-          </button>
-        </div>
-        <div ref={chartContainerRef} className="w-full" style={{ height: 250 }}>
-          {(chartMode === 'tvl' ? tvlHistory : sharePriceHistory).length === 0 && (
-            <div className="flex items-center justify-center h-full text-xs text-text-secondary">Loading chart data...</div>
+          {/* Stat cards row */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-surface border border-border rounded-xl p-4">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Total Value Locked</div>
+              <div className="text-xl font-bold font-mono text-text">${totalValue ? fmtUsdc(totalValue as bigint) : '0.00'}</div>
+            </div>
+            <div className="bg-surface border border-border rounded-xl p-4">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Vault PNL</div>
+              <div className="text-xl font-bold font-mono text-primary">
+                {(() => {
+                  const tvlNum = Number(tvlBig) / 1e6
+                  const depNum = Number(totalDep) / 1e6
+                  const withNum = Number(totalWith) / 1e6
+                  const profit = tvlNum - depNum + withNum
+                  return `$${profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                })()}
+              </div>
+            </div>
+            <div className="bg-surface border border-border rounded-xl p-4">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Vault APY (30d)</div>
+              <div className="text-xl font-bold font-mono text-primary">{apr !== null ? `${apr.toFixed(1)}%` : '—'}</div>
+            </div>
+          </div>
+
+          {/* Vault Performance / Your Performance tabs */}
+          <div className="bg-surface border border-border rounded-xl overflow-hidden">
+            <div className="flex items-center gap-6 px-5 border-b border-border">
+              <button
+                onClick={() => setChartMode('tvl')}
+                className={`py-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${chartMode === 'tvl' ? 'border-primary text-text' : 'border-transparent text-text-secondary hover:text-text'}`}
+              >
+                Vault Performance
+              </button>
+              <button
+                onClick={() => setChartMode('sharePrice')}
+                className={`py-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${chartMode === 'sharePrice' ? 'border-primary text-text' : 'border-transparent text-text-secondary hover:text-text'}`}
+              >
+                Share Price
+              </button>
+            </div>
+
+            {/* Stats row under tabs */}
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2 px-5 py-4 border-b border-border text-xs">
+              <div className="flex justify-between">
+                <span className="text-text-secondary">PNL</span>
+                <span className="font-mono text-text font-medium">
+                  {(() => {
+                    const tvlNum = Number(tvlBig) / 1e6
+                    const depNum = Number(totalDep) / 1e6
+                    const withNum = Number(totalWith) / 1e6
+                    const profit = tvlNum - depNum + withNum
+                    return `$${profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  })()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-secondary">Share Price</span>
+                <span className="font-mono text-text font-medium">${sharePriceNum.toFixed(4)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-secondary">Max Drawdown</span>
+                <span className="font-mono text-text font-medium">—</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-secondary">Depositors</span>
+                <span className="font-mono text-text font-medium">{depositors.length}</span>
+              </div>
+            </div>
+
+            {/* Chart */}
+            <div ref={chartContainerRef} className="w-full" style={{ height: 280 }}>
+              {(chartMode === 'tvl' ? tvlHistory : sharePriceHistory).length === 0 && (
+                <div className="flex items-center justify-center h-full text-xs text-text-secondary">Loading chart data...</div>
+              )}
+            </div>
+          </div>
+
+          {/* Tables: Vault Positions */}
+          {(vaultPositions as any[])?.length > 0 && (
+            <div className="bg-surface border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
+                <div className="text-xs font-semibold text-text">Vault Positions</div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-text-secondary border-b border-border">
+                      <th className="text-left px-4 py-2 font-medium">Market</th>
+                      <th className="text-left px-4 py-2 font-medium">Side</th>
+                      <th className="text-right px-4 py-2 font-medium">Size</th>
+                      <th className="text-right px-4 py-2 font-medium">Entry Price</th>
+                      <th className="text-right px-4 py-2 font-medium">Collateral</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(vaultPositions as any[]).map((pos: any, i: number) => (
+                      <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
+                        <td className="px-4 py-2.5 text-text font-medium">{marketName(pos.marketId)}</td>
+                        <td className={`px-4 py-2.5 font-semibold ${pos.side === 0 ? 'text-long' : 'text-short'}`}>
+                          {pos.side === 0 ? 'LONG' : 'SHORT'}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono text-text">{Number(pos.size)}</td>
+                        <td className="px-4 py-2.5 text-right font-mono text-text">${(Number(pos.entryPrice) / 1e8).toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-right font-mono text-text">${(Number(pos.collateral) / 1e6).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Tables: Vault Orders */}
+          {openOrders.length > 0 && (
+            <div className="bg-surface border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
+                <div className="text-xs font-semibold text-text">Vault Limit Orders</div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-text-secondary border-b border-border">
+                      <th className="text-left px-4 py-2 font-medium">Side</th>
+                      <th className="text-right px-4 py-2 font-medium">Price</th>
+                      <th className="text-right px-4 py-2 font-medium">Size</th>
+                      <th className="text-right px-4 py-2 font-medium">Filled</th>
+                      <th className="text-left px-4 py-2 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {openOrders.map((o: any, i: number) => (
+                      <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
+                        <td className={`px-4 py-2.5 font-semibold ${o.side === 0 ? 'text-long' : 'text-short'}`}>
+                          {o.side === 0 ? 'BUY' : 'SELL'}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono text-text">${(Number(o.price) / 1e8).toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-right font-mono text-text">{Number(o.amount)}</td>
+                        <td className="px-4 py-2.5 text-right font-mono text-text">{Number(o.filled)}</td>
+                        <td className="px-4 py-2.5 text-text-secondary">{o.status === 0 ? 'OPEN' : 'PARTIAL'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Tables: Depositors */}
+          {depositors.length > 0 && (
+            <div className="bg-surface border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
+                <div className="text-xs font-semibold text-text">Depositors ({depositors.length})</div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-text-secondary border-b border-border">
+                      <th className="text-left px-4 py-2 font-medium">Address</th>
+                      <th className="text-right px-4 py-2 font-medium">TLP Balance</th>
+                      <th className="text-right px-4 py-2 font-medium">Value (USD)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {depositors.map((d, i) => (
+                      <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
+                        <td className="px-4 py-2.5">
+                          <a href={`${EXPLORER_URL}/address/${d.address}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover font-mono">
+                            {truncAddr(d.address)}
+                          </a>
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono text-text">{fmtTlp(d.tlpBalance)}</td>
+                        <td className="px-4 py-2.5 text-right font-mono text-text">${d.valueUsd.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Your Position card */}
-      {isConnected && (
-        <div className="bg-surface border border-border rounded-xl p-4">
-          <div className="text-xs text-text-secondary mb-3">Your Position</div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <div className="text-[10px] text-text-secondary uppercase">TLP Balance</div>
-              <div className="text-lg font-bold font-mono text-text">{fmtTlp(mySharesBig)}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-text-secondary uppercase">Value</div>
-              <div className="text-lg font-bold font-mono text-primary">${myValueUsd.toFixed(2)}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-text-secondary uppercase">P&L</div>
-              <div className={`text-lg font-bold font-mono ${userPnl >= 0 ? 'text-long' : 'text-short'}`}>
-                {userPnl >= 0 ? '+' : ''}${userPnl.toFixed(2)}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] text-text-secondary uppercase">ROI</div>
-              <div className={`text-lg font-bold font-mono ${userRoi >= 0 ? 'text-long' : 'text-short'}`}>
-                {userRoi >= 0 ? '+' : ''}{userRoi.toFixed(1)}%
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* ════════ RIGHT COLUMN (sidebar) ════════ */}
+        <div className="w-[320px] shrink-0 space-y-4">
 
-      {/* Deposit / Withdraw tabs */}
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
-        <div className="grid grid-cols-2 border-b border-border">
-          <button
-            onClick={() => setTab('deposit')}
-            className={`py-3 text-sm font-semibold transition-colors cursor-pointer ${tab === 'deposit' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-text-secondary hover:text-text'}`}
-          >
-            Deposit
-          </button>
-          <button
-            onClick={() => setTab('withdraw')}
-            className={`py-3 text-sm font-semibold transition-colors cursor-pointer ${tab === 'withdraw' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-text-secondary hover:text-text'}`}
-          >
-            Withdraw
-          </button>
-        </div>
-
-        <div className="p-4 space-y-4">
-          {tab === 'deposit' ? (
-            <>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs text-text-secondary">Amount (USDC)</label>
-                  {isConnected && usdcBalance && (
-                    <button onClick={() => setDepositInput(formatUnits(usdcBalance as bigint, 6))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
-                      Max: ${fmtUsdc(usdcBalance as bigint)}
-                    </button>
-                  )}
-                </div>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  value={depositInput}
-                  onChange={(e) => setDepositInput(e.target.value)}
-                  className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-text font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-              </div>
-              {depositInput && Number(depositInput) > 0 && (
-                <div className="text-xs text-text-secondary">
-                  You'll receive ~<span className="text-text font-mono">{(Number(depositInput) / sharePriceNum).toFixed(2)}</span> TLP
-                </div>
-              )}
+          {/* Deposit / Withdraw tabs */}
+          <div className="bg-surface border border-border rounded-xl overflow-hidden">
+            <div className="grid grid-cols-2">
               <button
-                onClick={handleDeposit}
-                disabled={!isConnected || !depositInput || Number(depositInput) <= 0 || isPending}
-                className="w-full py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                onClick={() => setTab('deposit')}
+                className={`py-3 text-sm font-semibold transition-colors cursor-pointer ${tab === 'deposit' ? 'bg-primary text-white' : 'text-text-secondary hover:text-text'}`}
               >
-                {isPending ? 'Processing...' : 'Deposit USDC'}
+                Deposit
               </button>
-            </>
-          ) : (
-            <>
-              {hasPendingWithdraw ? (
-                <div className="space-y-3">
-                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                    <div className="text-xs text-text-secondary mb-1">Pending Withdrawal</div>
-                    <div className="text-sm font-mono text-text">{fmtTlp(pendingReq![0])} TLP</div>
-                    <div className="text-[10px] text-text-secondary mt-1">
-                      Requested at {new Date(Number(pendingReq![1]) * 1000).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleExecuteWithdraw}
-                      disabled={isPending}
-                      className="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                      Execute Withdraw
-                    </button>
-                    <button
-                      onClick={handleCancelWithdraw}
-                      disabled={isPending}
-                      className="px-4 py-2.5 text-sm font-semibold rounded-lg border border-border text-text-secondary hover:text-text transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
+              <button
+                onClick={() => setTab('withdraw')}
+                className={`py-3 text-sm font-semibold transition-colors cursor-pointer ${tab === 'withdraw' ? 'bg-primary text-white' : 'text-text-secondary hover:text-text'}`}
+              >
+                Withdraw
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {tab === 'deposit' ? (
                 <>
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs text-text-secondary">TLP Shares</label>
-                      {isConnected && mySharesBig > 0n && (
-                        <button onClick={() => setWithdrawInput(formatUnits(mySharesBig, 18))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
-                          Max: {fmtTlp(mySharesBig)}
+                      <label className="text-xs text-text-secondary">Amount (USDC)</label>
+                      {isConnected && usdcBalance && (
+                        <button onClick={() => setDepositInput(formatUnits(usdcBalance as bigint, 6))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
+                          Max: ${fmtUsdc(usdcBalance as bigint)}
                         </button>
                       )}
                     </div>
                     <input
                       type="number"
                       placeholder="0.00"
-                      value={withdrawInput}
-                      onChange={(e) => setWithdrawInput(e.target.value)}
+                      value={depositInput}
+                      onChange={(e) => setDepositInput(e.target.value)}
                       className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-text font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
-                  {withdrawInput && Number(withdrawInput) > 0 && (
+                  {depositInput && Number(depositInput) > 0 && (
                     <div className="text-xs text-text-secondary">
-                      You'll receive ~<span className="text-text font-mono">${(Number(withdrawInput) * sharePriceNum).toFixed(2)}</span> USDC after {delayHours}h delay
+                      You'll receive ~<span className="text-text font-mono">{(Number(depositInput) / sharePriceNum).toFixed(2)}</span> TLP
                     </div>
                   )}
                   <button
-                    onClick={handleRequestWithdraw}
-                    disabled={!isConnected || !withdrawInput || Number(withdrawInput) <= 0 || isPending}
-                    className="w-full py-2.5 text-sm font-semibold rounded-lg bg-short hover:bg-short/90 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    onClick={handleDeposit}
+                    disabled={!isConnected || !depositInput || Number(depositInput) <= 0 || isPending}
+                    className="w-full py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    {isPending ? 'Processing...' : 'Request Withdrawal'}
+                    {isPending ? 'Processing...' : 'Deposit USDC'}
                   </button>
                 </>
+              ) : (
+                <>
+                  {hasPendingWithdraw ? (
+                    <div className="space-y-3">
+                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                        <div className="text-xs text-text-secondary mb-1">Pending Withdrawal</div>
+                        <div className="text-sm font-mono text-text">{fmtTlp(pendingReq![0])} TLP</div>
+                        <div className="text-[10px] text-text-secondary mt-1">
+                          Requested at {new Date(Number(pendingReq![1]) * 1000).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleExecuteWithdraw}
+                          disabled={isPending}
+                          className="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                          Execute Withdraw
+                        </button>
+                        <button
+                          onClick={handleCancelWithdraw}
+                          disabled={isPending}
+                          className="px-4 py-2.5 text-sm font-semibold rounded-lg border border-border text-text-secondary hover:text-text transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs text-text-secondary">TLP Shares</label>
+                          {isConnected && mySharesBig > 0n && (
+                            <button onClick={() => setWithdrawInput(formatUnits(mySharesBig, 18))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
+                              Max: {fmtTlp(mySharesBig)}
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          value={withdrawInput}
+                          onChange={(e) => setWithdrawInput(e.target.value)}
+                          className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-text font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                      </div>
+                      {withdrawInput && Number(withdrawInput) > 0 && (
+                        <div className="text-xs text-text-secondary">
+                          You'll receive ~<span className="text-text font-mono">${(Number(withdrawInput) * sharePriceNum).toFixed(2)}</span> USDC after {delayHours}h delay
+                        </div>
+                      )}
+                      <button
+                        onClick={handleRequestWithdraw}
+                        disabled={!isConnected || !withdrawInput || Number(withdrawInput) <= 0 || isPending}
+                        className="w-full py-2.5 text-sm font-semibold rounded-lg bg-short hover:bg-short/90 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        {isPending ? 'Processing...' : 'Request Withdrawal'}
+                      </button>
+                    </>
+                  )}
+                </>
               )}
-            </>
+            </div>
+          </div>
+
+          {/* Your Position cards (sidebar) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-surface border border-border rounded-xl p-4">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Your Deposits</div>
+              <div className="text-lg font-bold font-mono text-text">
+                {isConnected ? `$${(Number(userTotalDeposited) / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+              </div>
+            </div>
+            <div className="bg-surface border border-border rounded-xl p-4">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Redeemable</div>
+              <div className="text-lg font-bold font-mono text-text">
+                {isConnected ? `${fmtTlp(mySharesBig)} TLP` : '—'}
+              </div>
+            </div>
+            <div className="bg-surface border border-border rounded-xl p-4">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Withdrawal Delay</div>
+              <div className="text-lg font-bold font-mono text-text">
+                {hasPendingWithdraw ? `${delayHours}h` : '—'}
+              </div>
+            </div>
+            <div className="bg-surface border border-border rounded-xl p-4">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Your PnL</div>
+              <div className={`text-lg font-bold font-mono ${userPnl >= 0 ? 'text-long' : 'text-short'}`}>
+                {isConnected ? `${userPnl >= 0 ? '+' : ''}$${userPnl.toFixed(2)}` : '—'}
+              </div>
+            </div>
+          </div>
+
+          {/* Your Deposits history */}
+          {isConnected && userDeposits.length > 0 && (
+            <div className="bg-surface border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
+                <div className="text-xs font-semibold text-text">Deposit History</div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-text-secondary border-b border-border">
+                      <th className="text-left px-3 py-2 font-medium">Date</th>
+                      <th className="text-right px-3 py-2 font-medium">USDC</th>
+                      <th className="text-right px-3 py-2 font-medium">TLP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {userDeposits.map((d, i) => (
+                      <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
+                        <td className="px-3 py-2 text-text">{d.timestamp ? new Date(d.timestamp * 1000).toLocaleDateString() : '—'}</td>
+                        <td className="px-3 py-2 text-right font-mono text-text">${fmtUsdc(d.usdcAmount)}</td>
+                        <td className="px-3 py-2 text-right">
+                          <a href={`${EXPLORER_URL}/tx/${d.txHash}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover font-mono">
+                            {fmtTlp(d.sharesReceived)}
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
+
       </div>
-
-      {/* Your Deposits table */}
-      {isConnected && userDeposits.length > 0 && (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-border">
-            <div className="text-xs font-semibold text-text">Your Deposits</div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-text-secondary border-b border-border">
-                  <th className="text-left px-4 py-2 font-medium">Date</th>
-                  <th className="text-right px-4 py-2 font-medium">Amount (USDC)</th>
-                  <th className="text-right px-4 py-2 font-medium">TLP Received</th>
-                  <th className="text-right px-4 py-2 font-medium">Tx</th>
-                </tr>
-              </thead>
-              <tbody>
-                {userDeposits.map((d, i) => (
-                  <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
-                    <td className="px-4 py-2.5 text-text">{d.timestamp ? new Date(d.timestamp * 1000).toLocaleDateString() : '—'}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-text">${fmtUsdc(d.usdcAmount)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-text">{fmtTlp(d.sharesReceived)}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <a href={`${EXPLORER_URL}/tx/${d.txHash}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover">
-                        {d.txHash.slice(0, 8)}...
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Vault Positions table */}
-      {(vaultPositions as any[])?.length > 0 && (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-border">
-            <div className="text-xs font-semibold text-text">Vault Positions</div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-text-secondary border-b border-border">
-                  <th className="text-left px-4 py-2 font-medium">Market</th>
-                  <th className="text-left px-4 py-2 font-medium">Side</th>
-                  <th className="text-right px-4 py-2 font-medium">Size</th>
-                  <th className="text-right px-4 py-2 font-medium">Entry Price</th>
-                  <th className="text-right px-4 py-2 font-medium">Collateral</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(vaultPositions as any[]).map((pos: any, i: number) => (
-                  <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
-                    <td className="px-4 py-2.5 text-text font-medium">{marketName(pos.marketId)}</td>
-                    <td className={`px-4 py-2.5 font-semibold ${pos.side === 0 ? 'text-long' : 'text-short'}`}>
-                      {pos.side === 0 ? 'LONG' : 'SHORT'}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-text">{Number(pos.size)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-text">${(Number(pos.entryPrice) / 1e8).toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-text">${(Number(pos.collateral) / 1e6).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Vault Orders table */}
-      {openOrders.length > 0 && (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-border">
-            <div className="text-xs font-semibold text-text">Vault Limit Orders</div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-text-secondary border-b border-border">
-                  <th className="text-left px-4 py-2 font-medium">Side</th>
-                  <th className="text-right px-4 py-2 font-medium">Price</th>
-                  <th className="text-right px-4 py-2 font-medium">Size</th>
-                  <th className="text-right px-4 py-2 font-medium">Filled</th>
-                  <th className="text-left px-4 py-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {openOrders.map((o: any, i: number) => (
-                  <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
-                    <td className={`px-4 py-2.5 font-semibold ${o.side === 0 ? 'text-long' : 'text-short'}`}>
-                      {o.side === 0 ? 'BUY' : 'SELL'}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-text">${(Number(o.price) / 1e8).toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-text">{Number(o.amount)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-text">{Number(o.filled)}</td>
-                    <td className="px-4 py-2.5 text-text-secondary">{o.status === 0 ? 'OPEN' : 'PARTIAL'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Depositors table */}
-      {depositors.length > 0 && (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-border">
-            <div className="text-xs font-semibold text-text">Depositors ({depositors.length})</div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-text-secondary border-b border-border">
-                  <th className="text-left px-4 py-2 font-medium">Address</th>
-                  <th className="text-right px-4 py-2 font-medium">TLP Balance</th>
-                  <th className="text-right px-4 py-2 font-medium">Value (USD)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {depositors.map((d, i) => (
-                  <tr key={i} className="border-b border-border/50 hover:bg-surface-2/50">
-                    <td className="px-4 py-2.5">
-                      <a href={`${EXPLORER_URL}/address/${d.address}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover font-mono">
-                        {truncAddr(d.address)}
-                      </a>
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-text">{fmtTlp(d.tlpBalance)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-text">${d.valueUsd.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
