@@ -153,22 +153,24 @@ export function useCancelOrder() {
 export function useApproveUSDC() {
   const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
-  const [isRevoke, setIsRevoke] = useState(false)
+  const [mode, setMode] = useState<'1ct' | 'revoke' | 'trade'>('1ct')
+
+  const label = mode === 'revoke' ? 'Revoking approval' : mode === 'trade' ? 'Approving USDC' : 'Enabling 1-Click Trading'
 
   useEffect(() => {
-    if (hash) toast.loading(isRevoke ? 'Revoking approval...' : 'Enabling 1-Click Trading...', { id: 'approve-usdc' })
-  }, [hash, isRevoke])
+    if (hash) toast.loading(`${label}...`, { id: 'approve-usdc' })
+  }, [hash, label])
 
   useEffect(() => {
-    if (isSuccess) toast.success(isRevoke ? '1-Click Trading revoked' : '1-Click Trading enabled!', { id: 'approve-usdc' })
-  }, [isSuccess, isRevoke])
+    if (isSuccess) toast.success(mode === 'revoke' ? '1-Click Trading revoked' : mode === 'trade' ? 'USDC approved!' : '1-Click Trading enabled!', { id: 'approve-usdc' })
+  }, [isSuccess, mode])
 
   useEffect(() => {
-    if (error) toast.error(`${isRevoke ? 'Revoke' : 'Approval'} failed: ${error.message.slice(0, 80)}`, { id: 'approve-usdc' })
-  }, [error, isRevoke])
+    if (error) toast.error(`${label} failed: ${error.message.slice(0, 80)}`, { id: 'approve-usdc' })
+  }, [error, label])
 
   const approve = (spender: `0x${string}`, amount: bigint) => {
-    setIsRevoke(amount === 0n)
+    setMode(amount === 0n ? 'revoke' : amount >= 2n ** 128n ? '1ct' : 'trade')
     writeContract({
       address: CONTRACTS.MockUSDC,
       abi: MockUSDCABI,

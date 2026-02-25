@@ -73,7 +73,11 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     approve,
     isPending: isApprovePending,
     isConfirming: isApproveConfirming,
+    isSuccess: isApproveSuccess,
   } = useApproveUSDC()
+
+  // Pending order to place after approval completes
+  const [pendingOrder, setPendingOrder] = useState<{ type: 'limit'; marketId: bigint; side: number; price: bigint; size: bigint; label?: string; tif?: number } | { type: 'market'; marketId: bigint; side: number; size: bigint } | null>(null)
 
   const { setTPSL } = useSetTPSL()
 
@@ -153,6 +157,18 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   useEffect(() => {
     if (!isConnected) setDismissed1CT(false)
   }, [isConnected])
+
+  // After approval succeeds, place the pending order
+  useEffect(() => {
+    if (isApproveSuccess && pendingOrder) {
+      if (pendingOrder.type === 'limit') {
+        placeLimitOrder(pendingOrder.marketId, pendingOrder.side, pendingOrder.price, pendingOrder.size, pendingOrder.label, pendingOrder.tif)
+      } else {
+        placeMarketOrder(pendingOrder.marketId, pendingOrder.side, pendingOrder.size)
+      }
+      setPendingOrder(null)
+    }
+  }, [isApproveSuccess])
 
   // Effective price for calculations (best book price for market, user input for limit)
   const effectivePrice = useMemo(() => {
@@ -316,9 +332,18 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     if (!isConnected || !address) return
     const sideEnum = side === 'long' ? 0 : 1
     const size = BigInt(Math.floor(Number(sizeInput)))
+
+    // If allowance is insufficient, approve first then place order
+    const needsApproval = !is1CTEnabled && collateralRequired > 0n && allowance < collateralRequired
+
     if (orderType === 'limit') {
       const price = parsePrice(priceInput)
       if (price === 0n || size === 0n) return
+      if (needsApproval) {
+        setPendingOrder({ type: 'limit', marketId, side: sideEnum, price, size })
+        approve(CONTRACTS.OrderBook, collateralRequired)
+        return
+      }
       placeLimitOrder(marketId, sideEnum, price, size)
     } else {
       if (size === 0n) return
@@ -329,11 +354,21 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
           ? refPrice + (refPrice * BigInt(slippageBps) / 10000n)
           : refPrice - (refPrice * BigInt(slippageBps) / 10000n)
         if (maxPrice > 0n) {
+          if (needsApproval) {
+            setPendingOrder({ type: 'limit', marketId, side: sideEnum, price: maxPrice, size, label: 'Market order', tif: 1 })
+            approve(CONTRACTS.OrderBook, collateralRequired)
+            return
+          }
           placeLimitOrder(marketId, sideEnum, maxPrice, size, 'Market order', 1) // IOC
           return
         }
       }
       // Fallback: no book data → raw market order (no slippage protection)
+      if (needsApproval) {
+        setPendingOrder({ type: 'market', marketId, side: sideEnum, size })
+        approve(CONTRACTS.OrderBook, collateralRequired)
+        return
+      }
       placeMarketOrder(marketId, sideEnum, size)
     }
   }
@@ -802,15 +837,10 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         <div className="w-full py-2.5 text-center text-sm text-text-secondary bg-surface-2 rounded-lg border border-border">
           Connect wallet to trade
         </div>
-      ) : !is1CTEnabled && !dismissed1CT ? (
-        /* If 1CT not enabled and prompt not dismissed, the prompt above handles it */
-        <div className="w-full py-2.5 text-center text-[10px] text-text-secondary">
-          Enable 1-Click Trading above to start
-        </div>
       ) : (
         <button
           onClick={handlePlaceOrder}
-          disabled={!isFormValid || isPending || isConfirming || insufficientBalance}
+          disabled={!isFormValid || isPending || isConfirming || isApprovePending || isApproveConfirming || insufficientBalance}
           className={cn(
             'w-full py-2.5 text-sm font-semibold rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
             insufficientBalance ? 'bg-surface-2 !text-short' : side === 'long' ? 'bg-long hover:bg-long/90' : 'bg-short hover:bg-short/90'
@@ -818,6 +848,10 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         >
           {insufficientBalance
             ? 'Insufficient Balance'
+            : isApprovePending
+            ? 'Approve in wallet...'
+            : isApproveConfirming
+            ? 'Approving USDC...'
             : isPending
             ? 'Confirm in wallet...'
             : isConfirming
