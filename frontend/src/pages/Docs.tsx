@@ -78,7 +78,7 @@ function P({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-text-secondary leading-relaxed mb-3">{children}</p>
 }
 function Code({ children }: { children: React.ReactNode }) {
-  return <pre className="bg-[#0d0d14] border border-border rounded-lg p-4 text-xs font-mono text-text overflow-x-auto mb-4 whitespace-pre">{children}</pre>
+  return <pre className="bg-[#f5f5f5] border border-border rounded-lg p-4 text-xs font-mono text-text overflow-x-auto mb-4 whitespace-pre">{children}</pre>
 }
 function InlineCode({ children }: { children: React.ReactNode }) {
   return <code className="bg-surface-2 text-primary text-xs px-1.5 py-0.5 rounded font-mono">{children}</code>

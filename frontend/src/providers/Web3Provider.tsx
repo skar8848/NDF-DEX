@@ -1,6 +1,6 @@
 import { WagmiProvider, http, fallback } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rainbowkit'
+import { RainbowKitProvider, lightTheme, getDefaultConfig } from '@rainbow-me/rainbowkit'
 import '@rainbow-me/rainbowkit/styles.css'
 import { avalancheFuji } from '../lib/config'
 
@@ -32,8 +32,8 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          theme={darkTheme({
-            accentColor: '#6366f1',
+          theme={lightTheme({
+            accentColor: '#f97316',
             accentColorForeground: 'white',
             borderRadius: 'medium',
             overlayBlur: 'small',

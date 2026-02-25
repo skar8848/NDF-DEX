@@ -66,14 +66,14 @@ function App() {
               </Route>
             </Routes>
             <Toaster
-              theme="dark"
+              theme="light"
               position="bottom-right"
               richColors
               toastOptions={{
                 style: {
-                  background: '#12121a',
-                  border: '1px solid #2a2a3e',
-                  color: '#e4e4ed',
+                  background: '#ffffff',
+                  border: '1px solid #1a1a1a',
+                  color: '#111111',
                   textAlign: 'center' as const,
                 },
               }}

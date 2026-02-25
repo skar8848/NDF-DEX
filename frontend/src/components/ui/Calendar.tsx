@@ -19,8 +19,8 @@ export function Calendar({ selected, onSelect, disabled }: CalendarProps) {
         onSelect={onSelect}
         disabled={disabled}
         style={{
-          '--rdp-accent-color': '#6366f1',
-          '--rdp-accent-background-color': '#6366f120',
+          '--rdp-accent-color': '#f97316',
+          '--rdp-accent-background-color': '#f9731620',
           '--rdp-day-height': '36px',
           '--rdp-day-width': '36px',
           '--rdp-day_button-height': '32px',

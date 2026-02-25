@@ -323,19 +323,19 @@ export function Vault() {
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
       height: 250,
-      layout: { background: { color: '#0a0a12' }, textColor: '#8b8b9e' },
-      grid: { vertLines: { color: '#1a1a2e' }, horzLines: { color: '#1a1a2e' } },
-      timeScale: { borderColor: '#1a1a2e', timeVisible: true },
-      rightPriceScale: { borderColor: '#1a1a2e' },
-      crosshair: { horzLine: { color: '#3a3a5e' }, vertLine: { color: '#3a3a5e' } },
+      layout: { background: { color: '#ffffff' }, textColor: '#6b7280' },
+      grid: { vertLines: { color: '#eeeeef' }, horzLines: { color: '#eeeeef' } },
+      timeScale: { borderColor: '#1a1a1a', timeVisible: true },
+      rightPriceScale: { borderColor: '#1a1a1a' },
+      crosshair: { horzLine: { color: '#d1d5db' }, vertLine: { color: '#d1d5db' } },
     })
     chartRef.current = chart
 
     if (chartMode === 'tvl') {
       const series = chart.addSeries(AreaSeries, {
-        lineColor: '#6366f1',
-        topColor: 'rgba(99, 102, 241, 0.3)',
-        bottomColor: 'rgba(99, 102, 241, 0.02)',
+        lineColor: '#f97316',
+        topColor: 'rgba(249, 115, 22, 0.3)',
+        bottomColor: 'rgba(249, 115, 22, 0.02)',
         lineWidth: 2,
         priceFormat: { type: 'custom', formatter: (p: number) => '$' + p.toLocaleString('en-US', { maximumFractionDigits: 0 }) },
       })

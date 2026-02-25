@@ -74,7 +74,7 @@ export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSe
         {selectedMarket ? (
           <>
             <AssetLogo asset={selectedMarket.baseAsset} size={28} />
-            <span className="font-semibold text-sm" style={{ color: '#e4e4ed' }}>
+            <span className="font-semibold text-sm text-text">
               {selectedMarket.baseAsset}/{selectedMarket.quoteAsset}
               <span className="font-normal text-text-secondary ml-1.5">{formatExpiryDate(selectedMarket.expiration)}</span>
             </span>
@@ -120,7 +120,7 @@ export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSe
                   <AssetLogo asset={market.baseAsset} size={28} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium" style={{ color: '#e4e4ed' }}>
+                      <span className="text-sm font-medium text-text">
                         {market.baseAsset}/{market.quoteAsset}
                         <span className="font-normal text-text-secondary ml-1">{formatExpiryDate(market.expiration)}</span>
                       </span>

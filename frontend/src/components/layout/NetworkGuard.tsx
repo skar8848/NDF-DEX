@@ -29,7 +29,7 @@ export function NetworkGuard({ children }: { children: React.ReactNode }) {
           disabled={isPending}
           className="w-full py-3 rounded-xl font-semibold text-white transition-all disabled:opacity-50 cursor-pointer"
           style={{
-            backgroundImage: 'linear-gradient(135deg, #E84142 0%, #ef6566 100%)',
+            backgroundImage: 'linear-gradient(135deg, #f97316 0%, #fb923c 100%)',
           }}
         >
           {isPending ? (

@@ -239,22 +239,22 @@ export default function Trade() {
             <div className="w-px h-6 bg-border" />
 
             <div className="flex flex-col">
-              <span className="text-[10px]" style={{ color: '#8888a0' }}>Mark / Mid</span>
-              <span className="text-sm font-bold font-mono" style={{ color: '#e4e4ed' }}>
+              <span className="text-[10px] text-text-secondary">Mark / Mid</span>
+              <span className="text-sm font-bold font-mono text-text">
                 {markPrice ? `$${(Number(markPrice) / PRICE_PRECISION).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}
               </span>
             </div>
 
             <div className="flex flex-col">
-              <span className="text-[10px]" style={{ color: '#8888a0' }}>Spread</span>
-              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
+              <span className="text-[10px] text-text-secondary">Spread</span>
+              <span className="text-sm font-mono text-text">
                 {spread ? `$${(Number(spread) / PRICE_PRECISION).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '--'}
               </span>
             </div>
 
             <div className="flex flex-col">
-              <span className="text-[10px]" style={{ color: '#8888a0' }}>Oracle</span>
-              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
+              <span className="text-[10px] text-text-secondary">Oracle</span>
+              <span className="text-sm font-mono text-text">
                 {oraclePrice ? `$${(Number(oraclePrice) / PRICE_PRECISION).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '--'}
               </span>
             </div>
@@ -262,8 +262,8 @@ export default function Trade() {
             <div className="w-px h-6 bg-border" />
 
             <div className="flex flex-col">
-              <span className="text-[10px]" style={{ color: '#8888a0' }}>Open Interest</span>
-              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
+              <span className="text-[10px] text-text-secondary">Open Interest</span>
+              <span className="text-sm font-mono text-text">
                 {market.settled
                   ? '--'
                   : oraclePrice
@@ -273,8 +273,8 @@ export default function Trade() {
             </div>
 
             <div className="flex flex-col">
-              <span className="text-[10px]" style={{ color: '#8888a0' }}>Volume 24h</span>
-              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
+              <span className="text-[10px] text-text-secondary">Volume 24h</span>
+              <span className="text-sm font-mono text-text">
                 {volume24h !== null ? `${Number(volume24h).toLocaleString()} contracts` : '--'}
               </span>
             </div>
@@ -282,20 +282,19 @@ export default function Trade() {
             <div className="w-px h-6 bg-border" />
 
             <div className="flex flex-col">
-              <span className="text-[10px]" style={{ color: '#8888a0' }}>Expiry</span>
-              <span className="text-sm font-mono" style={{ color: '#e4e4ed' }}>
+              <span className="text-[10px] text-text-secondary">Expiry</span>
+              <span className="text-sm font-mono text-text">
                 {formatCountdown(market.expiration)}
               </span>
             </div>
 
             <div className="flex flex-col">
-              <span className="text-[10px]" style={{ color: '#8888a0' }}>Contract</span>
+              <span className="text-[10px] text-text-secondary">Contract</span>
               <a
                 href={`https://testnet.snowtrace.io/address/${CONTRACTS.OrderBook}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm font-mono hover:text-primary transition-colors"
-                style={{ color: '#e4e4ed' }}
+                className="text-sm font-mono text-text hover:text-primary transition-colors"
               >
                 {CONTRACTS.OrderBook.slice(0, 6)}...{CONTRACTS.OrderBook.slice(-4)}
               </a>
