@@ -113,7 +113,7 @@ export function usePlaceMarketOrder() {
 export function useCancelOrder() {
   const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
-  const hashRef = useRef<`0x${string}` | undefined>()
+  const hashRef = useRef<`0x${string}` | undefined>(undefined)
   hashRef.current = hash
 
   useEffect(() => {
