@@ -88,8 +88,10 @@ export function OrderBookComponent({ bids, asks, markPrice, onPriceClick }: Orde
     onPriceClick(priceStr)
   }
 
-  const displayAsks = processedAsks.slice(-8)
-  const displayBids = processedBids.slice(0, 8)
+  const displayAsks = processedAsks.slice(-12)
+  const displayBids = processedBids.slice(0, 12)
+  const hiddenAsks = processedAsks.length - displayAsks.length
+  const hiddenBids = processedBids.length - displayBids.length
 
   return (
     <div className="flex flex-col h-full text-[11px]">
@@ -102,6 +104,11 @@ export function OrderBookComponent({ bids, asks, markPrice, onPriceClick }: Orde
 
       {/* Asks (sells) - red */}
       <div className="flex-1 overflow-hidden flex flex-col justify-end">
+        {hiddenAsks > 0 && (
+          <div className="px-3 py-1 text-[9px] text-text-secondary text-center">
+            +{hiddenAsks} more level{hiddenAsks > 1 ? 's' : ''} above
+          </div>
+        )}
         {displayAsks.length === 0 ? (
           <div className="flex items-center justify-center py-4 text-text-secondary text-xs">
             No asks
@@ -165,7 +172,8 @@ export function OrderBookComponent({ bids, asks, markPrice, onPriceClick }: Orde
             No bids
           </div>
         ) : (
-          displayBids.map((level) => {
+          <>
+          {displayBids.map((level) => {
             const cumulativePercent = Number(level.cumulative * 100n / maxCumulative)
             const individualPercent = Number(level.totalAmount * 100n / maxCumulative)
 
@@ -197,6 +205,12 @@ export function OrderBookComponent({ bids, asks, markPrice, onPriceClick }: Orde
               </div>
             )
           })
+          {hiddenBids > 0 && (
+            <div className="px-3 py-1 text-[9px] text-text-secondary text-center">
+              +{hiddenBids} more level{hiddenBids > 1 ? 's' : ''} below
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>
