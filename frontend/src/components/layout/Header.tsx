@@ -133,7 +133,7 @@ function WalletButton() {
   const { disconnect } = useDisconnect()
   return (
     <ConnectButton.Custom>
-      {({ account, chain, openConnectModal, openAccountModal, mounted }) => {
+      {({ account, openConnectModal, openAccountModal, mounted }) => {
         if (!mounted || !account) {
           return (
             <button
