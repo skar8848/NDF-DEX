@@ -1,6 +1,6 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { useAccount } from 'wagmi'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { OrderBookABI, MockUSDCABI } from '../lib/abis'
 import { CONTRACTS } from '../lib/config'
@@ -113,6 +113,8 @@ export function usePlaceMarketOrder() {
 export function useCancelOrder() {
   const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+  const hashRef = useRef<`0x${string}` | undefined>()
+  hashRef.current = hash
 
   useEffect(() => {
     if (hash) toast.loading('Cancelling order...', { id: 'cancel-order' })
@@ -126,14 +128,24 @@ export function useCancelOrder() {
     if (error) toast.error(`Cancel failed: ${error.message.slice(0, 80)}`, { id: 'cancel-order' })
   }, [error])
 
-  const cancelOrder = (orderId: bigint) => {
+  // If component unmounts while tx is in-flight (order row disappears from list
+  // after refetch), resolve the toast so it doesn't spin forever
+  useEffect(() => {
+    return () => {
+      if (hashRef.current) {
+        toast.success('Order cancelled', { id: 'cancel-order' })
+      }
+    }
+  }, [])
+
+  const cancelOrder = useCallback((orderId: bigint) => {
     writeContract({
       address: CONTRACTS.OrderBook,
       abi: OrderBookABI,
       functionName: 'cancelOrder',
       args: [orderId],
     })
-  }
+  }, [writeContract])
 
   return { cancelOrder, isPending, isConfirming, isSuccess, hash }
 }
