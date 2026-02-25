@@ -517,54 +517,49 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         </div>
 
         {/* Slider */}
-        {isConnected && maxSize > 0 && (
-          <div className="mt-2 space-y-1.5">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={sliderPercent}
-              onChange={handleSlider}
-              className={cn(
-                'w-full h-1 rounded-full appearance-none cursor-pointer',
-                '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-sm',
-                side === 'long'
-                  ? 'bg-long/20 [&::-webkit-slider-thumb]:bg-long'
-                  : 'bg-short/20 [&::-webkit-slider-thumb]:bg-short'
-              )}
-            />
-            <div className="flex justify-between gap-1">
-              {[25, 50, 75, 100].map((pct) => (
-                <button
-                  key={pct}
-                  onClick={() => handleSliderPreset(pct)}
-                  className={cn(
-                    'flex-1 py-0.5 text-[10px] font-medium rounded transition-colors cursor-pointer',
-                    sliderPercent >= pct
-                      ? side === 'long'
-                        ? 'bg-long/20 text-long'
-                        : 'bg-short/20 text-short'
-                      : 'bg-surface-2 text-text-secondary hover:text-text'
-                  )}
-                >
-                  {pct}%
-                </button>
-              ))}
-            </div>
+        <div className="mt-2 space-y-1.5">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={sliderPercent}
+            onChange={handleSlider}
+            disabled={!isConnected || maxSize <= 0}
+            className={cn(
+              'w-full h-1 rounded-full appearance-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed',
+              '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-sm',
+              'bg-primary/20 [&::-webkit-slider-thumb]:bg-primary'
+            )}
+          />
+          <div className="flex justify-between gap-1">
+            {[25, 50, 75, 100].map((pct) => (
+              <button
+                key={pct}
+                onClick={() => handleSliderPreset(pct)}
+                disabled={!isConnected || maxSize <= 0}
+                className={cn(
+                  'flex-1 py-0.5 text-[10px] font-medium rounded transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed',
+                  sliderPercent >= pct
+                    ? 'bg-primary/20 text-primary'
+                    : 'bg-surface-2 text-text-secondary hover:text-text'
+                )}
+              >
+                {pct}%
+              </button>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
       {/* TP/SL Section — always visible */}
       <div className="space-y-2">
         <span className="text-xs text-text-secondary font-medium">TP / SL</span>
         {/* Take Profit row: TP Price | Gain (both editable) */}
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2">
           <div className="flex-1">
-            <label className="block text-[10px] text-long mb-0.5">TP Price</label>
             <input
               type="number"
-              placeholder={side === 'long' ? 'Above entry' : 'Below entry'}
+              placeholder="TP Price"
               value={tpInput}
               onChange={(e) => { setTpInput(e.target.value); setTpLastEdited('price') }}
               step="0.01"
@@ -572,34 +567,30 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
               className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs text-text placeholder:text-text-secondary/40 focus:outline-none focus:border-long transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-0.5">
-              <label className="text-[10px] text-long">Gain</label>
-              <button
-                onClick={() => { setTpGainMode(tpGainMode === 'usd' ? 'pct' : 'usd'); setTpLastEdited(tpLastEdited) }}
-                className="text-[9px] text-text-secondary hover:text-text transition-colors cursor-pointer px-1 py-0.5 rounded bg-surface-2 border border-border/50"
-              >
-                {tpGainMode === 'usd' ? '$' : '%'}
-              </button>
-            </div>
+          <div className="flex-1 relative">
             <input
               type="number"
-              placeholder={tpGainMode === 'usd' ? '+$0.00' : '+0%'}
+              placeholder="Gain"
               value={tpGainInput}
               onChange={(e) => { setTpGainInput(e.target.value); setTpLastEdited('gain') }}
               step={tpGainMode === 'usd' ? '1' : '0.1'}
               min="0"
-              className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs text-long font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-long transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 pr-7 text-xs text-long font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-long transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
+            <button
+              onClick={() => { setTpGainMode(tpGainMode === 'usd' ? 'pct' : 'usd'); setTpLastEdited(tpLastEdited) }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-secondary hover:text-text transition-colors cursor-pointer"
+            >
+              {tpGainMode === 'usd' ? '$' : '%'}
+            </button>
           </div>
         </div>
         {/* Stop Loss row: SL Price | Loss (both editable) */}
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2">
           <div className="flex-1">
-            <label className="block text-[10px] text-short mb-0.5">SL Price</label>
             <input
               type="number"
-              placeholder={side === 'long' ? 'Below entry' : 'Above entry'}
+              placeholder="SL Price"
               value={slInput}
               onChange={(e) => { setSlInput(e.target.value); setSlLastEdited('price') }}
               step="0.01"
@@ -607,25 +598,22 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
               className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs text-text placeholder:text-text-secondary/40 focus:outline-none focus:border-short transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-0.5">
-              <label className="text-[10px] text-short">Loss</label>
-              <button
-                onClick={() => { setSlLossMode(slLossMode === 'usd' ? 'pct' : 'usd'); setSlLastEdited(slLastEdited) }}
-                className="text-[9px] text-text-secondary hover:text-text transition-colors cursor-pointer px-1 py-0.5 rounded bg-surface-2 border border-border/50"
-              >
-                {slLossMode === 'usd' ? '$' : '%'}
-              </button>
-            </div>
+          <div className="flex-1 relative">
             <input
               type="number"
-              placeholder={slLossMode === 'usd' ? '-$0.00' : '-0%'}
+              placeholder="Loss"
               value={slLossInput}
               onChange={(e) => { setSlLossInput(e.target.value); setSlLastEdited('loss') }}
               step={slLossMode === 'usd' ? '1' : '0.1'}
               min="0"
-              className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 text-xs text-short font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-short transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full bg-surface-2 border border-border rounded-lg px-2.5 py-1.5 pr-7 text-xs text-short font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-short transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
+            <button
+              onClick={() => { setSlLossMode(slLossMode === 'usd' ? 'pct' : 'usd'); setSlLastEdited(slLastEdited) }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-secondary hover:text-text transition-colors cursor-pointer"
+            >
+              {slLossMode === 'usd' ? '$' : '%'}
+            </button>
           </div>
         </div>
       </div>

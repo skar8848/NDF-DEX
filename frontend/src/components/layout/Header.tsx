@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from 'wagmi'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain, useDisconnect } from 'wagmi'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { MockUSDCABI } from '../../lib/abis'
@@ -93,7 +93,7 @@ export function Header() {
         </button>
 
         <FaucetButton />
-        <ConnectButton showBalance={false} />
+        <WalletButton />
       </div>
     </header>
   )
@@ -129,6 +129,49 @@ function ThemeToggle() {
   )
 }
 
+function WalletButton() {
+  const { disconnect } = useDisconnect()
+  return (
+    <ConnectButton.Custom>
+      {({ account, chain, openConnectModal, openAccountModal, mounted }) => {
+        if (!mounted || !account) {
+          return (
+            <button
+              onClick={openConnectModal}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors cursor-pointer"
+            >
+              Connect
+            </button>
+          )
+        }
+        return (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={openAccountModal}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface transition-colors cursor-pointer"
+              title={account.address}
+            >
+              <svg className="w-4 h-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9m18 0V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v3" />
+              </svg>
+              <span className="text-xs text-text-secondary font-mono">...</span>
+            </button>
+            <button
+              onClick={() => disconnect()}
+              className="p-1.5 rounded-lg border border-border bg-surface-2 hover:bg-surface transition-colors cursor-pointer"
+              title="Disconnect"
+            >
+              <svg className="w-4 h-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+              </svg>
+            </button>
+          </div>
+        )
+      }}
+    </ConnectButton.Custom>
+  )
+}
+
 function FaucetButton() {
   const { address } = useAccount()
   const { writeContract, data: hash, isPending, error } = useWriteContract()
@@ -160,7 +203,7 @@ function FaucetButton() {
       disabled={isPending || isLoading}
       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-colors disabled:opacity-50 cursor-pointer"
     >
-      {isPending || isLoading ? 'Minting...' : 'Faucet 10k USDC'}
+      {isPending || isLoading ? 'Minting...' : 'Faucet'}
     </button>
   )
 }
