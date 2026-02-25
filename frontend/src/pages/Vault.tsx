@@ -1,8 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi'
 import { parseUnits, formatUnits, parseAbiItem } from 'viem'
-import { createChart, AreaSeries, LineSeries } from 'lightweight-charts'
-import type { IChartApi, Time } from 'lightweight-charts'
 import { CONTRACTS } from '../lib/config'
 import { paginatedGetLogs } from '../lib/utils'
 import { PositionManagerABI, OrderBookABI } from '../lib/abis'
@@ -54,13 +52,100 @@ function truncAddr(addr: string) {
   return addr.slice(0, 6) + '...' + addr.slice(-4)
 }
 
+function VaultChart({ data, color, formatValue }: { data: ChartPoint[]; color: string; formatValue: (v: number) => string }) {
+  const { theme } = useTheme()
+
+  if (data.length < 2) {
+    return (
+      <div className="w-full flex items-center justify-center text-xs text-text-secondary" style={{ height: 280 }}>
+        Loading chart data...
+      </div>
+    )
+  }
+
+  const values = data.map(d => d.value)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+
+  const W = 800
+  const H = 250
+  const PAD = { t: 20, r: 65, b: 30, l: 10 }
+  const chartW = W - PAD.l - PAD.r
+  const chartH = H - PAD.t - PAD.b
+
+  const pts = data.map((d, i) => ({
+    x: PAD.l + (i / (data.length - 1)) * chartW,
+    y: PAD.t + (1 - (d.value - min) / range) * chartH,
+  }))
+
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+  const area = `${line} L${pts[pts.length - 1].x.toFixed(1)},${(PAD.t + chartH).toFixed(1)} L${pts[0].x.toFixed(1)},${(PAD.t + chartH).toFixed(1)} Z`
+
+  const yLabels = [0, 0.25, 0.5, 0.75, 1].map(pct => ({
+    value: min + pct * range,
+    y: PAD.t + (1 - pct) * chartH,
+  }))
+
+  const isDark = theme === 'dark'
+  const textColor = isDark ? '#999999' : '#6b7280'
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : '#eeeeef'
+  const gradId = `grad-${color.replace('#', '')}`
+
+  // Pick ~5 evenly spaced x-axis date labels
+  const xCount = Math.min(5, data.length)
+  const xLabels = Array.from({ length: xCount }, (_, i) => {
+    const idx = Math.round((i / (xCount - 1)) * (data.length - 1))
+    return { time: data[idx].time, x: pts[idx].x }
+  })
+
+  return (
+    <div className="w-full" style={{ height: 280 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {/* Grid lines */}
+        {yLabels.map((l, i) => (
+          <line key={i} x1={PAD.l} y1={l.y} x2={W - PAD.r} y2={l.y} stroke={gridColor} strokeWidth="0.5" />
+        ))}
+        {/* Area fill */}
+        <path d={area} fill={`url(#${gradId})`} />
+        {/* Line */}
+        <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" />
+        {/* Y labels */}
+        {yLabels.map((l, i) => (
+          <text key={i} x={W - PAD.r + 8} y={l.y + 4} fill={textColor} fontSize="10" fontFamily="ui-monospace, monospace">
+            {formatValue(l.value)}
+          </text>
+        ))}
+        {/* X labels */}
+        {xLabels.map((l, i) => (
+          <text
+            key={i}
+            x={l.x}
+            y={H - 5}
+            fill={textColor}
+            fontSize="10"
+            textAnchor={i === 0 ? 'start' : i === xLabels.length - 1 ? 'end' : 'middle'}
+          >
+            {new Date(l.time * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </text>
+        ))}
+      </svg>
+    </div>
+  )
+}
+
 export function Vault() {
   const { theme } = useTheme()
   const { address, isConnected } = useAccount()
   const publicClient = usePublicClient()
   const [depositInput, setDepositInput] = useState('')
   const [withdrawInput, setWithdrawInput] = useState('')
-  const [tab, setTab] = useState<'deposit' | 'withdraw'>('deposit')
   const [chartMode, setChartMode] = useState<'tvl' | 'sharePrice'>('tvl')
 
   // Chart data
@@ -70,8 +155,6 @@ export function Vault() {
   const [depositors, setDepositors] = useState<DepositorInfo[]>([])
   const [userTotalDeposited, setUserTotalDeposited] = useState(0n)
   const [vaultCreatedAt, setVaultCreatedAt] = useState<number | null>(null)
-  const chartContainerRef = useRef<HTMLDivElement>(null)
-  const chartRef = useRef<IChartApi | null>(null)
 
   // Contract reads
   const { data: sharePrice } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'sharePrice', query: { refetchInterval: 5000 } })
@@ -308,64 +391,6 @@ export function Vault() {
     return () => { cancelled = true; clearInterval(interval) }
   }, [publicClient, address, sharePrice])
 
-  // Render chart
-  useEffect(() => {
-    if (!chartContainerRef.current) return
-    const data = chartMode === 'tvl' ? tvlHistory : sharePriceHistory
-    if (data.length === 0) return
-
-    // Clean up previous chart
-    if (chartRef.current) {
-      chartRef.current.remove()
-      chartRef.current = null
-    }
-
-    const isDark = theme === 'dark'
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: 250,
-      layout: { background: { color: isDark ? '#000000' : '#ffffff' }, textColor: isDark ? '#999999' : '#6b7280' },
-      grid: { vertLines: { color: isDark ? 'rgba(255,255,255,0.08)' : '#eeeeef' }, horzLines: { color: isDark ? 'rgba(255,255,255,0.08)' : '#eeeeef' } },
-      timeScale: { borderColor: isDark ? '#ffffff' : '#1a1a1a', timeVisible: true },
-      rightPriceScale: { borderColor: isDark ? '#ffffff' : '#1a1a1a' },
-      crosshair: { horzLine: { color: isDark ? 'rgba(255,255,255,0.3)' : '#d1d5db' }, vertLine: { color: isDark ? 'rgba(255,255,255,0.3)' : '#d1d5db' } },
-    })
-    chartRef.current = chart
-
-    if (chartMode === 'tvl') {
-      const series = chart.addSeries(AreaSeries, {
-        lineColor: '#f97316',
-        topColor: 'rgba(249, 115, 22, 0.3)',
-        bottomColor: 'rgba(249, 115, 22, 0.02)',
-        lineWidth: 2,
-        priceFormat: { type: 'custom', formatter: (p: number) => '$' + p.toLocaleString('en-US', { maximumFractionDigits: 0 }) },
-      })
-      series.setData(data.map(d => ({ time: d.time as Time, value: d.value })))
-    } else {
-      const series = chart.addSeries(LineSeries, {
-        color: '#22c55e',
-        lineWidth: 2,
-        priceFormat: { type: 'custom', formatter: (p: number) => '$' + p.toFixed(4) },
-      })
-      series.setData(data.map(d => ({ time: d.time as Time, value: d.value })))
-    }
-
-    chart.timeScale().fitContent()
-
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth })
-      }
-    }
-    window.addEventListener('resize', handleResize)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      chart.remove()
-      chartRef.current = null
-    }
-  }, [chartMode, tvlHistory, sharePriceHistory, theme])
-
   // Transaction handlers
   async function handleDeposit() {
     if (!depositInput || !address) return
@@ -434,14 +459,14 @@ export function Vault() {
           </div>
 
           {/* Stat cards row */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-surface border border-border rounded-xl p-4">
-              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Total Value Locked</div>
-              <div className="text-xl font-bold font-mono text-text">${totalValue ? fmtUsdc(totalValue as bigint) : '0.00'}</div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-surface border border-border rounded-xl p-5">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2 whitespace-nowrap">Total Value Locked</div>
+              <div className="text-xl font-bold font-mono text-text whitespace-nowrap">${totalValue ? fmtUsdc(totalValue as bigint) : '0.00'}</div>
             </div>
-            <div className="bg-surface border border-border rounded-xl p-4">
-              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Vault PNL</div>
-              <div className="text-xl font-bold font-mono text-primary">
+            <div className="bg-surface border border-border rounded-xl p-5">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2 whitespace-nowrap">Vault PNL</div>
+              <div className="text-xl font-bold font-mono text-primary whitespace-nowrap">
                 {(() => {
                   const tvlNum = Number(tvlBig) / 1e6
                   const depNum = Number(totalDep) / 1e6
@@ -451,9 +476,9 @@ export function Vault() {
                 })()}
               </div>
             </div>
-            <div className="bg-surface border border-border rounded-xl p-4">
-              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Vault APY (30d)</div>
-              <div className="text-xl font-bold font-mono text-primary">{apr !== null ? `${apr.toFixed(1)}%` : '—'}</div>
+            <div className="bg-surface border border-border rounded-xl p-5">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2 whitespace-nowrap">Vault APY (30d)</div>
+              <div className="text-xl font-bold font-mono text-primary whitespace-nowrap">{apr !== null ? `${apr.toFixed(1)}%` : '—'}</div>
             </div>
           </div>
 
@@ -503,11 +528,14 @@ export function Vault() {
             </div>
 
             {/* Chart */}
-            <div ref={chartContainerRef} className="w-full" style={{ height: 280 }}>
-              {(chartMode === 'tvl' ? tvlHistory : sharePriceHistory).length === 0 && (
-                <div className="flex items-center justify-center h-full text-xs text-text-secondary">Loading chart data...</div>
-              )}
-            </div>
+            <VaultChart
+              data={chartMode === 'tvl' ? tvlHistory : sharePriceHistory}
+              color={chartMode === 'tvl' ? '#f97316' : '#22c55e'}
+              formatValue={chartMode === 'tvl'
+                ? (v: number) => '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 })
+                : (v: number) => '$' + v.toFixed(4)
+              }
+            />
           </div>
 
           {/* Tables: Vault Positions */}
@@ -617,117 +645,110 @@ export function Vault() {
         {/* ════════ RIGHT COLUMN (sidebar) ════════ */}
         <div className="w-[320px] shrink-0 space-y-4">
 
-          {/* Deposit / Withdraw tabs */}
+          {/* Deposit */}
           <div className="bg-surface border border-border rounded-xl overflow-hidden">
-            <div className="grid grid-cols-2">
+            <div className="px-4 py-3 border-b border-border">
+              <div className="text-sm font-semibold text-text">Deposit</div>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-text-secondary">Amount (USDC)</label>
+                  {isConnected && usdcBalance && (
+                    <button onClick={() => setDepositInput(formatUnits(usdcBalance as bigint, 6))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
+                      Max: ${fmtUsdc(usdcBalance as bigint)}
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  placeholder="0.00"
+                  value={depositInput}
+                  onChange={(e) => setDepositInput(e.target.value)}
+                  className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-text font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+              {depositInput && Number(depositInput) > 0 && (
+                <div className="text-xs text-text-secondary">
+                  You'll receive ~<span className="text-text font-mono">{(Number(depositInput) / sharePriceNum).toFixed(2)}</span> TLP
+                </div>
+              )}
               <button
-                onClick={() => setTab('deposit')}
-                className={`py-3 text-sm font-semibold transition-colors cursor-pointer ${tab === 'deposit' ? 'bg-primary text-white' : 'text-text-secondary hover:text-text'}`}
+                onClick={handleDeposit}
+                disabled={!isConnected || !depositInput || Number(depositInput) <= 0 || isPending}
+                className="w-full py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                Deposit
-              </button>
-              <button
-                onClick={() => setTab('withdraw')}
-                className={`py-3 text-sm font-semibold transition-colors cursor-pointer ${tab === 'withdraw' ? 'bg-primary text-white' : 'text-text-secondary hover:text-text'}`}
-              >
-                Withdraw
+                {isPending ? 'Processing...' : 'Deposit USDC'}
               </button>
             </div>
+          </div>
 
+          {/* Black separator */}
+          <div className="h-px bg-text" />
+
+          {/* Withdraw */}
+          <div className="bg-surface border border-border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-border">
+              <div className="text-sm font-semibold text-text">Withdraw</div>
+            </div>
             <div className="p-4 space-y-4">
-              {tab === 'deposit' ? (
+              {hasPendingWithdraw ? (
+                <div className="space-y-3">
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                    <div className="text-xs text-text-secondary mb-1">Pending Withdrawal</div>
+                    <div className="text-sm font-mono text-text">{fmtTlp(pendingReq![0])} TLP</div>
+                    <div className="text-[10px] text-text-secondary mt-1">
+                      Requested at {new Date(Number(pendingReq![1]) * 1000).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleExecuteWithdraw}
+                      disabled={isPending}
+                      className="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      Execute Withdraw
+                    </button>
+                    <button
+                      onClick={handleCancelWithdraw}
+                      disabled={isPending}
+                      className="px-4 py-2.5 text-sm font-semibold rounded-lg border border-border text-text-secondary hover:text-text transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
                 <>
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs text-text-secondary">Amount (USDC)</label>
-                      {isConnected && usdcBalance && (
-                        <button onClick={() => setDepositInput(formatUnits(usdcBalance as bigint, 6))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
-                          Max: ${fmtUsdc(usdcBalance as bigint)}
+                      <label className="text-xs text-text-secondary">TLP Shares</label>
+                      {isConnected && mySharesBig > 0n && (
+                        <button onClick={() => setWithdrawInput(formatUnits(mySharesBig, 18))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
+                          Max: {fmtTlp(mySharesBig)}
                         </button>
                       )}
                     </div>
                     <input
                       type="number"
                       placeholder="0.00"
-                      value={depositInput}
-                      onChange={(e) => setDepositInput(e.target.value)}
+                      value={withdrawInput}
+                      onChange={(e) => setWithdrawInput(e.target.value)}
                       className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-text font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
-                  {depositInput && Number(depositInput) > 0 && (
+                  {withdrawInput && Number(withdrawInput) > 0 && (
                     <div className="text-xs text-text-secondary">
-                      You'll receive ~<span className="text-text font-mono">{(Number(depositInput) / sharePriceNum).toFixed(2)}</span> TLP
+                      You'll receive ~<span className="text-text font-mono">${(Number(withdrawInput) * sharePriceNum).toFixed(2)}</span> USDC after {delayHours}h delay
                     </div>
                   )}
                   <button
-                    onClick={handleDeposit}
-                    disabled={!isConnected || !depositInput || Number(depositInput) <= 0 || isPending}
-                    className="w-full py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    onClick={handleRequestWithdraw}
+                    disabled={!isConnected || !withdrawInput || Number(withdrawInput) <= 0 || isPending}
+                    className="w-full py-2.5 text-sm font-semibold rounded-lg bg-short hover:bg-short/90 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    {isPending ? 'Processing...' : 'Deposit USDC'}
+                    {isPending ? 'Processing...' : 'Request Withdrawal'}
                   </button>
-                </>
-              ) : (
-                <>
-                  {hasPendingWithdraw ? (
-                    <div className="space-y-3">
-                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                        <div className="text-xs text-text-secondary mb-1">Pending Withdrawal</div>
-                        <div className="text-sm font-mono text-text">{fmtTlp(pendingReq![0])} TLP</div>
-                        <div className="text-[10px] text-text-secondary mt-1">
-                          Requested at {new Date(Number(pendingReq![1]) * 1000).toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleExecuteWithdraw}
-                          disabled={isPending}
-                          className="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 cursor-pointer"
-                        >
-                          Execute Withdraw
-                        </button>
-                        <button
-                          onClick={handleCancelWithdraw}
-                          disabled={isPending}
-                          className="px-4 py-2.5 text-sm font-semibold rounded-lg border border-border text-text-secondary hover:text-text transition-colors disabled:opacity-50 cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-xs text-text-secondary">TLP Shares</label>
-                          {isConnected && mySharesBig > 0n && (
-                            <button onClick={() => setWithdrawInput(formatUnits(mySharesBig, 18))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
-                              Max: {fmtTlp(mySharesBig)}
-                            </button>
-                          )}
-                        </div>
-                        <input
-                          type="number"
-                          placeholder="0.00"
-                          value={withdrawInput}
-                          onChange={(e) => setWithdrawInput(e.target.value)}
-                          className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-text font-mono placeholder:text-text-secondary/40 focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                      </div>
-                      {withdrawInput && Number(withdrawInput) > 0 && (
-                        <div className="text-xs text-text-secondary">
-                          You'll receive ~<span className="text-text font-mono">${(Number(withdrawInput) * sharePriceNum).toFixed(2)}</span> USDC after {delayHours}h delay
-                        </div>
-                      )}
-                      <button
-                        onClick={handleRequestWithdraw}
-                        disabled={!isConnected || !withdrawInput || Number(withdrawInput) <= 0 || isPending}
-                        className="w-full py-2.5 text-sm font-semibold rounded-lg bg-short hover:bg-short/90 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        {isPending ? 'Processing...' : 'Request Withdrawal'}
-                      </button>
-                    </>
-                  )}
                 </>
               )}
             </div>

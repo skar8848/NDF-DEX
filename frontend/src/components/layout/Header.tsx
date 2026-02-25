@@ -81,8 +81,9 @@ export function Header() {
             </>
           ) : isConnected ? (
             <>
+              <AvalancheLogo />
               <div className="w-2 h-2 rounded-full bg-danger animate-pulse" />
-              <span className="text-xs font-medium text-danger">Switch to Fuji</span>
+              <span className="text-xs font-medium text-danger">Fuji</span>
             </>
           ) : (
             <>
