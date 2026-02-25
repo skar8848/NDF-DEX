@@ -141,7 +141,6 @@ function VaultChart({ data, color, formatValue }: { data: ChartPoint[]; color: s
 }
 
 export function Vault() {
-  const { theme } = useTheme()
   const { address, isConnected } = useAccount()
   const publicClient = usePublicClient()
   const [depositInput, setDepositInput] = useState('')
