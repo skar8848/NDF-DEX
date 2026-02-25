@@ -8,6 +8,7 @@ import { paginatedGetLogs } from '../lib/utils'
 import { PositionManagerABI, OrderBookABI } from '../lib/abis'
 import { useAllMarkets, type MarketInfo } from '../hooks/useForwardMarket'
 import { toast } from 'sonner'
+import { useTheme } from '../hooks/useTheme'
 
 const EXPLORER_URL = 'https://testnet.snowtrace.io'
 
@@ -54,6 +55,7 @@ function truncAddr(addr: string) {
 }
 
 export function Vault() {
+  const { theme } = useTheme()
   const { address, isConnected } = useAccount()
   const publicClient = usePublicClient()
   const [depositInput, setDepositInput] = useState('')
@@ -129,8 +131,6 @@ export function Vault() {
 
   // User P&L
   const userPnl = myValueUsd - Number(userTotalDeposited) / 1e6
-  const userRoi = Number(userTotalDeposited) > 0 ? (userPnl / (Number(userTotalDeposited) / 1e6)) * 100 : 0
-
   const marketName = useCallback((id: bigint) => {
     const m = markets?.find(m => m.id === id)
     return m ? m.baseAsset : `#${id}`
@@ -320,14 +320,15 @@ export function Vault() {
       chartRef.current = null
     }
 
+    const isDark = theme === 'dark'
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
       height: 250,
-      layout: { background: { color: '#ffffff' }, textColor: '#6b7280' },
-      grid: { vertLines: { color: '#eeeeef' }, horzLines: { color: '#eeeeef' } },
-      timeScale: { borderColor: '#1a1a1a', timeVisible: true },
-      rightPriceScale: { borderColor: '#1a1a1a' },
-      crosshair: { horzLine: { color: '#d1d5db' }, vertLine: { color: '#d1d5db' } },
+      layout: { background: { color: isDark ? '#0c0c1d' : '#ffffff' }, textColor: isDark ? '#8b8fa3' : '#6b7280' },
+      grid: { vertLines: { color: isDark ? 'rgba(255,255,255,0.06)' : '#eeeeef' }, horzLines: { color: isDark ? 'rgba(255,255,255,0.06)' : '#eeeeef' } },
+      timeScale: { borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#1a1a1a', timeVisible: true },
+      rightPriceScale: { borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#1a1a1a' },
+      crosshair: { horzLine: { color: isDark ? 'rgba(255,255,255,0.2)' : '#d1d5db' }, vertLine: { color: isDark ? 'rgba(255,255,255,0.2)' : '#d1d5db' } },
     })
     chartRef.current = chart
 
@@ -363,7 +364,7 @@ export function Vault() {
       chart.remove()
       chartRef.current = null
     }
-  }, [chartMode, tvlHistory, sharePriceHistory])
+  }, [chartMode, tvlHistory, sharePriceHistory, theme])
 
   // Transaction handlers
   async function handleDeposit() {

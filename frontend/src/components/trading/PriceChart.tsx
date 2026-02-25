@@ -1,4 +1,5 @@
 import { useEffect, useRef, useMemo } from 'react'
+import { useTheme } from '../../hooks/useTheme'
 
 type PriceChartProps = {
   baseAsset: string
@@ -13,6 +14,7 @@ const ASSET_TO_SYMBOL: Record<string, string> = {
 export function PriceChart({ baseAsset }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<HTMLDivElement | null>(null)
+  const { theme } = useTheme()
 
   const symbol = useMemo(() => ASSET_TO_SYMBOL[baseAsset] ?? 'COINBASE:ETHUSD', [baseAsset])
 
@@ -23,6 +25,7 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
       widgetRef.current.innerHTML = ''
     }
 
+    const isDark = theme === 'dark'
     const wrapper = document.createElement('div')
     wrapper.className = 'tradingview-widget-container'
     wrapper.style.width = '100%'
@@ -43,11 +46,11 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
       symbol: symbol,
       interval: '60',
       timezone: 'Etc/UTC',
-      theme: 'light',
+      theme: isDark ? 'dark' : 'light',
       style: '1',
       locale: 'en',
-      backgroundColor: '#ffffff',
-      gridColor: 'rgba(26, 26, 26, 0.1)',
+      backgroundColor: isDark ? '#0c0c1d' : '#ffffff',
+      gridColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(26, 26, 26, 0.1)',
       hide_top_toolbar: false,
       hide_legend: false,
       allow_symbol_change: false,
@@ -62,7 +65,7 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
       studies: ['STD;EMA'],
       overrides: {
         'paneProperties.backgroundType': 'solid',
-        'paneProperties.background': '#ffffff',
+        'paneProperties.background': isDark ? '#0c0c1d' : '#ffffff',
         'mainSeriesProperties.candleStyle.upColor': '#22c55e',
         'mainSeriesProperties.candleStyle.downColor': '#ef4444',
         'mainSeriesProperties.candleStyle.borderUpColor': '#22c55e',
@@ -83,7 +86,7 @@ export function PriceChart({ baseAsset }: PriceChartProps) {
       }
       widgetRef.current = null
     }
-  }, [symbol])
+  }, [symbol, theme])
 
   return <div ref={containerRef} className="w-full h-full" />
 }

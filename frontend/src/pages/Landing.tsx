@@ -4,6 +4,7 @@ import { Hero } from '../components/landing/Hero'
 import { Features } from '../components/landing/Features'
 import { HowItWorks } from '../components/landing/HowItWorks'
 import { Stats } from '../components/landing/Stats'
+import { useTheme } from '../hooks/useTheme'
 
 export function Landing() {
   return (
@@ -25,6 +26,7 @@ export function Landing() {
             <a href="#how-it-works" className="text-sm text-text-secondary hover:text-text transition-colors no-underline">
               How It Works
             </a>
+            <LandingThemeToggle />
             <Link
               to="/trade/1"
               className="px-5 py-2 rounded-lg text-sm font-semibold text-white no-underline transition-all duration-300 hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]"
@@ -158,5 +160,26 @@ export function Landing() {
         </footer>
       </main>
     </div>
+  )
+}
+
+function LandingThemeToggle() {
+  const { theme, toggleTheme } = useTheme()
+  return (
+    <button
+      onClick={toggleTheme}
+      className="p-1.5 rounded-lg border border-border/50 hover:bg-surface transition-colors cursor-pointer"
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {theme === 'dark' ? (
+        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      )}
+    </button>
   )
 }

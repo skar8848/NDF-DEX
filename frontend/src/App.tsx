@@ -6,6 +6,7 @@ import { Header } from './components/layout/Header'
 import { NetworkGuard } from './components/layout/NetworkGuard'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Landing } from './pages/Landing'
+import { ThemeContext, useThemeProvider, useTheme } from './hooks/useTheme'
 
 const Trade = lazy(() => import('./pages/Trade'))
 const Markets = lazy(() =>
@@ -49,38 +50,49 @@ function AppLayout() {
   )
 }
 
+function ThemedToaster() {
+  const { theme } = useTheme()
+  return (
+    <Toaster
+      theme={theme}
+      position="bottom-right"
+      richColors
+      toastOptions={{
+        style: {
+          background: theme === 'dark' ? '#0c0c1d' : '#ffffff',
+          border: theme === 'dark' ? '1px solid rgba(255,255,255,0.15)' : '1px solid #1a1a1a',
+          color: theme === 'dark' ? '#f0f0f0' : '#111111',
+          textAlign: 'center' as const,
+        },
+      }}
+    />
+  )
+}
+
 function App() {
+  const themeValue = useThemeProvider()
+
   return (
     <ErrorBoundary>
-      <Web3Provider>
-        <BrowserRouter>
-          <div className="min-h-screen bg-background">
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route element={<AppLayout />}>
-                <Route path="/trade/:marketId" element={<Trade />} />
-                <Route path="/markets" element={<Markets />} />
-                <Route path="/portfolio" element={<Portfolio />} />
-                <Route path="/vault" element={<Vault />} />
-                <Route path="/docs" element={<Docs />} />
-              </Route>
-            </Routes>
-            <Toaster
-              theme="light"
-              position="bottom-right"
-              richColors
-              toastOptions={{
-                style: {
-                  background: '#ffffff',
-                  border: '1px solid #1a1a1a',
-                  color: '#111111',
-                  textAlign: 'center' as const,
-                },
-              }}
-            />
-          </div>
-        </BrowserRouter>
-      </Web3Provider>
+      <ThemeContext.Provider value={themeValue}>
+        <Web3Provider>
+          <BrowserRouter>
+            <div className="min-h-screen bg-background">
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route element={<AppLayout />}>
+                  <Route path="/trade/:marketId" element={<Trade />} />
+                  <Route path="/markets" element={<Markets />} />
+                  <Route path="/portfolio" element={<Portfolio />} />
+                  <Route path="/vault" element={<Vault />} />
+                  <Route path="/docs" element={<Docs />} />
+                </Route>
+              </Routes>
+              <ThemedToaster />
+            </div>
+          </BrowserRouter>
+        </Web3Provider>
+      </ThemeContext.Provider>
     </ErrorBoundary>
   )
 }

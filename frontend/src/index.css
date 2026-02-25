@@ -21,6 +21,24 @@ html {
   color-scheme: light;
 }
 
+html.dark {
+  color-scheme: dark;
+  --color-background: #060612;
+  --color-surface: #0c0c1d;
+  --color-surface-2: #141428;
+  --color-border: rgba(255, 255, 255, 0.15);
+  --color-text: #f0f0f0;
+  --color-text-secondary: #8b8fa3;
+  --color-primary: #f97316;
+  --color-primary-hover: #fb923c;
+  --color-accent: #ea580c;
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --color-long: #10b981;
+  --color-short: #ef4444;
+}
+
 body {
   margin: 0;
   background-color: var(--color-background);

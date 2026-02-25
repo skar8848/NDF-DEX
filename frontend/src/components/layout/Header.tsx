@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { MockUSDCABI } from '../../lib/abis'
 import { CONTRACTS } from '../../lib/config'
 import { cn } from '../../lib/utils'
+import { useTheme } from '../../hooks/useTheme'
 
 const navLinks = [
   { to: '/trade/1', label: 'Trade' },
@@ -56,6 +57,8 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Dark mode toggle */}
+        <ThemeToggle />
         {/* Network indicator */}
         <button
           onClick={() => {
@@ -102,6 +105,27 @@ function AvalancheLogo() {
       <circle cx="127" cy="127" r="127" fill="#E84142"/>
       <path d="M171.8 130.3c4.4-7.6 11.5-7.6 15.9 0l27.4 48.1c4.4 7.6.8 13.8-8 13.8h-55.1c-8.7 0-12.3-6.2-8-13.8l27.8-48.1zm-53.4-93.2c4.4-7.6 11.4-7.6 15.8 0l5.4 9.8 12.8 23.1c3.5 7.2 3.5 15.7 0 22.9l-34.5 59.5c-4.4 7.2-12 11.6-20.3 11.6H60.5c-8.7 0-12.3-6.2-8-13.8l66-113.1z" fill="white"/>
     </svg>
+  )
+}
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme()
+  return (
+    <button
+      onClick={toggleTheme}
+      className="p-2 rounded-lg border border-border bg-surface-2 hover:bg-surface transition-colors cursor-pointer"
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {theme === 'dark' ? (
+        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      )}
+    </button>
   )
 }
 
