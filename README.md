@@ -4,6 +4,7 @@
   <img src="https://img.shields.io/badge/Chainlink-375BD2?style=for-the-badge&logo=chainlink&logoColor=white" />
   <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/MCP-AI_Native-blueviolet?style=for-the-badge" />
 </p>
 
 <h1 align="center">Tenor Protocol</h1>
@@ -42,6 +43,7 @@ graph TB
     subgraph Users
         Trader["Trader (Browser + Wallet)"]
         KeeperOp["Keeper Operator"]
+        AIAgent["AI Agent (Claude, Cursor)"]
     end
 
     subgraph Frontend["Frontend (React + Vite)"]
@@ -64,9 +66,19 @@ graph TB
         Settle["Settlement Keeper"]
     end
 
+    subgraph MCP["MCP Server (Python)"]
+        MCPTools["20 Tools<br/><i>Markets, Orders, Positions, Trading</i>"]
+    end
+
     Trader --> UI --> Web3
     Web3 --> OB
     Web3 --> PM
+
+    AIAgent --> MCPTools
+    MCPTools --> OB
+    MCPTools --> PM
+    MCPTools --> FM
+    MCPTools --> Oracle
 
     KeeperOp --> Keeper
     TPSL --> PM
@@ -87,6 +99,7 @@ graph TB
     style PM fill:#E8832A,color:#fff
     style Oracle fill:#375BD2,color:#fff
     style USDC fill:#2775CA,color:#fff
+    style MCPTools fill:#8B5CF6,color:#fff
 ```
 
 ---
@@ -103,6 +116,7 @@ graph TB
 | **1-Click Trading** | Single USDC approval enables instant order placement |
 | **Keeper Bot** | Automated settlement, TP/SL triggering, and liquidation with retry logic |
 | **CLI Tool** | Full command-line interface for trading, monitoring, and keeper operations |
+| **AI-Native (MCP)** | Model Context Protocol server — AI agents can read markets and trade on Tenor directly |
 
 ---
 
@@ -114,6 +128,7 @@ graph TB
 | **[Order Matching](docs/MATCHING.md)** | CLOB mechanics, matching algorithm, collateral, partial fills, fees |
 | **[TP/SL](docs/TPSL.md)** | Take-profit/stop-loss mechanics, keeper execution, position lifecycle |
 | **[Settlement](docs/SETTLEMENT.md)** | Forward expiry, oracle settlement, batch processing, payout math |
+| **[MCP Server](mcp/README.md)** | AI-native interface — 20 tools for reading and trading on Tenor |
 
 ---
 
@@ -162,6 +177,12 @@ tenor-protocol/
 │       ├── hooks/             # wagmi contract hooks
 │       ├── providers/         # Web3 (wagmi + RainbowKit + Fuji)
 │       └── lib/               # ABIs, config, utilities
+├── mcp/                      # MCP server (AI-native interface)
+│   ├── tenor_mcp/
+│   │   ├── server.py                  # FastMCP server with 20 tools
+│   │   ├── contracts.py               # On-chain reads/writes via cast
+│   │   └── config.py                  # Contract addresses, RPC, constants
+│   └── pyproject.toml
 ├── keeper/                    # Keeper bot + CLI
 │   └── src/
 │       ├── cli.ts             # Full CLI for trading & monitoring
@@ -221,6 +242,32 @@ npm run dev          # Development server at localhost:5173
 npm run build        # Production build
 ```
 
+### MCP Server (AI Agents)
+
+```bash
+cd mcp
+
+python3 -m venv .venv
+.venv/bin/pip install -e .
+
+# Start the MCP server (connects to Claude Code, Cursor, etc.)
+.venv/bin/tenor-mcp
+
+# Or with trading capabilities:
+TENOR_PRIVATE_KEY=0x... .venv/bin/tenor-mcp
+```
+
+Add to Claude Code or Cursor MCP settings:
+```json
+{
+  "mcpServers": {
+    "tenor": { "command": "/path/to/mcp/.venv/bin/tenor-mcp" }
+  }
+}
+```
+
+Then ask your AI agent: *"What's the ETH order book?"* or *"Place a 5-contract long at $1900"*
+
 ### Keeper Bot
 
 ```bash
@@ -272,6 +319,7 @@ npx tsx src/cli.ts close 1 --percent 50              # Partial close
 | Frontend | React 18, Vite, TypeScript, Tailwind CSS v4, Framer Motion |
 | Web3 | wagmi v2, viem, RainbowKit |
 | Keeper | TypeScript, viem, Multicall3 |
+| MCP Server | Python, FastMCP, Foundry cast |
 | Charts | TradingView Lightweight Charts |
 | Notifications | Sonner (toast notifications) |
 | Chain | Avalanche Fuji Testnet (43113) |
