@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tenor-mcp"
+version = "0.1.0"
+description = "MCP server for the Tenor NDF-DEX protocol on Avalanche"
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0.0"]
+
+[project.scripts]
+tenor-mcp = "tenor_mcp.server:main"
