@@ -60,21 +60,22 @@ export function usePlaceLimitOrder() {
     if (error) toast.error(`Order failed: ${error.message.slice(0, 80)}`, { id: 'limit-order' })
   }, [error])
 
-  const placeLimitOrder = (marketId: bigint, side: number, price: bigint, amount: bigint, orderLabel?: string, timeInForce?: number) => {
+  const placeLimitOrder = (marketId: bigint, side: number, price: bigint, amount: bigint, orderLabel?: string, timeInForce?: number, token?: `0x${string}`) => {
+    const collateralToken = token ?? CONTRACTS.MockUSDC
     labelRef.current = orderLabel ?? 'Limit order'
     if (timeInForce !== undefined) {
       writeContract({
         address: CONTRACTS.OrderBook,
         abi: OrderBookABI,
         functionName: 'placeLimitOrderAdvanced',
-        args: [marketId, side, price, amount, timeInForce],
+        args: [marketId, side, price, amount, timeInForce, collateralToken],
       })
     } else {
       writeContract({
         address: CONTRACTS.OrderBook,
         abi: OrderBookABI,
         functionName: 'placeLimitOrder',
-        args: [marketId, side, price, amount],
+        args: [marketId, side, price, amount, collateralToken],
       })
     }
   }
@@ -98,12 +99,12 @@ export function usePlaceMarketOrder() {
     if (error) toast.error(`Order failed: ${error.message.slice(0, 80)}`, { id: 'market-order' })
   }, [error])
 
-  const placeMarketOrder = (marketId: bigint, side: number, amount: bigint) => {
+  const placeMarketOrder = (marketId: bigint, side: number, amount: bigint, token?: `0x${string}`) => {
     writeContract({
       address: CONTRACTS.OrderBook,
       abi: OrderBookABI,
       functionName: 'placeMarketOrder',
-      args: [marketId, side, amount],
+      args: [marketId, side, amount, token ?? CONTRACTS.MockUSDC],
     })
   }
 
@@ -169,10 +170,10 @@ export function useApproveUSDC() {
     if (error) toast.error(`${label} failed: ${error.message.slice(0, 80)}`, { id: 'approve-usdc' })
   }, [error, label])
 
-  const approve = (spender: `0x${string}`, amount: bigint) => {
+  const approve = (spender: `0x${string}`, amount: bigint, token?: `0x${string}`) => {
     setMode(amount === 0n ? 'revoke' : amount >= 2n ** 128n ? '1ct' : 'trade')
     writeContract({
-      address: CONTRACTS.MockUSDC,
+      address: token ?? CONTRACTS.MockUSDC,
       abi: MockUSDCABI,
       functionName: 'approve',
       args: [spender, amount],
@@ -182,10 +183,10 @@ export function useApproveUSDC() {
   return { approve, isPending, isConfirming, isSuccess, hash }
 }
 
-export function useUSDCBalance() {
+export function useUSDCBalance(token?: `0x${string}`) {
   const { address } = useAccount()
   return useReadContract({
-    address: CONTRACTS.MockUSDC,
+    address: token ?? CONTRACTS.MockUSDC,
     abi: MockUSDCABI,
     functionName: 'balanceOf',
     args: [address!],
@@ -193,10 +194,10 @@ export function useUSDCBalance() {
   })
 }
 
-export function useUSDCAllowance() {
+export function useUSDCAllowance(token?: `0x${string}`) {
   const { address } = useAccount()
   return useReadContract({
-    address: CONTRACTS.MockUSDC,
+    address: token ?? CONTRACTS.MockUSDC,
     abi: MockUSDCABI,
     functionName: 'allowance',
     args: [address!, CONTRACTS.OrderBook],

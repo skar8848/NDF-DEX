@@ -17,9 +17,11 @@ export const avalancheFuji = defineChain({
   testnet: true,
 })
 
-// Deployed on Avalanche Fuji Testnet — v7 Hub Features
+// Deployed on Avalanche Fuji Testnet — v8 Multi-Collateral
 export const CONTRACTS = {
   MockUSDC: '0xDa9103E3121784fba3e60f5a95304833a5A904f1' as `0x${string}`,
+  MockUSDT: '0x0000000000000000000000000000000000000000' as `0x${string}`, // TODO: update after redeploy
+  MockAUSD: '0x0000000000000000000000000000000000000000' as `0x${string}`, // TODO: update after redeploy
   MockWETH: '0x53bcf608A367661b3cafd4878624041F2ce522E3' as `0x${string}`,
   MockOracle: '0x6e1bebEf40dA65B2B5B39EFa1591a985C0EE884E' as `0x${string}`, // ChainlinkOracle
   ForwardMarket: '0x7De1970F024cB1c2953dCBc850E895c4637f57E9' as `0x${string}`,
@@ -29,6 +31,13 @@ export const CONTRACTS = {
   TenorVault: '0x62Ef155a07EA3bF04e6930d40Ad1549F973fB37D' as `0x${string}`,
   CollateralManager: '0xE5586FF57d8602F980bf36eE9a9B99144cd15b66' as `0x${string}`,
 } as const
+
+// Supported collateral tokens for trading
+export const COLLATERAL_TOKENS = [
+  { address: CONTRACTS.MockUSDC, symbol: 'USDC', decimals: 6 },
+  { address: CONTRACTS.MockUSDT, symbol: 'USDT', decimals: 6 },
+  { address: CONTRACTS.MockAUSD, symbol: 'AUSD', decimals: 6 },
+] as const
 
 export const PRICE_PRECISION = 1e8
 export const COLLATERAL_PRECISION = 1e6

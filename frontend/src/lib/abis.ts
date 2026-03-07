@@ -1313,6 +1313,11 @@ export const OrderBookABI = [
         "name": "amount",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -1346,6 +1351,11 @@ export const OrderBookABI = [
         "name": "tif",
         "type": "uint8",
         "internalType": "enum OrderLib.TimeInForce"
+      },
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -1369,10 +1379,28 @@ export const OrderBookABI = [
         "name": "amount",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getSupportedTokens",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",

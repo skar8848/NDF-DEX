@@ -381,29 +381,32 @@ async def approve_usdc(spender: str, amount: int) -> dict:
     return {"status": "success", "tx": result}
 
 
-async def place_limit_order(market_id: int, side: int, price: int, amount: int) -> dict:
+async def place_limit_order(market_id: int, side: int, price: int, amount: int, token: str | None = None) -> dict:
+    collateral_token = token or CONTRACTS["MockUSDC"]
     result = await cast_send(
         CONTRACTS["OrderBook"],
-        "placeLimitOrder(uint256,uint8,uint256,uint256)",
-        str(market_id), str(side), str(price), str(amount),
+        "placeLimitOrder(uint256,uint8,uint256,uint256,address)",
+        str(market_id), str(side), str(price), str(amount), collateral_token,
     )
     return {"status": "success", "tx": result}
 
 
-async def place_limit_order_advanced(market_id: int, side: int, price: int, amount: int, tif: int) -> dict:
+async def place_limit_order_advanced(market_id: int, side: int, price: int, amount: int, tif: int, token: str | None = None) -> dict:
+    collateral_token = token or CONTRACTS["MockUSDC"]
     result = await cast_send(
         CONTRACTS["OrderBook"],
-        "placeLimitOrderAdvanced(uint256,uint8,uint256,uint256,uint8)",
-        str(market_id), str(side), str(price), str(amount), str(tif),
+        "placeLimitOrderAdvanced(uint256,uint8,uint256,uint256,uint8,address)",
+        str(market_id), str(side), str(price), str(amount), str(tif), collateral_token,
     )
     return {"status": "success", "tx": result}
 
 
-async def place_market_order(market_id: int, side: int, amount: int) -> dict:
+async def place_market_order(market_id: int, side: int, amount: int, token: str | None = None) -> dict:
+    collateral_token = token or CONTRACTS["MockUSDC"]
     result = await cast_send(
         CONTRACTS["OrderBook"],
-        "placeMarketOrder(uint256,uint8,uint256)",
-        str(market_id), str(side), str(amount),
+        "placeMarketOrder(uint256,uint8,uint256,address)",
+        str(market_id), str(side), str(amount), collateral_token,
     )
     return {"status": "success", "tx": result}
 

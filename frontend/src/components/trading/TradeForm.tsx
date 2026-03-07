@@ -9,7 +9,7 @@ import {
 } from '../../hooks/useOrderBook'
 import { useOraclePrice } from '../../hooks/usePriceData'
 import { useUserOpenPositions, useSetTPSL } from '../../hooks/usePositions'
-import { CONTRACTS, PRICE_PRECISION, COLLATERAL_PRECISION, PERCENT_BASE } from '../../lib/config'
+import { CONTRACTS, COLLATERAL_TOKENS, PRICE_PRECISION, COLLATERAL_PRECISION, PERCENT_BASE } from '../../lib/config'
 import { formatUSDC, formatPrice, parsePrice } from '../../lib/utils'
 import { cn } from '../../lib/utils'
 import type { MarketInfo } from '../../hooks/useForwardMarket'
@@ -49,9 +49,12 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   const [slLossMode, setSlLossMode] = useState<'usd' | 'pct'>('usd')
   const [tpLastEdited, setTpLastEdited] = useState<'price' | 'gain'>('price')
   const [slLastEdited, setSlLastEdited] = useState<'price' | 'loss'>('price')
+  const [selectedToken, setSelectedToken] = useState<`0x${string}`>(CONTRACTS.MockUSDC)
 
-  const { data: balanceData } = useUSDCBalance()
-  const { data: allowanceData, isLoading: allowanceLoading } = useUSDCAllowance()
+  const selectedTokenInfo = COLLATERAL_TOKENS.find(t => t.address === selectedToken) ?? COLLATERAL_TOKENS[0]
+
+  const { data: balanceData } = useUSDCBalance(selectedToken)
+  const { data: allowanceData, isLoading: allowanceLoading } = useUSDCAllowance(selectedToken)
   const balance = (balanceData as bigint) ?? 0n
   const allowance = (allowanceData as bigint) ?? 0n
 
@@ -87,12 +90,12 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   const show1CTPrompt = isConnected && !allowanceLoading && !is1CTEnabled && !dismissed1CT
 
   const handleEnable1CT = useCallback(() => {
-    approve(CONTRACTS.OrderBook, MAX_UINT256)
-  }, [approve])
+    approve(CONTRACTS.OrderBook, MAX_UINT256, selectedToken)
+  }, [approve, selectedToken])
 
   const handleRevoke1CT = useCallback(() => {
-    approve(CONTRACTS.OrderBook, 0n)
-  }, [approve])
+    approve(CONTRACTS.OrderBook, 0n, selectedToken)
+  }, [approve, selectedToken])
 
   const { data: oraclePriceData } = useOraclePrice(market?.baseAsset ?? '')
   const oraclePrice = useMemo(() => {
@@ -162,9 +165,9 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   useEffect(() => {
     if (isApproveSuccess && pendingOrder) {
       if (pendingOrder.type === 'limit') {
-        placeLimitOrder(pendingOrder.marketId, pendingOrder.side, pendingOrder.price, pendingOrder.size, pendingOrder.label, pendingOrder.tif)
+        placeLimitOrder(pendingOrder.marketId, pendingOrder.side, pendingOrder.price, pendingOrder.size, pendingOrder.label, pendingOrder.tif, selectedToken)
       } else {
-        placeMarketOrder(pendingOrder.marketId, pendingOrder.side, pendingOrder.size)
+        placeMarketOrder(pendingOrder.marketId, pendingOrder.side, pendingOrder.size, selectedToken)
       }
       setPendingOrder(null)
     }
@@ -332,6 +335,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
     if (!isConnected || !address) return
     const sideEnum = side === 'long' ? 0 : 1
     const size = BigInt(Math.floor(Number(sizeInput)))
+    const token = selectedToken
 
     // If allowance is insufficient, approve first then place order
     const needsApproval = !is1CTEnabled && collateralRequired > 0n && allowance < collateralRequired
@@ -341,10 +345,10 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
       if (price === 0n || size === 0n) return
       if (needsApproval) {
         setPendingOrder({ type: 'limit', marketId, side: sideEnum, price, size })
-        approve(CONTRACTS.OrderBook, collateralRequired)
+        approve(CONTRACTS.OrderBook, collateralRequired, token)
         return
       }
-      placeLimitOrder(marketId, sideEnum, price, size)
+      placeLimitOrder(marketId, sideEnum, price, size, undefined, undefined, token)
     } else {
       if (size === 0n) return
       // Slippage protection: use limit order with price = best + tolerance
@@ -356,20 +360,20 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         if (maxPrice > 0n) {
           if (needsApproval) {
             setPendingOrder({ type: 'limit', marketId, side: sideEnum, price: maxPrice, size, label: 'Market order', tif: 1 })
-            approve(CONTRACTS.OrderBook, collateralRequired)
+            approve(CONTRACTS.OrderBook, collateralRequired, token)
             return
           }
-          placeLimitOrder(marketId, sideEnum, maxPrice, size, 'Market order', 1) // IOC
+          placeLimitOrder(marketId, sideEnum, maxPrice, size, 'Market order', 1, token) // IOC
           return
         }
       }
       // Fallback: no book data → raw market order (no slippage protection)
       if (needsApproval) {
         setPendingOrder({ type: 'market', marketId, side: sideEnum, size })
-        approve(CONTRACTS.OrderBook, collateralRequired)
+        approve(CONTRACTS.OrderBook, collateralRequired, token)
         return
       }
-      placeMarketOrder(marketId, sideEnum, size)
+      placeMarketOrder(marketId, sideEnum, size, token)
     }
   }
 
@@ -653,6 +657,24 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
         </div>
       </div>
 
+      {/* Collateral token selector */}
+      <div className="flex gap-1">
+        {COLLATERAL_TOKENS.map(t => (
+          <button
+            key={t.symbol}
+            onClick={() => setSelectedToken(t.address as `0x${string}`)}
+            className={cn(
+              'flex-1 py-1.5 text-xs font-medium rounded-lg border cursor-pointer transition-colors',
+              selectedToken === t.address
+                ? 'border-primary text-primary bg-primary/10'
+                : 'border-border text-text-secondary hover:text-text'
+            )}
+          >
+            {t.symbol}
+          </button>
+        ))}
+      </div>
+
       {/* Summary box */}
       <div className="bg-surface-2 rounded-lg p-2.5 space-y-1.5">
         {/* Available to trade */}
@@ -660,8 +682,7 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
           <div className="flex items-center justify-between text-xs">
             <span className="text-text-secondary">Available</span>
             <span className="text-text font-mono">
-              <img src="/logos/USDC_Logo.png" alt="USDC" className="w-3 h-3 rounded-full inline mr-1 -mt-px" />
-              ${formatUSDC(balance)}
+              ${formatUSDC(balance)} {selectedTokenInfo.symbol}
             </span>
           </div>
         )}

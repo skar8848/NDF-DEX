@@ -3,7 +3,7 @@
 import json
 from mcp.server.fastmcp import FastMCP
 from . import contracts
-from .config import CONTRACTS, PRICE_PRECISION, COLLATERAL_PRECISION
+from .config import CONTRACTS, COLLATERAL_TOKENS, PRICE_PRECISION, COLLATERAL_PRECISION
 
 mcp = FastMCP(
     "Tenor DEX",
@@ -222,7 +222,7 @@ async def get_fee_config() -> str:
 # ---------------------------------------------------------------------------
 
 @mcp.tool()
-async def place_limit_order(market_id: int, side: int, price: float, amount: int) -> str:
+async def place_limit_order(market_id: int, side: int, price: float, amount: int, token: str = "USDC") -> str:
     """Place a limit order on the order book. Requires TENOR_PRIVATE_KEY env var.
 
     Args:
@@ -230,25 +230,31 @@ async def place_limit_order(market_id: int, side: int, price: float, amount: int
         side: 0 for LONG, 1 for SHORT
         price: The limit price in USD (e.g. 2500.00)
         amount: Number of contracts
+        token: Collateral token to use: USDC, USDT, or AUSD (default: USDC)
     """
     price_raw = int(price * PRICE_PRECISION)
     side_name = "LONG" if side == 0 else "SHORT"
-    result = await contracts.place_limit_order(market_id, side, price_raw, amount)
-    return f"Limit order placed: {side_name} {amount} contracts @ ${price:.2f}\n{result['tx']}"
+    token_key = COLLATERAL_TOKENS.get(token.upper(), "MockUSDC")
+    token_addr = CONTRACTS.get(token_key, CONTRACTS["MockUSDC"])
+    result = await contracts.place_limit_order(market_id, side, price_raw, amount, token_addr)
+    return f"Limit order placed: {side_name} {amount} contracts @ ${price:.2f} (collateral: {token.upper()})\n{result['tx']}"
 
 
 @mcp.tool()
-async def place_market_order(market_id: int, side: int, amount: int) -> str:
+async def place_market_order(market_id: int, side: int, amount: int, token: str = "USDC") -> str:
     """Place a market order. Requires TENOR_PRIVATE_KEY env var.
 
     Args:
         market_id: The market ID
         side: 0 for LONG, 1 for SHORT
         amount: Number of contracts
+        token: Collateral token to use: USDC, USDT, or AUSD (default: USDC)
     """
     side_name = "LONG" if side == 0 else "SHORT"
-    result = await contracts.place_market_order(market_id, side, amount)
-    return f"Market order placed: {side_name} {amount} contracts\n{result['tx']}"
+    token_key = COLLATERAL_TOKENS.get(token.upper(), "MockUSDC")
+    token_addr = CONTRACTS.get(token_key, CONTRACTS["MockUSDC"])
+    result = await contracts.place_market_order(market_id, side, amount, token_addr)
+    return f"Market order placed: {side_name} {amount} contracts (collateral: {token.upper()})\n{result['tx']}"
 
 
 @mcp.tool()
