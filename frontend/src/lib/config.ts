@@ -19,17 +19,17 @@ export const avalancheFuji = defineChain({
 
 // Deployed on Avalanche Fuji Testnet — v8 Multi-Collateral
 export const CONTRACTS = {
-  MockUSDC: '0xDa9103E3121784fba3e60f5a95304833a5A904f1' as `0x${string}`,
-  MockUSDT: '0x0000000000000000000000000000000000000000' as `0x${string}`, // TODO: update after redeploy
-  MockAUSD: '0x0000000000000000000000000000000000000000' as `0x${string}`, // TODO: update after redeploy
-  MockWETH: '0x53bcf608A367661b3cafd4878624041F2ce522E3' as `0x${string}`,
-  MockOracle: '0x6e1bebEf40dA65B2B5B39EFa1591a985C0EE884E' as `0x${string}`, // ChainlinkOracle
-  ForwardMarket: '0x7De1970F024cB1c2953dCBc850E895c4637f57E9' as `0x${string}`,
-  OrderBook: '0xd92Ff3f1FF6AAC7E298BcF9634eB907B9B7e7Bf9' as `0x${string}`,
-  PositionManager: '0x7a867BC74482724C2B0b6F36DFb15f6691088a88' as `0x${string}`,
-  InsuranceFund: '0x3BC01a6710CF2f8DBa2E4bfD8b6F4C7F553E3BFC' as `0x${string}`,
-  TenorVault: '0x62Ef155a07EA3bF04e6930d40Ad1549F973fB37D' as `0x${string}`,
-  CollateralManager: '0xE5586FF57d8602F980bf36eE9a9B99144cd15b66' as `0x${string}`,
+  MockUSDC: '0x4a9Cc53548eBbEfb31bC2189FA5f2aBb48A3335a' as `0x${string}`,
+  MockUSDT: '0x2867e9A5a9db4115E9e7AE9747ea50bd12DeD9Ed' as `0x${string}`,
+  MockAUSD: '0x5052262e7AfFF6befD734551114d90bd56218C54' as `0x${string}`,
+  MockWETH: '0x46cf521d854cEcF81073c9fE955Ffd99209C9069' as `0x${string}`,
+  MockOracle: '0xf5EfBaf278268B4A82A46DC51C0132Ab5861b4ae' as `0x${string}`, // ChainlinkOracle
+  ForwardMarket: '0x0d51Bb1c3eEE7C0573B6b2D905a287372d6301E1' as `0x${string}`,
+  OrderBook: '0x463e3d633FC591ed02900Afd041Bcf7EdfE9DCB1' as `0x${string}`,
+  PositionManager: '0x3fd14cb5dc574986004973254186aDbB2CE4A900' as `0x${string}`,
+  InsuranceFund: '0x85fCaB9Cb3FCE04ED277190c9c09cDC5178B9Ca0' as `0x${string}`,
+  TenorVault: '0xEac92864c8D56e02d076981EaaD6aeCc6b7D93B0' as `0x${string}`,
+  CollateralManager: '0xc42e2d1e47eA74d5B9CF0eb70806D7a4169D66e0' as `0x${string}`,
 } as const
 
 // Supported collateral tokens for trading
