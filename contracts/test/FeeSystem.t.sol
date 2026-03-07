@@ -28,9 +28,10 @@ contract FeeSystemTest is Test {
         oracle = new MockOracle();
         usdc = new MockUSDC();
         forwardMarket = new ForwardMarket(address(oracle));
-        orderBook = new OrderBook(address(forwardMarket), address(usdc), feeCollector, 10); // 0.10% taker fee
+        orderBook = new OrderBook(address(forwardMarket), feeCollector, 10); // 0.10% taker fee
+        orderBook.addSupportedCollateral(address(usdc));
         positionManager = new PositionManager(
-            address(forwardMarket), address(oracle), address(usdc), address(orderBook)
+            address(forwardMarket), address(oracle), address(orderBook)
         );
         orderBook.setPositionManager(address(positionManager));
         forwardMarket.setAuthorized(address(orderBook), true);
@@ -52,9 +53,9 @@ contract FeeSystemTest is Test {
 
     function test_takerFeeDeducted() public {
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         assertTrue(orderBook.totalFeesCollected() > 0);
     }
@@ -63,9 +64,9 @@ contract FeeSystemTest is Test {
         orderBook.setMakerFee(2, true); // 0.02% rebate
 
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         assertTrue(orderBook.totalMakerRebates() > 0);
     }
@@ -77,9 +78,9 @@ contract FeeSystemTest is Test {
         uint256 feeCollBefore = usdc.balanceOf(feeCollector);
 
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         uint256 protocolFees = usdc.balanceOf(feeCollector) - feeCollBefore;
         uint256 insuranceFees = usdc.balanceOf(insurance) - insuranceBefore;
@@ -100,9 +101,9 @@ contract FeeSystemTest is Test {
         uint256 builderBefore = usdc.balanceOf(builder);
 
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         uint256 builderAfter = usdc.balanceOf(builder);
         assertTrue(builderAfter > builderBefore, "Builder should receive fees");
@@ -113,9 +114,9 @@ contract FeeSystemTest is Test {
         orderBook.setTakerFee(0);
 
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         assertEq(orderBook.totalFeesCollected(), 0);
     }
@@ -138,9 +139,9 @@ contract FeeSystemTest is Test {
 
     function test_getFeeTotals() public {
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         (uint256 total, uint256 protocol, uint256 ins, uint256 bld, uint256 rebates) = orderBook.getFeeTotals();
         assertTrue(total > 0);

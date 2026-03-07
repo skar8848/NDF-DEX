@@ -13,7 +13,11 @@ contract OrderBook is ReentrancyGuard {
     using SafeERC20 for IERC20;
     ForwardMarket public forwardMarket;
     PositionManager public positionManager;
-    IERC20 public collateralToken; // USDC
+
+    // Multi-collateral support
+    mapping(address => bool) public supportedCollateral;
+    address[] public supportedTokenList;
+    mapping(uint256 => address) public orderCollateral; // orderId → token used
 
     address public owner;
 
@@ -90,10 +94,9 @@ contract OrderBook is ReentrancyGuard {
         _;
     }
 
-    constructor(address _forwardMarket, address _collateralToken, address _feeCollector, uint256 _takerFeeBps) {
+    constructor(address _forwardMarket, address _feeCollector, uint256 _takerFeeBps) {
         require(_takerFeeBps <= 1000, "OrderBook: fee too high"); // max 10%
         forwardMarket = ForwardMarket(_forwardMarket);
-        collateralToken = IERC20(_collateralToken);
         owner = msg.sender;
         feeCollector = _feeCollector;
         takerFeeBps = _takerFeeBps;
@@ -101,6 +104,16 @@ contract OrderBook is ReentrancyGuard {
         // Default fee split: 30% protocol, 10% insurance, 60% LP
         protocolFeeBps = 3000;
         insuranceFeeBps = 1000;
+    }
+
+    function addSupportedCollateral(address token) external onlyOwner {
+        require(!supportedCollateral[token], "OrderBook: already supported");
+        supportedCollateral[token] = true;
+        supportedTokenList.push(token);
+    }
+
+    function getSupportedTokens() external view returns (address[] memory) {
+        return supportedTokenList;
     }
 
     // ─── Admin: Fee Configuration ────────────────────────────────
@@ -158,9 +171,10 @@ contract OrderBook is ReentrancyGuard {
         uint256 marketId,
         OrderLib.Side side,
         uint256 price,
-        uint256 amount
+        uint256 amount,
+        address token
     ) external nonReentrant {
-        _placeLimitOrderInternal(marketId, side, price, amount, OrderLib.TimeInForce.GTC);
+        _placeLimitOrderInternal(marketId, side, price, amount, OrderLib.TimeInForce.GTC, token);
     }
 
     function placeLimitOrderAdvanced(
@@ -168,9 +182,10 @@ contract OrderBook is ReentrancyGuard {
         OrderLib.Side side,
         uint256 price,
         uint256 amount,
-        OrderLib.TimeInForce tif
+        OrderLib.TimeInForce tif,
+        address token
     ) external nonReentrant {
-        _placeLimitOrderInternal(marketId, side, price, amount, tif);
+        _placeLimitOrderInternal(marketId, side, price, amount, tif, token);
     }
 
     function _placeLimitOrderInternal(
@@ -178,8 +193,10 @@ contract OrderBook is ReentrancyGuard {
         OrderLib.Side side,
         uint256 price,
         uint256 amount,
-        OrderLib.TimeInForce tif
+        OrderLib.TimeInForce tif,
+        address token
     ) internal {
+        require(supportedCollateral[token], "OrderBook: unsupported collateral");
         OrderLib.MarketInfo memory market = forwardMarket.getMarket(marketId);
         require(!market.settled, "OrderBook: market settled");
         require(block.timestamp < market.expiration, "OrderBook: market expired");
@@ -203,9 +220,10 @@ contract OrderBook is ReentrancyGuard {
         require(collateral >= market.minCollateral, "OrderBook: below min collateral");
 
         // Transfer collateral from trader
-        collateralToken.safeTransferFrom(msg.sender, address(this), collateral);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), collateral);
 
         uint256 orderId = _nextOrderId++;
+        orderCollateral[orderId] = token;
         orders[orderId] = OrderLib.Order({
             id: orderId,
             trader: msg.sender,
@@ -240,7 +258,7 @@ contract OrderBook is ReentrancyGuard {
                 order.status = OrderLib.OrderStatus.FILLED;
             }
             if (refund > 0) {
-                collateralToken.safeTransfer(msg.sender, refund);
+                IERC20(token).safeTransfer(msg.sender, refund);
             }
             return; // Don't add to book
         }
@@ -258,8 +276,10 @@ contract OrderBook is ReentrancyGuard {
     function placeMarketOrder(
         uint256 marketId,
         OrderLib.Side side,
-        uint256 amount
+        uint256 amount,
+        address token
     ) external nonReentrant {
+        require(supportedCollateral[token], "OrderBook: unsupported collateral");
         OrderLib.MarketInfo memory market = forwardMarket.getMarket(marketId);
         require(!market.settled, "OrderBook: market settled");
         require(block.timestamp < market.expiration, "OrderBook: market expired");
@@ -279,9 +299,10 @@ contract OrderBook is ReentrancyGuard {
             * MathLib.COLLATERAL_PRECISION * MathLib.PERCENT_BASE / market.ltv;
         if (collateral < market.minCollateral) collateral = market.minCollateral;
 
-        collateralToken.safeTransferFrom(msg.sender, address(this), collateral);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), collateral);
 
         uint256 orderId = _nextOrderId++;
+        orderCollateral[orderId] = token;
         orders[orderId] = OrderLib.Order({
             id: orderId,
             trader: msg.sender,
@@ -309,7 +330,7 @@ contract OrderBook is ReentrancyGuard {
             uint256 refund = order.collateral - usedCollateral;
             order.collateral = usedCollateral;
             if (refund > 0) {
-                collateralToken.safeTransfer(msg.sender, refund);
+                IERC20(token).safeTransfer(msg.sender, refund);
             }
             if (order.filled == 0) {
                 order.status = OrderLib.OrderStatus.CANCELLED;
@@ -334,7 +355,7 @@ contract OrderBook is ReentrancyGuard {
         order.status = OrderLib.OrderStatus.CANCELLED;
 
         if (refund > 0) {
-            collateralToken.safeTransfer(msg.sender, refund);
+            IERC20(orderCollateral[orderId]).safeTransfer(msg.sender, refund);
         }
 
         // Remove from order book arrays
@@ -411,12 +432,7 @@ contract OrderBook is ReentrancyGuard {
         }
 
         // Open positions & transfer collateral
-        {
-            uint256 mktId = orders[longId].marketId;
-            positionManager.openPosition(mktId, orders[longId].trader, OrderLib.Side.LONG, matchPrice, matchAmount, longCollat);
-            positionManager.openPosition(mktId, orders[shortId].trader, OrderLib.Side.SHORT, matchPrice, matchAmount, shortCollat);
-            collateralToken.safeTransfer(address(positionManager), longCollat + shortCollat);
-        }
+        _openMatchedPositions(longId, shortId, matchPrice, matchAmount, longCollat, shortCollat);
 
         // Update fill amounts
         orders[incomingId].filled += matchAmount;
@@ -429,6 +445,23 @@ contract OrderBook is ReentrancyGuard {
         _updateOrderStatus(restingId);
 
         emit OrderMatched(longId, shortId, matchPrice, matchAmount, 0, 0, netTakerFee);
+    }
+
+    function _openMatchedPositions(
+        uint256 longId,
+        uint256 shortId,
+        uint256 matchPrice,
+        uint256 matchAmount,
+        uint256 longCollat,
+        uint256 shortCollat
+    ) internal {
+        uint256 mktId = orders[longId].marketId;
+        address longToken = orderCollateral[longId];
+        address shortToken = orderCollateral[shortId];
+        positionManager.openPosition(mktId, orders[longId].trader, OrderLib.Side.LONG, matchPrice, matchAmount, longCollat, longToken);
+        positionManager.openPosition(mktId, orders[shortId].trader, OrderLib.Side.SHORT, matchPrice, matchAmount, shortCollat, shortToken);
+        IERC20(longToken).safeTransfer(address(positionManager), longCollat);
+        IERC20(shortToken).safeTransfer(address(positionManager), shortCollat);
     }
 
     function _updateMatchedCollateral(
@@ -456,6 +489,7 @@ contract OrderBook is ReentrancyGuard {
         uint256 /* makerId */,
         uint256 takerCollat
     ) internal returns (uint256 netTakerFee, uint256 makerRebate) {
+        IERC20 feeToken = IERC20(orderCollateral[takerId]);
         if (takerFeeBps == 0) return (0, 0);
 
         // 1. Calculate taker fee
@@ -484,7 +518,7 @@ contract OrderBook is ReentrancyGuard {
         if (builder != address(0) && registeredBuilder[builder] && builderFeeBps[builder] > 0) {
             builderFee = netFee * builderFeeBps[builder] / 10000;
             if (builderFee > 0) {
-                collateralToken.safeTransfer(builder, builderFee);
+                feeToken.safeTransfer(builder, builderFee);
                 totalBuilderFees += builderFee;
             }
         }
@@ -499,21 +533,21 @@ contract OrderBook is ReentrancyGuard {
         // All fees fall back to feeCollector if specific destination not set
         if (protocolFee > 0) {
             if (feeCollector != address(0)) {
-                collateralToken.safeTransfer(feeCollector, protocolFee);
+                feeToken.safeTransfer(feeCollector, protocolFee);
             }
             totalProtocolFees += protocolFee;
         }
         if (insurFee > 0) {
             address insurDest = insuranceFund != address(0) ? insuranceFund : feeCollector;
             if (insurDest != address(0)) {
-                collateralToken.safeTransfer(insurDest, insurFee);
+                feeToken.safeTransfer(insurDest, insurFee);
             }
             totalInsuranceFees += insurFee;
         }
         if (lpFee > 0) {
             address lpDest = lpVault != address(0) ? lpVault : feeCollector;
             if (lpDest != address(0)) {
-                collateralToken.safeTransfer(lpDest, lpFee);
+                feeToken.safeTransfer(lpDest, lpFee);
             }
         }
 

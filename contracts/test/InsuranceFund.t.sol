@@ -26,9 +26,10 @@ contract InsuranceFundTest is Test {
         oracle = new MockOracle();
         usdc = new MockUSDC();
         forwardMarket = new ForwardMarket(address(oracle));
-        orderBook = new OrderBook(address(forwardMarket), address(usdc), address(this), 10);
+        orderBook = new OrderBook(address(forwardMarket), address(this), 10);
+        orderBook.addSupportedCollateral(address(usdc));
         positionManager = new PositionManager(
-            address(forwardMarket), address(oracle), address(usdc), address(orderBook)
+            address(forwardMarket), address(oracle), address(orderBook)
         );
         orderBook.setPositionManager(address(positionManager));
         forwardMarket.setAuthorized(address(orderBook), true);
@@ -119,9 +120,9 @@ contract InsuranceFundTest is Test {
 
         // Create positions
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         // Warp to expiry, price goes way up (long profits a lot)
         vm.warp(block.timestamp + 31 days);

@@ -24,9 +24,10 @@ contract OrderBookTest is Test {
         oracle = new MockOracle();
         usdc = new MockUSDC();
         forwardMarket = new ForwardMarket(address(oracle));
-        orderBook = new OrderBook(address(forwardMarket), address(usdc), address(this), 10);
+        orderBook = new OrderBook(address(forwardMarket), address(this), 10);
+        orderBook.addSupportedCollateral(address(usdc));
         positionManager = new PositionManager(
-            address(forwardMarket), address(oracle), address(usdc), address(orderBook)
+            address(forwardMarket), address(oracle), address(orderBook)
         );
         orderBook.setPositionManager(address(positionManager));
         forwardMarket.setAuthorized(address(orderBook), true);
@@ -48,7 +49,7 @@ contract OrderBookTest is Test {
 
     function test_placeLimitOrder() public {
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
 
         // Check order exists
         OrderLib.Order memory order = orderBook.getOrder(1);
@@ -62,11 +63,11 @@ contract OrderBookTest is Test {
     function test_matchOrders() public {
         // Alice places a LONG limit order
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
 
         // Bob places a SHORT limit order at the same price -> should match
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         // Both orders should be filled
         OrderLib.Order memory aliceOrder = orderBook.getOrder(1);
@@ -89,11 +90,11 @@ contract OrderBookTest is Test {
     function test_partialFill() public {
         // Alice wants 3 contracts
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 3);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 3, address(usdc));
 
         // Bob only offers 1
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         OrderLib.Order memory aliceOrder = orderBook.getOrder(1);
         OrderLib.Order memory bobOrder = orderBook.getOrder(2);
@@ -108,7 +109,7 @@ contract OrderBookTest is Test {
         uint256 balanceBefore = usdc.balanceOf(alice);
 
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
 
         uint256 balanceAfterOrder = usdc.balanceOf(alice);
         assertTrue(balanceAfterOrder < balanceBefore); // collateral taken
@@ -126,10 +127,10 @@ contract OrderBookTest is Test {
 
     function test_orderBookView() public {
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
 
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2600e8, 2);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2600e8, 2, address(usdc));
 
         (OrderLib.Order[] memory bids, OrderLib.Order[] memory asks) = orderBook.getOrderBook(marketId);
         assertEq(bids.length, 1);
@@ -141,10 +142,10 @@ contract OrderBookTest is Test {
     function test_noMatchDifferentPrices() public {
         // Long at 2400, Short at 2600 => no cross
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2400e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2400e8, 1, address(usdc));
 
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2600e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2600e8, 1, address(usdc));
 
         OrderLib.Order memory aliceOrder = orderBook.getOrder(1);
         OrderLib.Order memory bobOrder = orderBook.getOrder(2);
@@ -156,11 +157,11 @@ contract OrderBookTest is Test {
     function test_priceCrossing() public {
         // Short resting at 2400
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2400e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2400e8, 1, address(usdc));
 
         // Long incoming at 2500 (willing to pay more) -> crosses at 2400 (resting price)
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
 
         OrderLib.Order memory longOrder = orderBook.getOrder(2);
         assertEq(longOrder.filled, 1);

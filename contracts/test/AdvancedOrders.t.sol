@@ -24,9 +24,10 @@ contract AdvancedOrdersTest is Test {
         oracle = new MockOracle();
         usdc = new MockUSDC();
         forwardMarket = new ForwardMarket(address(oracle));
-        orderBook = new OrderBook(address(forwardMarket), address(usdc), address(this), 10);
+        orderBook = new OrderBook(address(forwardMarket), address(this), 10);
+        orderBook.addSupportedCollateral(address(usdc));
         positionManager = new PositionManager(
-            address(forwardMarket), address(oracle), address(usdc), address(orderBook)
+            address(forwardMarket), address(oracle), address(orderBook)
         );
         orderBook.setPositionManager(address(positionManager));
         forwardMarket.setAuthorized(address(orderBook), true);
@@ -47,11 +48,11 @@ contract AdvancedOrdersTest is Test {
     function test_IOC_fullFill() public {
         // Place resting ask
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 3);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 3, address(usdc));
 
         // IOC buy should fill fully
         vm.prank(alice);
-        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 2, OrderLib.TimeInForce.IOC);
+        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 2, OrderLib.TimeInForce.IOC, address(usdc));
 
         OrderLib.Order memory order = orderBook.getOrder(2); // alice's order
         assertEq(order.filled, 2);
@@ -60,11 +61,11 @@ contract AdvancedOrdersTest is Test {
     function test_IOC_partialFill() public {
         // Place resting ask for only 1
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         uint256 aliceBefore = usdc.balanceOf(alice);
         vm.prank(alice);
-        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 3, OrderLib.TimeInForce.IOC);
+        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 3, OrderLib.TimeInForce.IOC, address(usdc));
 
         OrderLib.Order memory order = orderBook.getOrder(2);
         assertEq(order.filled, 1);
@@ -78,7 +79,7 @@ contract AdvancedOrdersTest is Test {
         // No resting orders, IOC should cancel entirely
         uint256 aliceBefore = usdc.balanceOf(alice);
         vm.prank(alice);
-        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 1, OrderLib.TimeInForce.IOC);
+        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 1, OrderLib.TimeInForce.IOC, address(usdc));
 
         OrderLib.Order memory order = orderBook.getOrder(1);
         assertEq(order.filled, 0);
@@ -94,10 +95,10 @@ contract AdvancedOrdersTest is Test {
     function test_FOK_success() public {
         // Place enough liquidity
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 5);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 5, address(usdc));
 
         vm.prank(alice);
-        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 3, OrderLib.TimeInForce.FOK);
+        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 3, OrderLib.TimeInForce.FOK, address(usdc));
 
         OrderLib.Order memory order = orderBook.getOrder(2);
         assertEq(order.filled, 3);
@@ -107,11 +108,11 @@ contract AdvancedOrdersTest is Test {
     function test_FOK_revert_insufficientLiquidity() public {
         // Only 1 resting, try FOK for 3
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         vm.prank(alice);
         vm.expectRevert("OrderBook: insufficient liquidity (FOK)");
-        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 3, OrderLib.TimeInForce.FOK);
+        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 3, OrderLib.TimeInForce.FOK, address(usdc));
     }
 
     // ─── POST_ONLY Tests ─────────────────────────────────────────
@@ -119,7 +120,7 @@ contract AdvancedOrdersTest is Test {
     function test_POSTONLY_addToBook() public {
         // No opposite orders, should add to book
         vm.prank(alice);
-        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2400e8, 1, OrderLib.TimeInForce.POST_ONLY);
+        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2400e8, 1, OrderLib.TimeInForce.POST_ONLY, address(usdc));
 
         OrderLib.Order memory order = orderBook.getOrder(1);
         assertEq(order.filled, 0);
@@ -132,12 +133,12 @@ contract AdvancedOrdersTest is Test {
     function test_POSTONLY_revertIfWouldMatch() public {
         // Place ask at 2500
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         // Post-only bid at 2500 would cross
         vm.prank(alice);
         vm.expectRevert("OrderBook: would match (post-only)");
-        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 1, OrderLib.TimeInForce.POST_ONLY);
+        orderBook.placeLimitOrderAdvanced(marketId, OrderLib.Side.LONG, 2500e8, 1, OrderLib.TimeInForce.POST_ONLY, address(usdc));
     }
 
     // ─── GTC Backward Compatibility ──────────────────────────────
@@ -145,7 +146,7 @@ contract AdvancedOrdersTest is Test {
     function test_GTC_backwardCompat() public {
         // placeLimitOrder should still work as GTC
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2400e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2400e8, 1, address(usdc));
 
         OrderLib.Order memory order = orderBook.getOrder(1);
         assertTrue(order.timeInForce == OrderLib.TimeInForce.GTC);

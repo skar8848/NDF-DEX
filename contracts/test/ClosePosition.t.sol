@@ -26,9 +26,10 @@ contract ClosePositionTest is Test {
         oracle = new MockOracle();
         usdc = new MockUSDC();
         forwardMarket = new ForwardMarket(address(oracle));
-        orderBook = new OrderBook(address(forwardMarket), address(usdc), address(this), 10);
+        orderBook = new OrderBook(address(forwardMarket), address(this), 10);
+        orderBook.addSupportedCollateral(address(usdc));
         positionManager = new PositionManager(
-            address(forwardMarket), address(oracle), address(usdc), address(orderBook)
+            address(forwardMarket), address(oracle), address(orderBook)
         );
         orderBook.setPositionManager(address(positionManager));
         forwardMarket.setAuthorized(address(orderBook), true);
@@ -54,9 +55,9 @@ contract ClosePositionTest is Test {
 
     function _createMatchedPositions() internal returns (uint256 longPosId, uint256 shortPosId) {
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
         longPosId = 1;
         shortPosId = 2;
     }
@@ -284,9 +285,9 @@ contract ClosePositionTest is Test {
         // Create 3 pairs of positions
         _createMatchedPositions(); // IDs 1, 2
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1); // IDs 3, 4
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc)); // IDs 3, 4
 
         assertEq(positionManager.getOpenPositionCount(), 4);
 
@@ -369,9 +370,9 @@ contract ClosePositionTest is Test {
 
     function _createLargeMatchedPositions() internal returns (uint256 longPosId, uint256 shortPosId) {
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 10);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 10, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 10);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 10, address(usdc));
         longPosId = 1;
         shortPosId = 2;
     }

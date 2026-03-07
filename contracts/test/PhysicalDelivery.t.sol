@@ -29,9 +29,10 @@ contract PhysicalDeliveryTest is Test {
         usdc = new MockUSDC();
         weth = new MockWETH();
         forwardMarket = new ForwardMarket(address(oracle));
-        orderBook = new OrderBook(address(forwardMarket), address(usdc), address(this), 10);
+        orderBook = new OrderBook(address(forwardMarket), address(this), 10);
+        orderBook.addSupportedCollateral(address(usdc));
         positionManager = new PositionManager(
-            address(forwardMarket), address(oracle), address(usdc), address(orderBook)
+            address(forwardMarket), address(oracle), address(orderBook)
         );
         orderBook.setPositionManager(address(positionManager));
         forwardMarket.setAuthorized(address(orderBook), true);
@@ -78,9 +79,9 @@ contract PhysicalDeliveryTest is Test {
     function test_physicalDelivery_longReceivesWETH() public {
         // Alice goes long, Bob goes short on PHYSICAL market
         vm.prank(alice);
-        orderBook.placeLimitOrder(physicalMarketId, OrderLib.Side.LONG, 2500e8, 2);
+        orderBook.placeLimitOrder(physicalMarketId, OrderLib.Side.LONG, 2500e8, 2, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(physicalMarketId, OrderLib.Side.SHORT, 2500e8, 2);
+        orderBook.placeLimitOrder(physicalMarketId, OrderLib.Side.SHORT, 2500e8, 2, address(usdc));
 
         // Warp to expiry and settle
         vm.warp(expiry + 1);
@@ -107,9 +108,9 @@ contract PhysicalDeliveryTest is Test {
     function test_physicalDelivery_shortReceivesUSDC() public {
         // Alice goes long, Bob goes short on PHYSICAL market
         vm.prank(alice);
-        orderBook.placeLimitOrder(physicalMarketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(physicalMarketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(physicalMarketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(physicalMarketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         vm.warp(expiry + 1);
         oracle.setPrice("ETH", 2400e8); // price dropped — short profits
@@ -133,9 +134,9 @@ contract PhysicalDeliveryTest is Test {
     function test_cashSettlement_unchanged() public {
         // Same flow but on CASH market — should behave as before
         vm.prank(alice);
-        orderBook.placeLimitOrder(cashMarketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(cashMarketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(cashMarketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(cashMarketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         vm.warp(expiry + 1);
         oracle.setPrice("ETH", 3000e8);

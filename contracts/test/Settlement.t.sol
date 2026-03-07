@@ -25,9 +25,10 @@ contract SettlementTest is Test {
         oracle = new MockOracle();
         usdc = new MockUSDC();
         forwardMarket = new ForwardMarket(address(oracle));
-        orderBook = new OrderBook(address(forwardMarket), address(usdc), address(this), 10);
+        orderBook = new OrderBook(address(forwardMarket), address(this), 10);
+        orderBook.addSupportedCollateral(address(usdc));
         positionManager = new PositionManager(
-            address(forwardMarket), address(oracle), address(usdc), address(orderBook)
+            address(forwardMarket), address(oracle), address(orderBook)
         );
         orderBook.setPositionManager(address(positionManager));
         forwardMarket.setAuthorized(address(orderBook), true);
@@ -48,9 +49,9 @@ contract SettlementTest is Test {
     function test_settlementProfitLong() public {
         // Entry at 2500, settle at 3000 → long profits
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         // Warp to expiry and settle
         vm.warp(expiry + 1);
@@ -77,9 +78,9 @@ contract SettlementTest is Test {
     function test_settlementProfitShort() public {
         // Entry at 2500, settle at 2000 → short profits
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         vm.warp(expiry + 1);
         oracle.setPrice("ETH", 2000e8);
@@ -100,9 +101,9 @@ contract SettlementTest is Test {
 
     function test_revert_settleBeforeMarketSettled() public {
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         vm.expectRevert("PositionManager: market not settled");
         positionManager.settlePosition(1);
@@ -114,9 +115,9 @@ contract SettlementTest is Test {
             forwardMarket.createMarket("ETH", "USDC", expiry, 9000, 9000, 1e6);
 
         vm.prank(alice);
-        orderBook.placeLimitOrder(leveragedMarketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(leveragedMarketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(leveragedMarketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(leveragedMarketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         // Price drops significantly → long position becomes liquidatable
         // Collateral ≈ $2778, maintenance margin = $2250
@@ -141,9 +142,9 @@ contract SettlementTest is Test {
 
     function test_addCollateral() public {
         vm.prank(alice);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.LONG, 2500e8, 1, address(usdc));
         vm.prank(bob);
-        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1);
+        orderBook.placeLimitOrder(marketId, OrderLib.Side.SHORT, 2500e8, 1, address(usdc));
 
         OrderLib.PositionInfo memory posBefore = positionManager.getPosition(1);
 

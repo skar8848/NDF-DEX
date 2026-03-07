@@ -17,8 +17,10 @@ contract PositionManager is ReentrancyGuard {
     event InsuranceCover(uint256 indexed positionId, uint256 shortfall, uint256 covered);
     ForwardMarket public forwardMarket;
     IPriceOracle public oracle;
-    IERC20 public collateralToken;
     address public orderBook;
+
+    // Per-position collateral token tracking
+    mapping(uint256 => address) public positionCollateral;
     IInsuranceFund public insuranceFund;
     address public admin;
 
@@ -58,10 +60,9 @@ contract PositionManager is ReentrancyGuard {
         _;
     }
 
-    constructor(address _forwardMarket, address _oracle, address _collateralToken, address _orderBook) {
+    constructor(address _forwardMarket, address _oracle, address _orderBook) {
         forwardMarket = ForwardMarket(_forwardMarket);
         oracle = IPriceOracle(_oracle);
-        collateralToken = IERC20(_collateralToken);
         orderBook = _orderBook;
         admin = msg.sender;
     }
@@ -77,9 +78,11 @@ contract PositionManager is ReentrancyGuard {
         OrderLib.Side side,
         uint256 entryPrice,
         uint256 size,
-        uint256 collateral
+        uint256 collateral,
+        address token
     ) external onlyOrderBook returns (uint256 positionId) {
         positionId = _nextPositionId++;
+        positionCollateral[positionId] = token;
 
         positions[positionId] = OrderLib.PositionInfo({
             id: positionId,
@@ -188,11 +191,12 @@ contract PositionManager is ReentrancyGuard {
         // Update open interest
         forwardMarket.updateOI(pos.marketId, pos.side, sizeToClose, false);
 
-        // Calculate payout (from protocol pool)
+        // Calculate payout using position's collateral token
+        IERC20 token = IERC20(positionCollateral[positionId]);
         uint256 payout;
         if (pnl >= 0) {
             payout = collatForClose + uint256(pnl);
-            uint256 balance = collateralToken.balanceOf(address(this));
+            uint256 balance = token.balanceOf(address(this));
             if (payout > balance) {
                 uint256 shortfall = payout - balance;
                 uint256 covered = _requestInsuranceCover(positionId, shortfall);
@@ -204,7 +208,7 @@ contract PositionManager is ReentrancyGuard {
         }
 
         if (payout > 0) {
-            collateralToken.safeTransfer(pos.trader, payout);
+            token.safeTransfer(pos.trader, payout);
         }
 
         emit PositionClosedEarly(positionId, markPrice, pnl, msg.sender);
@@ -238,7 +242,7 @@ contract PositionManager is ReentrancyGuard {
         require(pos.isOpen, "PositionManager: position closed");
         require(pos.trader == msg.sender, "PositionManager: not your position");
 
-        collateralToken.safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(positionCollateral[positionId]).safeTransferFrom(msg.sender, address(this), amount);
         pos.collateral += amount;
 
         emit CollateralAdded(positionId, amount);
@@ -261,7 +265,7 @@ contract PositionManager is ReentrancyGuard {
         require(health >= MathLib.PERCENT_BASE, "PositionManager: would be liquidatable");
 
         pos.collateral = newCollateral;
-        collateralToken.safeTransfer(msg.sender, amount);
+        IERC20(positionCollateral[positionId]).safeTransfer(msg.sender, amount);
 
         emit CollateralRemoved(positionId, amount);
     }
@@ -305,11 +309,12 @@ contract PositionManager is ReentrancyGuard {
         if (liquidatorBonus > remaining) liquidatorBonus = remaining;
         uint256 traderRefund = remaining - liquidatorBonus;
 
+        IERC20 token = IERC20(positionCollateral[positionId]);
         if (liquidatorBonus > 0) {
-            collateralToken.safeTransfer(msg.sender, liquidatorBonus);
+            token.safeTransfer(msg.sender, liquidatorBonus);
         }
         if (traderRefund > 0) {
-            collateralToken.safeTransfer(pos.trader, traderRefund);
+            token.safeTransfer(pos.trader, traderRefund);
         }
 
         emit PositionLiquidated(positionId, msg.sender, pnl);
@@ -339,12 +344,13 @@ contract PositionManager is ReentrancyGuard {
         }
     }
 
-    /// @notice Cash settlement: PnL paid in USDC (NDF-style)
+    /// @notice Cash settlement: PnL paid in position's collateral token (NDF-style)
     function _settleCash(uint256 positionId, OrderLib.PositionInfo storage pos, int256 pnl) internal {
+        IERC20 token = IERC20(positionCollateral[positionId]);
         uint256 payout;
         if (pnl >= 0) {
             payout = pos.collateral + uint256(pnl);
-            uint256 balance = collateralToken.balanceOf(address(this));
+            uint256 balance = token.balanceOf(address(this));
             if (payout > balance) {
                 uint256 shortfall = payout - balance;
                 uint256 covered = _requestInsuranceCover(positionId, shortfall);
@@ -356,7 +362,7 @@ contract PositionManager is ReentrancyGuard {
         }
 
         if (payout > 0) {
-            collateralToken.safeTransfer(pos.trader, payout);
+            token.safeTransfer(pos.trader, payout);
         }
 
         emit PositionSettled(positionId, pnl);
@@ -386,18 +392,18 @@ contract PositionManager is ReentrancyGuard {
                 emit PhysicalDelivery(positionId, pos.trader, market.underlyingToken, deliveryAmount);
             }
 
-            // Return remaining USDC collateral minus forward price cost
-            // Forward price cost = entryPrice * size * COLLATERAL_PRECISION / PRICE_PRECISION
+            // Return remaining collateral minus forward price cost
+            IERC20 posToken = IERC20(positionCollateral[positionId]);
             uint256 forwardCost = pos.entryPrice * pos.size * MathLib.COLLATERAL_PRECISION / MathLib.PRICE_PRECISION;
-            uint256 usdcPayout = pos.collateral > forwardCost ? pos.collateral - forwardCost : 0;
-            if (usdcPayout > 0) {
-                uint256 balance = collateralToken.balanceOf(address(this));
-                if (usdcPayout > balance) usdcPayout = balance;
-                collateralToken.safeTransfer(pos.trader, usdcPayout);
+            uint256 stablePayout = pos.collateral > forwardCost ? pos.collateral - forwardCost : 0;
+            if (stablePayout > 0) {
+                uint256 balance = posToken.balanceOf(address(this));
+                if (stablePayout > balance) stablePayout = balance;
+                posToken.safeTransfer(pos.trader, stablePayout);
             }
         } else {
-            // SHORT: receives USDC (forward price + PnL from price movement)
-            // Short delivered the asset obligation, receives the forward price
+            // SHORT: receives stablecoin (forward price + PnL from price movement)
+            IERC20 posToken = IERC20(positionCollateral[positionId]);
             uint256 payout;
             if (pnl >= 0) {
                 payout = pos.collateral + uint256(pnl);
@@ -405,10 +411,10 @@ contract PositionManager is ReentrancyGuard {
                 uint256 loss = MathLib.abs(pnl);
                 payout = pos.collateral > loss ? pos.collateral - loss : 0;
             }
-            uint256 balance = collateralToken.balanceOf(address(this));
+            uint256 balance = posToken.balanceOf(address(this));
             if (payout > balance) payout = balance;
             if (payout > 0) {
-                collateralToken.safeTransfer(pos.trader, payout);
+                posToken.safeTransfer(pos.trader, payout);
             }
         }
 

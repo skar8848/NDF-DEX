@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
 import {MockUSDC} from "../src/tokens/MockUSDC.sol";
+import {MockUSDT} from "../src/tokens/MockUSDT.sol";
+import {MockAUSD} from "../src/tokens/MockAUSD.sol";
 import {MockWETH} from "../src/tokens/MockWETH.sol";
 import {MockOracle} from "../src/oracle/MockOracle.sol";
 import {ChainlinkOracle} from "../src/oracle/ChainlinkOracle.sol";
@@ -27,8 +29,12 @@ contract DeployScript is Script {
 
         // 1. Tokens
         MockUSDC usdc = new MockUSDC();
+        MockUSDT usdt = new MockUSDT();
+        MockAUSD ausd = new MockAUSD();
         MockWETH weth = new MockWETH();
         console.log("MockUSDC:", address(usdc));
+        console.log("MockUSDT:", address(usdt));
+        console.log("MockAUSD:", address(ausd));
         console.log("MockWETH:", address(weth));
 
         // 2. Oracle
@@ -36,10 +42,13 @@ contract DeployScript is Script {
 
         // 3. Core contracts
         ForwardMarket fm = new ForwardMarket(oracleAddr);
-        OrderBook ob = new OrderBook(address(fm), address(usdc), deployer, 5); // 0.05% taker fee
-        PositionManager pm = new PositionManager(address(fm), oracleAddr, address(usdc), address(ob));
+        OrderBook ob = new OrderBook(address(fm), deployer, 5); // 0.05% taker fee
+        PositionManager pm = new PositionManager(address(fm), oracleAddr, address(ob));
 
         ob.setPositionManager(address(pm));
+        ob.addSupportedCollateral(address(usdc));
+        ob.addSupportedCollateral(address(usdt));
+        ob.addSupportedCollateral(address(ausd));
         fm.setAuthorized(address(ob), true);
         fm.setAuthorized(address(pm), true);
 
@@ -77,10 +86,12 @@ contract DeployScript is Script {
 
         // 10. Fund pools
         usdc.mint(address(pm), 1_000_000e6);
+        usdt.mint(address(pm), 1_000_000e6);
+        ausd.mint(address(pm), 1_000_000e6);
         weth.mint(address(pm), 1000e18);
         usdc.mint(address(insurance), 10_000e6);    // Seed insurance fund
         usdc.mint(address(vault), 10_000e6);         // Seed vault
-        console.log("Funded: 1M USDC + 1000 WETH to PM, 10K each to Insurance & Vault");
+        console.log("Funded: 1M each USDC/USDT/AUSD + 1000 WETH to PM, 10K each to Insurance & Vault");
 
         vm.stopBroadcast();
     }
