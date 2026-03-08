@@ -49,7 +49,12 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
   const [slLossMode, setSlLossMode] = useState<'usd' | 'pct'>('usd')
   const [tpLastEdited, setTpLastEdited] = useState<'price' | 'gain'>('price')
   const [slLastEdited, setSlLastEdited] = useState<'price' | 'loss'>('price')
-  const [selectedToken, setSelectedToken] = useState<`0x${string}`>(CONTRACTS.MockUSDC)
+  // Collateral token is determined by the market's quote asset
+  const selectedToken = useMemo<`0x${string}`>(() => {
+    const quote = market?.quoteAsset?.toUpperCase()
+    const match = COLLATERAL_TOKENS.find(t => t.symbol === quote)
+    return match ? (match.address as `0x${string}`) : CONTRACTS.MockUSDC
+  }, [market])
 
   const selectedTokenInfo = COLLATERAL_TOKENS.find(t => t.address === selectedToken) ?? COLLATERAL_TOKENS[0]
 
@@ -655,24 +660,6 @@ export function TradeForm({ marketId, market, externalPrice, onExternalPriceCons
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Collateral token selector */}
-      <div className="flex gap-1">
-        {COLLATERAL_TOKENS.map(t => (
-          <button
-            key={t.symbol}
-            onClick={() => setSelectedToken(t.address as `0x${string}`)}
-            className={cn(
-              'flex-1 py-1.5 text-xs font-medium rounded-lg border cursor-pointer transition-colors',
-              selectedToken === t.address
-                ? 'border-primary text-primary bg-primary/10'
-                : 'border-border text-text-secondary hover:text-text'
-            )}
-          >
-            {t.symbol}
-          </button>
-        ))}
       </div>
 
       {/* Summary box */}
