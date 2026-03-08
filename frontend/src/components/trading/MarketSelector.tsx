@@ -9,6 +9,8 @@ const ASSET_LOGOS: Record<string, string> = {
   BTC: '/logos/BTC_Logo.png',
   AVAX: '/logos/AVAX_Logo.png',
   USDC: '/logos/USDC_Logo.png',
+  USDT: '/logos/USDT_Logo.png',
+  AUSD: '/logos/AUSD_Logo.png',
 }
 
 function AssetLogo({ asset, size = 28 }: { asset: string; size?: number }) {

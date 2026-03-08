@@ -154,7 +154,7 @@ def _parse_markets(raw: str) -> list[dict]:
     for t in tuples:
         if len(t) < 12:
             continue
-        markets.append({
+        market = {
             "id": int(strip_sci(t[0])),
             "baseAsset": t[1].strip('"'),
             "quoteAsset": t[2].strip('"'),
@@ -166,7 +166,12 @@ def _parse_markets(raw: str) -> list[dict]:
             "settled": t[8].strip().lower() == "true",
             "total_long_oi": int(strip_sci(t[9])),
             "total_short_oi": int(strip_sci(t[10])),
-        })
+        }
+        if len(t) >= 12:
+            market["settlement_type"] = int(strip_sci(t[11]))
+        if len(t) >= 13:
+            market["underlying_token"] = t[12].strip()
+        markets.append(market)
     return markets
 
 

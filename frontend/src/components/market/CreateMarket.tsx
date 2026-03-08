@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useCreateMarket } from '../../hooks/useForwardMarket'
 import { parseUSDC } from '../../lib/utils'
+import { CONTRACTS } from '../../lib/config'
 import { Calendar } from '../ui/Calendar'
 
 type ValueMode = 'percent' | 'bps'
@@ -55,13 +56,19 @@ function dateToSettlementTimestamp(date: Date): bigint {
 
 export function CreateMarket({ onClose }: { onClose: () => void }) {
   const [baseAsset, setBaseAsset] = useState('ETH')
-  const [quoteAsset] = useState('USDC')
+  const [quoteAsset, setQuoteAsset] = useState('USDC')
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [ltvValue, setLtvValue] = useState('80')
   const [ltvMode, setLtvMode] = useState<ValueMode>('percent')
   const [liqValue, setLiqValue] = useState('85')
   const [liqMode, setLiqMode] = useState<ValueMode>('percent')
   const [minCollateral, setMinCollateral] = useState('10')
+  const [settlementType, setSettlementType] = useState<'cash' | 'physical'>('cash')
+  const [underlyingToken, setUnderlyingToken] = useState('')
+
+  const UNDERLYING_TOKENS: Record<string, `0x${string}`> = {
+    ETH: CONTRACTS.MockWETH,
+  }
 
   const { createMarket, isPending, isConfirming, isSuccess, hash } = useCreateMarket()
 
@@ -73,13 +80,18 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
     e.preventDefault()
     if (!selectedDate) return
     const expiration = dateToSettlementTimestamp(selectedDate)
+    const tokenAddr = settlementType === 'physical'
+      ? (underlyingToken as `0x${string}` || UNDERLYING_TOKENS[baseAsset])
+      : undefined
     createMarket(
       baseAsset,
       quoteAsset,
       expiration,
       toBps(ltvValue, ltvMode),
       toBps(liqValue, liqMode),
-      parseUSDC(minCollateral)
+      parseUSDC(minCollateral),
+      settlementType,
+      tokenAddr
     )
   }
 
@@ -98,7 +110,7 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
 
           <h2 className="text-lg font-semibold text-text mb-1">Market Created</h2>
           <p className="text-text-secondary text-sm mb-4">
-            {baseAsset}/{quoteAsset} {selectedDate ? formatSelectedDate(selectedDate) : ''} forward market is now live.
+            {baseAsset}/{quoteAsset} {selectedDate ? formatSelectedDate(selectedDate) : ''} {settlementType === 'physical' ? 'physical delivery' : 'NDF'} market is now live.
           </p>
 
           <div className="bg-surface-2 rounded-lg p-3 mb-4">
@@ -151,6 +163,77 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
               <option value="AVAX">AVAX</option>
             </select>
           </div>
+
+          <div>
+            <label className="block text-xs text-text-secondary mb-1">Quote Asset (Stablecoin)</label>
+            <div className="flex gap-2">
+              {['USDC', 'USDT', 'AUSD'].map((token) => (
+                <button
+                  key={token}
+                  type="button"
+                  onClick={() => setQuoteAsset(token)}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer border ${
+                    quoteAsset === token
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-surface-2 text-text-secondary border-border hover:text-text'
+                  }`}
+                >
+                  {token}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-text-secondary mb-1">Settlement Type</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSettlementType('cash')}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer border ${
+                  settlementType === 'cash'
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-surface-2 text-text-secondary border-border hover:text-text'
+                }`}
+              >
+                Cash (NDF)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettlementType('physical')}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer border ${
+                  settlementType === 'physical'
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-surface-2 text-text-secondary border-border hover:text-text'
+                }`}
+              >
+                Physical Delivery
+              </button>
+            </div>
+            <p className="text-[10px] text-text-secondary/60 mt-1">
+              {settlementType === 'cash'
+                ? 'PnL settled in stablecoin at expiry — no token delivery'
+                : 'Underlying token delivered to long side at expiry'}
+            </p>
+          </div>
+
+          {settlementType === 'physical' && (
+            <div>
+              <label className="block text-xs text-text-secondary mb-1">Underlying Token Address</label>
+              <input
+                type="text"
+                value={underlyingToken || UNDERLYING_TOKENS[baseAsset] || ''}
+                onChange={(e) => setUnderlyingToken(e.target.value)}
+                placeholder="0x..."
+                className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-text text-sm font-mono focus:outline-none focus:border-primary"
+              />
+              {UNDERLYING_TOKENS[baseAsset] && !underlyingToken && (
+                <p className="text-[10px] text-text-secondary/60 mt-1">
+                  Using MockWETH for {baseAsset}
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-xs text-text-secondary mb-1">
@@ -228,7 +311,7 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="block text-xs text-text-secondary mb-1">Min Collateral (USDC)</label>
+            <label className="block text-xs text-text-secondary mb-1">Min Collateral ({quoteAsset})</label>
             <input
               type="number"
               value={minCollateral}
@@ -247,7 +330,7 @@ export function CreateMarket({ onClose }: { onClose: () => void }) {
             </button>
             <button
               type="submit"
-              disabled={isPending || isConfirming || !selectedDate}
+              disabled={isPending || isConfirming || !selectedDate || (settlementType === 'physical' && !underlyingToken && !UNDERLYING_TOKENS[baseAsset])}
               className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 cursor-pointer"
             >
               {isPending ? (

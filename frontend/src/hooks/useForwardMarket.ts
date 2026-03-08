@@ -104,14 +104,25 @@ export function useCreateMarket() {
     expiration: bigint,
     ltv: bigint,
     liquidationThreshold: bigint,
-    minCollateral: bigint
+    minCollateral: bigint,
+    settlementType: 'cash' | 'physical' = 'cash',
+    underlyingToken?: `0x${string}`
   ) => {
-    writeContract({
-      address: CONTRACTS.ForwardMarket,
-      abi: ForwardMarketABI,
-      functionName: 'createMarket',
-      args: [baseAsset, quoteAsset, expiration, ltv, liquidationThreshold, minCollateral],
-    })
+    if (settlementType === 'physical' && underlyingToken) {
+      writeContract({
+        address: CONTRACTS.ForwardMarket,
+        abi: ForwardMarketABI,
+        functionName: 'createPhysicalMarket',
+        args: [baseAsset, quoteAsset, expiration, ltv, liquidationThreshold, minCollateral, underlyingToken],
+      })
+    } else {
+      writeContract({
+        address: CONTRACTS.ForwardMarket,
+        abi: ForwardMarketABI,
+        functionName: 'createMarket',
+        args: [baseAsset, quoteAsset, expiration, ltv, liquidationThreshold, minCollateral],
+      })
+    }
   }
 
   return { createMarket, isPending, isConfirming, isSuccess, hash }

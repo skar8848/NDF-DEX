@@ -4,10 +4,12 @@ import { MarketCard } from '../components/market/MarketCard'
 import { CreateMarket } from '../components/market/CreateMarket'
 import { AssetLogo } from '../components/trading/MarketSelector'
 
+type TypeFilter = 'all' | 'ndf' | 'forward' | 'settled'
+
 export function Markets() {
   const { data: markets, isLoading } = useAllMarkets()
   const [showCreate, setShowCreate] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<'active' | 'settled'>('active')
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [assetFilter, setAssetFilter] = useState<string>('all')
 
   const allAssets = useMemo(() => {
@@ -17,25 +19,38 @@ export function Markets() {
     return Array.from(set)
   }, [markets])
 
+  // Counts per type
+  const counts = useMemo(() => {
+    if (!markets) return { all: 0, ndf: 0, forward: 0, settled: 0 }
+    const arr = markets as any[]
+    return {
+      all: arr.filter((m: any) => !m.settled).length,
+      ndf: arr.filter((m: any) => !m.settled && m.settlementType !== 1).length,
+      forward: arr.filter((m: any) => !m.settled && m.settlementType === 1).length,
+      settled: arr.filter((m: any) => m.settled).length,
+    }
+  }, [markets])
+
   const filteredMarkets = useMemo(() => {
     if (!markets) return []
     return (markets as any[]).filter((m: any) => {
-      if (statusFilter === 'active' && m.settled) return false
-      if (statusFilter === 'settled' && !m.settled) return false
+      // Type filter
+      if (typeFilter === 'all' && m.settled) return false
+      if (typeFilter === 'ndf' && (m.settled || m.settlementType === 1)) return false
+      if (typeFilter === 'forward' && (m.settled || m.settlementType !== 1)) return false
+      if (typeFilter === 'settled' && !m.settled) return false
+      // Asset filter
       if (assetFilter !== 'all' && m.baseAsset !== assetFilter) return false
       return true
     })
-  }, [markets, statusFilter, assetFilter])
+  }, [markets, typeFilter, assetFilter])
 
-  // Count for tab labels
-  const activeCount = useMemo(() => {
-    if (!markets) return 0
-    return (markets as any[]).filter((m: any) => !m.settled).length
-  }, [markets])
-  const settledCount = useMemo(() => {
-    if (!markets) return 0
-    return (markets as any[]).filter((m: any) => m.settled).length
-  }, [markets])
+  const typeFilters: { id: TypeFilter; label: string }[] = [
+    { id: 'all', label: `All (${counts.all})` },
+    { id: 'ndf', label: `NDF (${counts.ndf})` },
+    { id: 'forward', label: `Forward (${counts.forward})` },
+    { id: 'settled', label: `Settled (${counts.settled})` },
+  ]
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -43,7 +58,7 @@ export function Markets() {
         <div>
           <h1 className="text-2xl font-bold text-text mb-1">Forward Markets</h1>
           <p className="text-text-secondary text-sm">
-            Trade non-deliverable forwards on crypto assets
+            Trade forward contracts on crypto assets
           </p>
         </div>
         <button
@@ -55,17 +70,14 @@ export function Markets() {
       </div>
 
       <div className="flex items-center gap-4 mb-6">
-        {/* Status filter */}
+        {/* Type filter */}
         <div className="flex gap-1">
-          {([
-            { id: 'active' as const, label: `Active (${activeCount})` },
-            { id: 'settled' as const, label: `Settled (${settledCount})` },
-          ]).map((f) => (
+          {typeFilters.map((f) => (
             <button
               key={f.id}
-              onClick={() => setStatusFilter(f.id)}
+              onClick={() => setTypeFilter(f.id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                statusFilter === f.id
+                typeFilter === f.id
                   ? 'bg-surface-2 text-text'
                   : 'text-text-secondary hover:text-text hover:bg-surface-2'
               }`}
@@ -128,6 +140,7 @@ export function Markets() {
               totalLongOI={market.totalLongOI}
               totalShortOI={market.totalShortOI}
               settled={market.settled}
+              settlementType={market.settlementType}
             />
           ))}
         </div>

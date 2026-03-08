@@ -53,15 +53,17 @@ const allPages = sections.flatMap(s => s.pages)
 
 // ─── Contract addresses ──────────────────────────────────────────────
 const contracts = [
-  { name: 'ForwardMarket', role: 'Market creation & settlement', address: '0x7De1970F024cB1c2953dCBc850E895c4637f57E9' },
-  { name: 'OrderBook', role: 'Limit orders & matching engine', address: '0xd92Ff3f1FF6AAC7E298BcF9634eB907B9B7e7Bf9' },
-  { name: 'PositionManager', role: 'Position lifecycle & P&L', address: '0x7a867BC74482724C2B0b6F36DFb15f6691088a88' },
-  { name: 'TenorVault', role: 'TLP passive liquidity vault', address: '0x62Ef155a07EA3bF04e6930d40Ad1549F973fB37D' },
-  { name: 'InsuranceFund', role: 'Protocol solvency backstop', address: '0x3BC01a6710CF2f8DBa2E4bfD8b6F4C7F553E3BFC' },
-  { name: 'CollateralManager', role: 'Multi-collateral support', address: '0xE5586FF57d8602F980bf36eE9a9B99144cd15b66' },
-  { name: 'ChainlinkOracle', role: 'Price feed oracle', address: '0x6e1bebEf40dA65B2B5B39EFa1591a985C0EE884E' },
-  { name: 'MockUSDC', role: 'Testnet USDC (faucet)', address: '0xDa9103E3121784fba3e60f5a95304833a5A904f1' },
-  { name: 'MockWETH', role: 'Testnet WETH', address: '0x53bcf608A367661b3cafd4878624041F2ce522E3' },
+  { name: 'ForwardMarket', role: 'Market creation & settlement (NDF + Physical)', address: '0x0d51Bb1c3eEE7C0573B6b2D905a287372d6301E1' },
+  { name: 'OrderBook', role: 'Limit orders & matching engine', address: '0x463e3d633FC591ed02900Afd041Bcf7EdfE9DCB1' },
+  { name: 'PositionManager', role: 'Position lifecycle & P&L', address: '0x3fd14cb5dc574986004973254186aDbB2CE4A900' },
+  { name: 'TenorVault', role: 'TLP passive liquidity vault', address: '0xEac92864c8D56e02d076981EaaD6aeCc6b7D93B0' },
+  { name: 'InsuranceFund', role: 'Protocol solvency backstop', address: '0x85fCaB9Cb3FCE04ED277190c9c09cDC5178B9Ca0' },
+  { name: 'CollateralManager', role: 'Multi-collateral support', address: '0xc42e2d1e47eA74d5B9CF0eb70806D7a4169D66e0' },
+  { name: 'ChainlinkOracle', role: 'Price feed oracle', address: '0xf5EfBaf278268B4A82A46DC51C0132Ab5861b4ae' },
+  { name: 'MockUSDC', role: 'Testnet USDC (faucet)', address: '0x4a9Cc53548eBbEfb31bC2189FA5f2aBb48A3335a' },
+  { name: 'MockUSDT', role: 'Testnet USDT (faucet)', address: '0x2867e9A5a9db4115E9e7AE9747ea50bd12DeD9Ed' },
+  { name: 'MockAUSD', role: 'Testnet AUSD (faucet)', address: '0x5052262e7AfFF6befD734551114d90bd56218C54' },
+  { name: 'MockWETH', role: 'Testnet WETH (physical delivery)', address: '0x46cf521d854cEcF81073c9fE955Ffd99209C9069' },
 ]
 
 // ─── Reusable doc components ─────────────────────────────────────────
@@ -125,20 +127,20 @@ function OverviewPage() {
   return (
     <div>
       <H1>Tenor Protocol</H1>
-      <P>Decentralized Non-Deliverable Forward (NDF) exchange built on Avalanche. Permissionless trading of cash-settled forward contracts on crypto assets with fully on-chain order matching, Chainlink oracle pricing, and automated position management.</P>
+      <P>Decentralized Forward exchange built on Avalanche supporting both NDF (cash-settled) and Physical Delivery markets. Permissionless trading of forward contracts on crypto assets with fully on-chain order matching, Chainlink oracle pricing, multi-collateral support (USDC, USDT, AUSD), and automated position management.</P>
 
-      <Callout type="info">Forward contracts on Tenor: two parties agree on a future price for an asset. At expiration, instead of delivering the underlying, the contract settles the price difference in USDC.</Callout>
+      <Callout type="info">Tenor supports two settlement types: <strong>NDF (Cash)</strong> — PnL settled in stablecoins at expiry. <strong>Physical Delivery</strong> — the underlying token (e.g. WETH) is delivered to the long side at expiry.</Callout>
 
       <H2>Key Features</H2>
       <div className="grid grid-cols-2 gap-3 mb-6">
         {[
-          { title: 'On-Chain CLOB', desc: 'Fully on-chain order book with automatic price-time priority matching' },
+          { title: 'On-Chain CLOB', desc: 'Fully on-chain order book with automatic matching for NDF and physical delivery forwards' },
           { title: 'Chainlink Oracles', desc: 'Live price feeds for ETH, BTC, AVAX on Fuji testnet' },
           { title: 'Advanced Orders', desc: 'GTC, IOC, FOK, Post-Only time-in-force modes' },
           { title: 'TP/SL', desc: 'On-chain take-profit and stop-loss with keeper automation' },
           { title: 'TLP Vault', desc: 'Passive liquidity provision earning 60% of trading fees' },
           { title: 'Insurance Fund', desc: 'Protocol backstop covering solvency shortfalls' },
-          { title: 'Multi-Collateral', desc: 'WETH, WBTC, WAVAX with oracle-based haircuts' },
+          { title: 'Multi-Collateral', desc: 'USDC, USDT, AUSD stablecoins + WETH, WBTC, WAVAX with haircuts' },
           { title: 'Fee Rebates', desc: 'Maker rebates, builder codes, protocol/insurance/LP split' },
         ].map(f => (
           <div key={f.title} className="bg-surface-2 rounded-lg p-3 border border-border/50">
@@ -151,11 +153,11 @@ function OverviewPage() {
       <H2>How It Works</H2>
       <div className="space-y-3 mb-6">
         {[
-          { step: '1', title: 'Deposit USDC', desc: 'Get testnet USDC from the faucet and deposit as collateral' },
+          { step: '1', title: 'Deposit Collateral', desc: 'Get testnet stablecoins (USDC, USDT, or AUSD) from the faucet and deposit as collateral' },
           { step: '2', title: 'Place Orders', desc: 'Place limit or market orders on any forward market (ETH, BTC, AVAX)' },
           { step: '3', title: 'Automatic Matching', desc: 'Orders are matched on-chain when prices cross. Positions are created for both sides.' },
           { step: '4', title: 'Manage Positions', desc: 'Set TP/SL, add collateral, or close early at mark price' },
-          { step: '5', title: 'Settlement', desc: 'At expiry, positions settle at the Chainlink oracle price. PnL paid in USDC.' },
+          { step: '5', title: 'Settlement', desc: 'At expiry, NDF markets settle PnL in stablecoins. Physical delivery markets transfer the underlying token to the long side.' },
         ].map(s => (
           <div key={s.step} className="flex gap-3 items-start">
             <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{s.step}</div>
@@ -193,13 +195,14 @@ function ArchitecturePage() {
       <H2>Core Contracts</H2>
 
       <H3>ForwardMarket</H3>
-      <P>Registry and lifecycle manager for forward markets. Each market defines a tradeable forward contract with a base asset (e.g. ETH), expiration timestamp, LTV ratio, and liquidation threshold.</P>
+      <P>Registry and lifecycle manager for forward markets. Supports both NDF (cash-settled) and Physical Delivery markets. Each market defines a tradeable forward contract with a base asset, settlement type, expiration timestamp, LTV ratio, and liquidation threshold.</P>
       <Table
         headers={['Function', 'Description']}
         rows={[
-          ['createMarket(...)', 'Creates a new forward market with risk parameters'],
+          ['createMarket(...)', 'Creates a new NDF (cash-settled) forward market'],
+          ['createPhysicalMarket(..., underlyingToken)', 'Creates a physical delivery forward market with an underlying ERC20 token'],
           ['settleMarket(marketId)', 'Settles an expired market using the Chainlink oracle price'],
-          ['getMarket(marketId)', 'Returns full market info (expiration, LTV, OI, settlement)'],
+          ['getMarket(marketId)', 'Returns full market info (expiration, LTV, OI, settlement type)'],
           ['updateOI(marketId, side, amount, isIncrease)', 'Updates open interest (called by PositionManager)'],
           ['setAuthorized(addr, status)', 'Grants/revokes OI update authorization'],
         ]}
@@ -467,22 +470,31 @@ function SettlementPage() {
   return (
     <div>
       <H1>Forward Settlement</H1>
-      <P>Forward contracts expire at a predetermined timestamp. At expiration, the market is settled using the Chainlink oracle price, and all positions are closed with PnL calculated against that price.</P>
+      <P>Forward contracts expire at a predetermined timestamp. Tenor supports two settlement modes: <strong className="text-text">NDF (Cash)</strong> and <strong className="text-text">Physical Delivery</strong>.</P>
 
       <H2>Two-Phase Settlement</H2>
       <H3>Phase 1: Market Settlement</H3>
       <P>Anyone calls <InlineCode>settleMarket(marketId)</InlineCode>. The contract reads the oracle price and locks it as the definitive settlement price. Once set, it's immutable.</P>
 
       <H3>Phase 2: Position Settlement</H3>
-      <P>For each open position on the settled market, <InlineCode>settlePosition(positionId)</InlineCode> calculates PnL against the settlement price and distributes payouts.</P>
+      <P>For each open position on the settled market, <InlineCode>settlePosition(positionId)</InlineCode> calculates PnL and distributes payouts based on the settlement type.</P>
 
-      <H2>PnL Calculation</H2>
+      <H2>NDF (Cash) Settlement</H2>
+      <P>PnL is calculated as the difference between entry and settlement price, paid in stablecoins:</P>
       <Code>{`LONG PnL  = (settlePrice - entryPrice) * size * CP / PP
 SHORT PnL = (entryPrice - settlePrice) * size * CP / PP
 
 Payout:
   if PnL >= 0: payout = collateral + PnL (capped at balance)
   if PnL <  0: payout = max(collateral - |PnL|, 0)`}</Code>
+
+      <H2>Physical Delivery Settlement</H2>
+      <P>The underlying token (e.g. WETH) is delivered at expiry:</P>
+      <ul className="list-disc list-inside mb-4">
+        <Li><strong className="text-text">Long side</strong> receives the underlying token (e.g. WETH) proportional to position size</Li>
+        <Li><strong className="text-text">Short side</strong> receives stablecoin collateral (minus the value of delivered tokens)</Li>
+      </ul>
+      <Callout type="info">Physical delivery markets require the underlying token contract address at creation time (e.g. MockWETH for ETH forwards).</Callout>
 
       <H2>Worked Example</H2>
       <Table
@@ -849,7 +861,7 @@ export function Docs() {
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center font-bold text-white text-[10px]">T</div>
             <span className="text-sm font-bold text-text">Tenor Docs</span>
           </div>
-          <div className="text-[10px] text-text-secondary mt-1">v7 — Avalanche Fuji</div>
+          <div className="text-[10px] text-text-secondary mt-1">v8 — Avalanche Fuji</div>
         </div>
 
         <nav className="p-3 space-y-4">

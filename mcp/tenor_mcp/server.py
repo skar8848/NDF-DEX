@@ -7,10 +7,13 @@ from .config import CONTRACTS, COLLATERAL_TOKENS, PRICE_PRECISION, COLLATERAL_PR
 
 mcp = FastMCP(
     "Tenor DEX",
-    instructions="Tenor is a Non-Deliverable Forward (NDF) DEX on Avalanche. "
+    instructions="Tenor is a Forward DEX on Avalanche supporting both NDF (cash-settled) "
+    "and Physical Delivery (underlying token delivered at expiry) markets. "
     "Use these tools to read market data, order books, positions, and execute trades. "
-    "Prices have 8 decimals (divide by 1e8). USDC amounts have 6 decimals (divide by 1e6). "
-    "Side: 0 = LONG, 1 = SHORT. TimeInForce: 0 = GTC, 1 = IOC, 2 = FOK, 3 = POST_ONLY.",
+    "Prices have 8 decimals (divide by 1e8). Collateral amounts have 6 decimals (divide by 1e6). "
+    "Side: 0 = LONG, 1 = SHORT. TimeInForce: 0 = GTC, 1 = IOC, 2 = FOK, 3 = POST_ONLY. "
+    "SettlementType: 0 = CASH (NDF), 1 = PHYSICAL (token delivery). "
+    "Supported collateral: USDC, USDT, AUSD.",
 )
 
 
@@ -26,8 +29,9 @@ async def get_active_markets() -> str:
         return "No active markets found."
     lines = []
     for m in markets:
+        stype = "Physical" if m.get('settlement_type') == 1 else "NDF"
         lines.append(
-            f"Market #{m['id']}: {m['baseAsset']}/{m['quoteAsset']} | "
+            f"Market #{m['id']}: {m['baseAsset']}/{m['quoteAsset']} ({stype}) | "
             f"LTV: {m['ltv_bps'] / 100:.0f}% | "
             f"Long OI: {m['total_long_oi']} | Short OI: {m['total_short_oi']} | "
             f"Settled: {m['settled']}"
