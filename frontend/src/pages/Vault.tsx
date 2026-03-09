@@ -6,7 +6,6 @@ import { paginatedGetLogs } from '../lib/utils'
 import { PositionManagerABI, OrderBookABI } from '../lib/abis'
 import { useAllMarkets, type MarketInfo } from '../hooks/useForwardMarket'
 import { toast } from 'sonner'
-import { useTheme } from '../hooks/useTheme'
 
 const EXPLORER_URL = 'https://testnet.snowtrace.io'
 
@@ -36,7 +35,6 @@ const DepositedEvent = parseAbiItem('event Deposited(address indexed user, uint2
 const USDCTransferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 const TLPTransferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 
-type ChartPoint = { time: number; value: number }
 type UserDeposit = { usdcAmount: bigint; sharesReceived: bigint; txHash: string; timestamp: number }
 type DepositorInfo = { address: `0x${string}`; tlpBalance: bigint; valueUsd: number }
 
@@ -52,103 +50,12 @@ function truncAddr(addr: string) {
   return addr.slice(0, 6) + '...' + addr.slice(-4)
 }
 
-function VaultChart({ data, color, formatValue }: { data: ChartPoint[]; color: string; formatValue: (v: number) => string }) {
-  const { theme } = useTheme()
-
-  if (data.length < 2) {
-    return (
-      <div className="w-full flex items-center justify-center text-xs text-text-secondary" style={{ height: 280 }}>
-        Loading chart data...
-      </div>
-    )
-  }
-
-  const values = data.map(d => d.value)
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const range = max - min || 1
-
-  const W = 800
-  const H = 250
-  const PAD = { t: 20, r: 65, b: 30, l: 10 }
-  const chartW = W - PAD.l - PAD.r
-  const chartH = H - PAD.t - PAD.b
-
-  const pts = data.map((d, i) => ({
-    x: PAD.l + (i / (data.length - 1)) * chartW,
-    y: PAD.t + (1 - (d.value - min) / range) * chartH,
-  }))
-
-  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
-  const area = `${line} L${pts[pts.length - 1].x.toFixed(1)},${(PAD.t + chartH).toFixed(1)} L${pts[0].x.toFixed(1)},${(PAD.t + chartH).toFixed(1)} Z`
-
-  const yLabels = [0, 0.25, 0.5, 0.75, 1].map(pct => ({
-    value: min + pct * range,
-    y: PAD.t + (1 - pct) * chartH,
-  }))
-
-  const isDark = theme === 'dark'
-  const textColor = isDark ? '#999999' : '#6b7280'
-  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : '#eeeeef'
-  const gradId = `grad-${color.replace('#', '')}`
-
-  // Pick ~5 evenly spaced x-axis date labels
-  const xCount = Math.min(5, data.length)
-  const xLabels = Array.from({ length: xCount }, (_, i) => {
-    const idx = Math.round((i / (xCount - 1)) * (data.length - 1))
-    return { time: data[idx].time, x: pts[idx].x }
-  })
-
-  return (
-    <div className="w-full" style={{ height: 280 }}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-        {/* Grid lines */}
-        {yLabels.map((l, i) => (
-          <line key={i} x1={PAD.l} y1={l.y} x2={W - PAD.r} y2={l.y} stroke={gridColor} strokeWidth="0.5" />
-        ))}
-        {/* Area fill */}
-        <path d={area} fill={`url(#${gradId})`} />
-        {/* Line */}
-        <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" />
-        {/* Y labels */}
-        {yLabels.map((l, i) => (
-          <text key={i} x={W - PAD.r + 8} y={l.y + 4} fill={textColor} fontSize="10" fontFamily="ui-monospace, monospace">
-            {formatValue(l.value)}
-          </text>
-        ))}
-        {/* X labels */}
-        {xLabels.map((l, i) => (
-          <text
-            key={i}
-            x={l.x}
-            y={H - 5}
-            fill={textColor}
-            fontSize="10"
-            textAnchor={i === 0 ? 'start' : i === xLabels.length - 1 ? 'end' : 'middle'}
-          >
-            {new Date(l.time * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-          </text>
-        ))}
-      </svg>
-    </div>
-  )
-}
-
 export function Vault() {
   const { address, isConnected } = useAccount()
   const publicClient = usePublicClient()
   const [depositInput, setDepositInput] = useState('')
   const [withdrawInput, setWithdrawInput] = useState('')
-  const [chartMode, setChartMode] = useState<'performance' | 'tvl'>('performance')
 
-  // Chart data
-  const [tvlHistory, setTvlHistory] = useState<ChartPoint[]>([])
   const [userDeposits, setUserDeposits] = useState<UserDeposit[]>([])
   const [depositors, setDepositors] = useState<DepositorInfo[]>([])
   const [userTotalDeposited, setUserTotalDeposited] = useState(0n)
@@ -217,7 +124,7 @@ export function Vault() {
     return m ? m.baseAsset : `#${id}`
   }, [markets])
 
-  // Fetch event data (TVL history, share price history, user deposits, depositors)
+  // Fetch event data (user deposits, depositors, vault creation time)
   useEffect(() => {
     if (!publicClient) return
     let cancelled = false
@@ -227,73 +134,25 @@ export function Vault() {
         const currentBlock = await publicClient!.getBlockNumber()
         const fromBlock = currentBlock > 50000n ? currentBlock - 50000n : 0n
 
-        // 1. USDC Transfer events to/from vault (for TVL history)
-        // Paginated — Fuji RPC limits to 2048 blocks per query
-        const [logsIn, logsOut] = await Promise.all([
-          paginatedGetLogs(publicClient!, {
-            address: CONTRACTS.MockUSDC,
-            event: USDCTransferEvent,
-            args: { to: vaultAddr },
-            fromBlock,
-            toBlock: currentBlock,
-          }),
-          paginatedGetLogs(publicClient!, {
-            address: CONTRACTS.MockUSDC,
-            event: USDCTransferEvent,
-            args: { from: vaultAddr },
-            fromBlock,
-            toBlock: currentBlock,
-          }),
-        ])
+        // 1. Get vault creation time from first USDC transfer to vault
+        const firstDeposits = await paginatedGetLogs(publicClient!, {
+          address: CONTRACTS.MockUSDC,
+          event: USDCTransferEvent,
+          args: { to: vaultAddr },
+          fromBlock,
+          toBlock: currentBlock,
+        })
 
         if (cancelled) return
 
-        // Merge and sort by block
-        type TxLog = { blockNumber: bigint; value: bigint; isDeposit: boolean }
-        const allTxs: TxLog[] = [
-          ...logsIn.map(l => ({ blockNumber: l.blockNumber, value: l.args.value!, isDeposit: true })),
-          ...logsOut.map(l => ({ blockNumber: l.blockNumber, value: l.args.value!, isDeposit: false })),
-        ].sort((a, b) => Number(a.blockNumber - b.blockNumber))
-
-        // Get timestamps for unique blocks
-        const uniqueBlocks = [...new Set(allTxs.map(t => t.blockNumber))]
-        const blockTimestamps = new Map<bigint, number>()
-        await Promise.all(
-          uniqueBlocks.map(async (bn) => {
-            try {
-              const block = await publicClient!.getBlock({ blockNumber: bn })
-              blockTimestamps.set(bn, Number(block.timestamp))
-            } catch { /* skip */ }
-          })
-        )
-
-        if (cancelled) return
-
-        // Build TVL history
-        let runningTvl = 0
-        const tvlPoints: ChartPoint[] = []
-        const seenTimes = new Set<number>()
-        for (const tx of allTxs) {
-          const ts = blockTimestamps.get(tx.blockNumber)
-          if (!ts) continue
-          const val = Number(tx.value) / 1e6
-          runningTvl += tx.isDeposit ? val : -val
-          if (!seenTimes.has(ts)) {
-            tvlPoints.push({ time: ts, value: Math.max(0, runningTvl) })
-            seenTimes.add(ts)
-          } else {
-            // Update last point at same timestamp
-            const last = tvlPoints[tvlPoints.length - 1]
-            if (last) last.value = Math.max(0, runningTvl)
-          }
+        if (firstDeposits.length > 0 && !vaultCreatedAt) {
+          try {
+            const block = await publicClient!.getBlock({ blockNumber: firstDeposits[0].blockNumber })
+            setVaultCreatedAt(Number(block.timestamp))
+          } catch { /* skip */ }
         }
 
-        // Set vault creation timestamp
-        if (tvlPoints.length > 0 && !cancelled) {
-          setVaultCreatedAt(tvlPoints[0].time)
-        }
-
-        // 2. Deposited events for share price history + user deposits
+        // 2. Deposited events for user deposits
         const depositLogs = await paginatedGetLogs(publicClient!, {
           address: vaultAddr,
           event: DepositedEvent,
@@ -307,18 +166,14 @@ export function Vault() {
         let myTotalDep = 0n
 
         for (const log of depositLogs) {
-          const ts = blockTimestamps.get(log.blockNumber) ?? 0
           const usdcAmt = log.args.usdcAmount!
           const shares = log.args.sharesReceived!
-          // User deposits
           if (address && log.args.user?.toLowerCase() === address.toLowerCase()) {
-            let timestamp = ts
-            if (!timestamp) {
-              try {
-                const block = await publicClient!.getBlock({ blockNumber: log.blockNumber })
-                timestamp = Number(block.timestamp)
-              } catch { /* skip */ }
-            }
+            let timestamp = 0
+            try {
+              const block = await publicClient!.getBlock({ blockNumber: log.blockNumber })
+              timestamp = Number(block.timestamp)
+            } catch { /* skip */ }
             myDeposits.push({
               usdcAmount: usdcAmt,
               sharesReceived: shares,
@@ -331,7 +186,6 @@ export function Vault() {
 
         if (cancelled) return
 
-        setTvlHistory(tvlPoints)
         setUserDeposits(myDeposits)
         setUserTotalDeposited(myTotalDep)
 
@@ -348,7 +202,6 @@ export function Vault() {
 
         const uniqueAddrs = [...new Set(mintLogs.map(l => l.args.to!))].filter(Boolean) as `0x${string}`[]
 
-        // Fetch current TLP balance for each depositor
         const depositorInfos: DepositorInfo[] = []
         const currentSharePrice = sharePrice ? Number(sharePrice as bigint) / 1e18 : 1
         for (const addr of uniqueAddrs) {
@@ -448,92 +301,36 @@ export function Vault() {
             </p>
           </div>
 
-          {/* Stat cards row */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="bg-surface border border-border rounded-xl p-5">
-              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2 whitespace-nowrap">Total Value Locked</div>
-              <div className="text-xl font-bold font-mono text-text whitespace-nowrap">${totalValue ? fmtUsdc(totalValue as bigint) : '0.00'}</div>
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2">Total Value Locked</div>
+              <div className="text-2xl font-bold font-mono text-text">${totalValue ? fmtUsdc(totalValue as bigint) : '0.00'}</div>
+              <div className="text-xs text-text-secondary mt-1">{depositors.length} depositor{depositors.length !== 1 ? 's' : ''}</div>
             </div>
             <div className="bg-surface border border-border rounded-xl p-5">
-              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2 whitespace-nowrap">Vault PNL</div>
-              <div className="text-xl font-bold font-mono text-primary whitespace-nowrap">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2">Share Price</div>
+              <div className="text-2xl font-bold font-mono text-text">${sharePriceNum.toFixed(4)}</div>
+              <div className="text-xs text-text-secondary mt-1">per TLP token</div>
+            </div>
+            <div className="bg-surface border border-border rounded-xl p-5">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2">Fees Earned (LP)</div>
+              <div className={`text-2xl font-bold font-mono ${(() => {
+                const profit = Number(tvlBig) / 1e6 - Number(totalDep) / 1e6 + Number(totalWith) / 1e6
+                return profit >= 0 ? 'text-long' : 'text-short'
+              })()}`}>
                 {(() => {
-                  const tvlNum = Number(tvlBig) / 1e6
-                  const depNum = Number(totalDep) / 1e6
-                  const withNum = Number(totalWith) / 1e6
-                  const profit = tvlNum - depNum + withNum
-                  return `$${profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  const profit = Number(tvlBig) / 1e6 - Number(totalDep) / 1e6 + Number(totalWith) / 1e6
+                  return `${profit >= 0 ? '+' : ''}$${profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 })()}
               </div>
+              <div className="text-xs text-text-secondary mt-1">60% of trading fees</div>
             </div>
             <div className="bg-surface border border-border rounded-xl p-5">
-              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2 whitespace-nowrap">Vault APY (30d)</div>
-              <div className="text-xl font-bold font-mono text-primary whitespace-nowrap">{apr !== null ? `${apr.toFixed(1)}%` : '—'}</div>
+              <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2">APY</div>
+              <div className="text-2xl font-bold font-mono text-primary">{apr !== null ? `${apr.toFixed(1)}%` : '0.0%'}</div>
+              <div className="text-xs text-text-secondary mt-1">annualized from fees</div>
             </div>
-          </div>
-
-          {/* Vault Performance / Your Performance tabs */}
-          <div className="bg-surface border border-border rounded-xl overflow-hidden">
-            <div className="flex items-center gap-6 px-5 border-b border-border">
-              <button
-                onClick={() => setChartMode('performance')}
-                className={`py-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${chartMode === 'performance' ? 'border-primary text-text' : 'border-transparent text-text-secondary hover:text-text'}`}
-              >
-                Vault Performance
-              </button>
-              <button
-                onClick={() => setChartMode('tvl')}
-                className={`py-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${chartMode === 'tvl' ? 'border-primary text-text' : 'border-transparent text-text-secondary hover:text-text'}`}
-              >
-                TVL
-              </button>
-            </div>
-
-            {/* Stats row under tabs */}
-            <div className="grid grid-cols-2 gap-x-8 gap-y-2 px-5 py-4 border-b border-border text-xs">
-              <div className="flex justify-between">
-                <span className="text-text-secondary">PNL</span>
-                <span className="font-mono text-text font-medium">
-                  {(() => {
-                    const tvlNum = Number(tvlBig) / 1e6
-                    const depNum = Number(totalDep) / 1e6
-                    const withNum = Number(totalWith) / 1e6
-                    const profit = tvlNum - depNum + withNum
-                    return `$${profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                  })()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Share Price</span>
-                <span className="font-mono text-text font-medium">${sharePriceNum.toFixed(4)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Max Drawdown</span>
-                <span className="font-mono text-text font-medium">—</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Depositors</span>
-                <span className="font-mono text-text font-medium">{depositors.length}</span>
-              </div>
-            </div>
-
-            {/* Chart */}
-            {chartMode === 'performance' ? (
-              <VaultChart
-                data={tvlHistory.length >= 2
-                  ? [{ time: tvlHistory[0].time, value: 0 }, { time: tvlHistory[tvlHistory.length - 1].time, value: 0 }]
-                  : [{ time: Math.floor(Date.now() / 1000) - 86400, value: 0 }, { time: Math.floor(Date.now() / 1000), value: 0 }]
-                }
-                color="#22c55e"
-                formatValue={(v: number) => '$' + v.toFixed(2)}
-              />
-            ) : (
-              <VaultChart
-                data={tvlHistory}
-                color="#f97316"
-                formatValue={(v: number) => '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-              />
-            )}
           </div>
 
           {/* Tables: Vault Positions */}
