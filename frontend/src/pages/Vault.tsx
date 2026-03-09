@@ -145,11 +145,10 @@ export function Vault() {
   const publicClient = usePublicClient()
   const [depositInput, setDepositInput] = useState('')
   const [withdrawInput, setWithdrawInput] = useState('')
-  const [chartMode, setChartMode] = useState<'tvl' | 'sharePrice'>('tvl')
+  const [chartMode, setChartMode] = useState<'performance' | 'tvl'>('performance')
 
   // Chart data
   const [tvlHistory, setTvlHistory] = useState<ChartPoint[]>([])
-  const [sharePriceHistory, setSharePriceHistory] = useState<ChartPoint[]>([])
   const [userDeposits, setUserDeposits] = useState<UserDeposit[]>([])
   const [depositors, setDepositors] = useState<DepositorInfo[]>([])
   const [userTotalDeposited, setUserTotalDeposited] = useState(0n)
@@ -304,7 +303,6 @@ export function Vault() {
 
         if (cancelled) return
 
-        const spPoints: ChartPoint[] = []
         const myDeposits: UserDeposit[] = []
         let myTotalDep = 0n
 
@@ -312,12 +310,6 @@ export function Vault() {
           const ts = blockTimestamps.get(log.blockNumber) ?? 0
           const usdcAmt = log.args.usdcAmount!
           const shares = log.args.sharesReceived!
-          if (shares > 0n) {
-            const impliedPrice = (Number(usdcAmt) / 1e6) / (Number(shares) / 1e18)
-            if (ts > 0 && impliedPrice > 0 && impliedPrice < 1e6) {
-              spPoints.push({ time: ts, value: impliedPrice })
-            }
-          }
           // User deposits
           if (address && log.args.user?.toLowerCase() === address.toLowerCase()) {
             let timestamp = ts
@@ -340,7 +332,6 @@ export function Vault() {
         if (cancelled) return
 
         setTvlHistory(tvlPoints)
-        setSharePriceHistory(spPoints)
         setUserDeposits(myDeposits)
         setUserTotalDeposited(myTotalDep)
 
@@ -485,16 +476,16 @@ export function Vault() {
           <div className="bg-surface border border-border rounded-xl overflow-hidden">
             <div className="flex items-center gap-6 px-5 border-b border-border">
               <button
-                onClick={() => setChartMode('tvl')}
-                className={`py-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${chartMode === 'tvl' ? 'border-primary text-text' : 'border-transparent text-text-secondary hover:text-text'}`}
+                onClick={() => setChartMode('performance')}
+                className={`py-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${chartMode === 'performance' ? 'border-primary text-text' : 'border-transparent text-text-secondary hover:text-text'}`}
               >
                 Vault Performance
               </button>
               <button
-                onClick={() => setChartMode('sharePrice')}
-                className={`py-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${chartMode === 'sharePrice' ? 'border-primary text-text' : 'border-transparent text-text-secondary hover:text-text'}`}
+                onClick={() => setChartMode('tvl')}
+                className={`py-3 text-xs font-semibold cursor-pointer transition-colors border-b-2 ${chartMode === 'tvl' ? 'border-primary text-text' : 'border-transparent text-text-secondary hover:text-text'}`}
               >
-                Share Price
+                TVL
               </button>
             </div>
 
@@ -527,14 +518,22 @@ export function Vault() {
             </div>
 
             {/* Chart */}
-            <VaultChart
-              data={chartMode === 'tvl' ? tvlHistory : sharePriceHistory}
-              color={chartMode === 'tvl' ? '#f97316' : '#22c55e'}
-              formatValue={chartMode === 'tvl'
-                ? (v: number) => '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 })
-                : (v: number) => '$' + v.toFixed(4)
-              }
-            />
+            {chartMode === 'performance' ? (
+              <VaultChart
+                data={tvlHistory.length >= 2
+                  ? [{ time: tvlHistory[0].time, value: 0 }, { time: tvlHistory[tvlHistory.length - 1].time, value: 0 }]
+                  : [{ time: Math.floor(Date.now() / 1000) - 86400, value: 0 }, { time: Math.floor(Date.now() / 1000), value: 0 }]
+                }
+                color="#22c55e"
+                formatValue={(v: number) => '$' + v.toFixed(2)}
+              />
+            ) : (
+              <VaultChart
+                data={tvlHistory}
+                color="#f97316"
+                formatValue={(v: number) => '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              />
+            )}
           </div>
 
           {/* Tables: Vault Positions */}
