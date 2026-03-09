@@ -106,7 +106,7 @@ export function MarketSelector({ markets, selectedMarketId, onSelect }: MarketSe
             {markets.length === 0 ? (
               <div className="px-4 py-3 text-text-secondary text-sm">No markets available</div>
             ) : (
-              markets.map((market) => (
+              markets.filter((m) => !m.settled).map((market) => (
                 <Link
                   key={market.id.toString()}
                   to={`/trade/${market.id}`}
