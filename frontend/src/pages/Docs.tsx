@@ -472,6 +472,166 @@ function SettlementPage() {
       <H1>Forward Settlement</H1>
       <P>Forward contracts expire at a predetermined timestamp. Tenor supports two settlement modes: <strong className="text-text">NDF (Cash)</strong> and <strong className="text-text">Physical Delivery</strong>.</P>
 
+      {/* NDF Flow Diagram */}
+      <H2>NDF (Cash-Settled) Flow</H2>
+      <div className="mb-6 bg-surface-2 border border-border rounded-xl p-5 overflow-x-auto">
+        <div className="flex items-center justify-between gap-3 min-w-[600px]">
+          {/* Trader A */}
+          <div className="text-center shrink-0">
+            <div className="w-14 h-14 rounded-full bg-long/20 text-long flex items-center justify-center mx-auto mb-1.5">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" /></svg>
+            </div>
+            <div className="text-[10px] font-semibold text-long">LONG</div>
+            <div className="text-[9px] text-text-secondary">Buyer</div>
+          </div>
+          {/* Arrow: collateral */}
+          <div className="flex-1 flex flex-col items-center gap-0.5">
+            <div className="text-[9px] text-text-secondary">USDC collateral</div>
+            <div className="w-full h-px bg-border relative">
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-l-[5px] border-l-border" />
+            </div>
+          </div>
+          {/* OrderBook */}
+          <div className="text-center shrink-0">
+            <div className="w-16 h-14 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-1.5">
+              <span className="text-[10px] font-bold text-primary leading-tight text-center">Order<br/>Book</span>
+            </div>
+            <div className="text-[9px] text-text-secondary">Matching</div>
+          </div>
+          {/* Arrow: collateral */}
+          <div className="flex-1 flex flex-col items-center gap-0.5">
+            <div className="text-[9px] text-text-secondary">USDC collateral</div>
+            <div className="w-full h-px bg-border relative">
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-r-[5px] border-r-border" />
+            </div>
+          </div>
+          {/* Trader B */}
+          <div className="text-center shrink-0">
+            <div className="w-14 h-14 rounded-full bg-short/20 text-short flex items-center justify-center mx-auto mb-1.5">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" /></svg>
+            </div>
+            <div className="text-[10px] font-semibold text-short">SHORT</div>
+            <div className="text-[9px] text-text-secondary">Seller</div>
+          </div>
+        </div>
+        {/* Expiry section */}
+        <div className="mt-4 pt-4 border-t border-border/50">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <div className="h-px flex-1 bg-border/50" />
+            <span className="text-[10px] font-semibold text-warning px-2">AT EXPIRY</span>
+            <div className="h-px flex-1 bg-border/50" />
+          </div>
+          <div className="flex items-center justify-between gap-3 min-w-[600px]">
+            <div className="text-center shrink-0 w-14">
+              <div className="text-[10px] font-semibold text-long">LONG</div>
+            </div>
+            <div className="flex-1 flex flex-col items-center gap-0.5">
+              <div className="text-[9px] text-long font-medium">collateral + PnL</div>
+              <div className="w-full h-px bg-long/40 relative">
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-r-[5px] border-r-long/40" />
+              </div>
+            </div>
+            <div className="text-center shrink-0">
+              <div className="w-16 h-10 rounded-lg bg-warning/10 border border-warning/30 flex items-center justify-center mx-auto">
+                <span className="text-[10px] font-bold text-warning">Settle</span>
+              </div>
+            </div>
+            <div className="flex-1 flex flex-col items-center gap-0.5">
+              <div className="text-[9px] text-short font-medium">collateral - PnL</div>
+              <div className="w-full h-px bg-short/40 relative">
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-l-[5px] border-l-short/40" />
+              </div>
+            </div>
+            <div className="text-center shrink-0 w-14">
+              <div className="text-[10px] font-semibold text-short">SHORT</div>
+            </div>
+          </div>
+          <div className="text-center mt-2">
+            <span className="text-[9px] text-text-secondary">Both sides receive USDC — no underlying token changes hands</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Physical Delivery Flow Diagram */}
+      <H2>Physical Delivery Flow</H2>
+      <div className="mb-6 bg-surface-2 border border-border rounded-xl p-5 overflow-x-auto">
+        <div className="flex items-center justify-between gap-3 min-w-[600px]">
+          {/* Trader A */}
+          <div className="text-center shrink-0">
+            <div className="w-14 h-14 rounded-full bg-long/20 text-long flex items-center justify-center mx-auto mb-1.5">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" /></svg>
+            </div>
+            <div className="text-[10px] font-semibold text-long">LONG</div>
+            <div className="text-[9px] text-text-secondary">Buyer</div>
+          </div>
+          {/* Arrow: collateral */}
+          <div className="flex-1 flex flex-col items-center gap-0.5">
+            <div className="text-[9px] text-text-secondary">USDC collateral</div>
+            <div className="w-full h-px bg-border relative">
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-l-[5px] border-l-border" />
+            </div>
+          </div>
+          {/* OrderBook */}
+          <div className="text-center shrink-0">
+            <div className="w-16 h-14 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-1.5">
+              <span className="text-[10px] font-bold text-primary leading-tight text-center">Order<br/>Book</span>
+            </div>
+            <div className="text-[9px] text-text-secondary">Matching</div>
+          </div>
+          {/* Arrow: collateral */}
+          <div className="flex-1 flex flex-col items-center gap-0.5">
+            <div className="text-[9px] text-text-secondary">USDC collateral</div>
+            <div className="w-full h-px bg-border relative">
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-r-[5px] border-r-border" />
+            </div>
+          </div>
+          {/* Trader B */}
+          <div className="text-center shrink-0">
+            <div className="w-14 h-14 rounded-full bg-short/20 text-short flex items-center justify-center mx-auto mb-1.5">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" /></svg>
+            </div>
+            <div className="text-[10px] font-semibold text-short">SHORT</div>
+            <div className="text-[9px] text-text-secondary">Seller</div>
+          </div>
+        </div>
+        {/* Expiry section */}
+        <div className="mt-4 pt-4 border-t border-border/50">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <div className="h-px flex-1 bg-border/50" />
+            <span className="text-[10px] font-semibold text-warning px-2">AT EXPIRY</span>
+            <div className="h-px flex-1 bg-border/50" />
+          </div>
+          <div className="flex items-center justify-between gap-3 min-w-[600px]">
+            <div className="text-center shrink-0 w-14">
+              <div className="text-[10px] font-semibold text-long">LONG</div>
+            </div>
+            <div className="flex-1 flex flex-col items-center gap-1">
+              <div className="text-[9px] text-primary font-medium">underlying token (WETH)</div>
+              <div className="w-full h-px bg-primary/40 relative">
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-r-[5px] border-r-primary/40" />
+              </div>
+            </div>
+            <div className="text-center shrink-0">
+              <div className="w-16 h-10 rounded-lg bg-warning/10 border border-warning/30 flex items-center justify-center mx-auto">
+                <span className="text-[10px] font-bold text-warning">Settle</span>
+              </div>
+            </div>
+            <div className="flex-1 flex flex-col items-center gap-1">
+              <div className="text-[9px] text-short font-medium">USDC (remaining collateral)</div>
+              <div className="w-full h-px bg-short/40 relative">
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-l-[5px] border-l-short/40" />
+              </div>
+            </div>
+            <div className="text-center shrink-0 w-14">
+              <div className="text-[10px] font-semibold text-short">SHORT</div>
+            </div>
+          </div>
+          <div className="text-center mt-2">
+            <span className="text-[9px] text-text-secondary">Long receives the actual underlying token — Short receives stablecoin settlement</span>
+          </div>
+        </div>
+      </div>
+
       <H2>Two-Phase Settlement</H2>
       <H3>Phase 1: Market Settlement</H3>
       <P>Anyone calls <InlineCode>settleMarket(marketId)</InlineCode>. The contract reads the oracle price and locks it as the definitive settlement price. Once set, it's immutable.</P>
@@ -798,8 +958,6 @@ function RoadmapPage() {
         { phase: '2', title: 'Hub Features (Current)', status: 'live', items: ['Fee system: maker/taker, rebates, builder codes', 'Insurance Fund', 'TLP Vault (passive liquidity)', 'Multi-Collateral (WETH, WBTC, WAVAX)', 'Advanced orders (IOC, FOK, POST_ONLY)', 'Audit fixes (inflation attack, access control)'] },
         { phase: '3', title: 'Market Expansion (Q2 2026)', status: 'next', items: ['Forward curve (multiple expiries per asset)', 'Commodity forwards (Gold/XAUUSD, Oil/WTIUSD)', 'FX forwards (EUR/USD, GBP/USD)', 'Interest rate forwards'] },
         { phase: '4', title: 'Unified Trading Account (Q3 2026)', status: 'planned', items: ['Cross-margin portfolio', 'Sub-accounts', 'Unified PnL across all positions', 'Portfolio-level risk management'] },
-        { phase: '5', title: 'Advanced Trading (Q1 2027)', status: 'planned', items: ['Agent/bot trading SDK', 'Grid trading, DCA strategies', 'Batch operations', 'Conditional orders', 'API rate limits + WebSocket feeds'] },
-        { phase: '6', title: 'Mainnet & Beyond (Q3 2027)', status: 'planned', items: ['Security audit', 'Avalanche C-Chain mainnet deployment', 'Real Chainlink feeds', 'Governance token', 'DAO treasury'] },
       ].map(phase => (
         <div key={phase.phase} className="mb-6">
           <div className="flex items-center gap-2 mb-2">
