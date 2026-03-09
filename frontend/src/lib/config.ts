@@ -29,6 +29,8 @@ export const CONTRACTS = {
   PositionManager: '0x3fd14cb5dc574986004973254186aDbB2CE4A900' as `0x${string}`,
   InsuranceFund: '0x85fCaB9Cb3FCE04ED277190c9c09cDC5178B9Ca0' as `0x${string}`,
   TenorVault: '0xEac92864c8D56e02d076981EaaD6aeCc6b7D93B0' as `0x${string}`,
+  TenorVaultUSDT: '0x899A5e338EF1180cD4bD5955A140D25d8aF17a50' as `0x${string}`,
+  TenorVaultAUSD: '0xF068510c9e3194E768325646Ff6b84c779E72222' as `0x${string}`,
   CollateralManager: '0xc42e2d1e47eA74d5B9CF0eb70806D7a4169D66e0' as `0x${string}`,
 } as const
 

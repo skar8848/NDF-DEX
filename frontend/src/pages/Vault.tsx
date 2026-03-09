@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi'
 import { parseUnits, formatUnits, parseAbiItem } from 'viem'
 import { CONTRACTS } from '../lib/config'
 import { paginatedGetLogs } from '../lib/utils'
 import { PositionManagerABI, OrderBookABI } from '../lib/abis'
 import { useAllMarkets, type MarketInfo } from '../hooks/useForwardMarket'
+import { AssetLogo } from '../components/trading/MarketSelector'
 import { toast } from 'sonner'
 
 const EXPLORER_URL = 'https://testnet.snowtrace.io'
@@ -24,16 +25,26 @@ const TenorVaultABI = [
   { type: 'function', name: 'totalWithdrawn', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' },
 ] as const
 
-const MockUSDCABI = [
+const ERC20ABI = [
   { type: 'function', name: 'approve', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ type: 'bool' }], stateMutability: 'nonpayable' },
   { type: 'function', name: 'balanceOf', inputs: [{ name: 'account', type: 'address' }], outputs: [{ type: 'uint256' }], stateMutability: 'view' },
 ] as const
 
-const vaultAddr = CONTRACTS.TenorVault as `0x${string}`
+type VaultConfig = {
+  symbol: string
+  tokenAddress: `0x${string}`
+  vaultAddress: `0x${string}`
+  lpSymbol: string
+}
+
+const VAULT_CONFIGS: VaultConfig[] = [
+  { symbol: 'USDC', tokenAddress: CONTRACTS.MockUSDC, vaultAddress: CONTRACTS.TenorVault, lpSymbol: 'TLP' },
+  { symbol: 'USDT', tokenAddress: CONTRACTS.MockUSDT, vaultAddress: CONTRACTS.TenorVaultUSDT, lpSymbol: 'TLP' },
+  { symbol: 'AUSD', tokenAddress: CONTRACTS.MockAUSD, vaultAddress: CONTRACTS.TenorVaultAUSD, lpSymbol: 'TLP' },
+]
 
 const DepositedEvent = parseAbiItem('event Deposited(address indexed user, uint256 usdcAmount, uint256 sharesReceived)')
-const USDCTransferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
-const TLPTransferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
+const TransferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 
 type UserDeposit = { usdcAmount: bigint; sharesReceived: bigint; txHash: string; timestamp: number }
 type DepositorInfo = { address: `0x${string}`; tlpBalance: bigint; valueUsd: number }
@@ -55,11 +66,25 @@ export function Vault() {
   const publicClient = usePublicClient()
   const [depositInput, setDepositInput] = useState('')
   const [withdrawInput, setWithdrawInput] = useState('')
+  const [selectedVaultIdx, setSelectedVaultIdx] = useState(0)
+
+  const vault = VAULT_CONFIGS[selectedVaultIdx]
+  const vaultAddr = vault.vaultAddress
 
   const [userDeposits, setUserDeposits] = useState<UserDeposit[]>([])
   const [depositors, setDepositors] = useState<DepositorInfo[]>([])
   const [userTotalDeposited, setUserTotalDeposited] = useState(0n)
   const [vaultCreatedAt, setVaultCreatedAt] = useState<number | null>(null)
+
+  // Reset state on vault switch
+  useEffect(() => {
+    setDepositInput('')
+    setWithdrawInput('')
+    setUserDeposits([])
+    setDepositors([])
+    setUserTotalDeposited(0n)
+    setVaultCreatedAt(null)
+  }, [selectedVaultIdx])
 
   // Contract reads
   const { data: sharePrice } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'sharePrice', query: { refetchInterval: 5000 } })
@@ -67,11 +92,11 @@ export function Vault() {
   const { data: myShares } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'balanceOf', args: address ? [address] : undefined, query: { enabled: !!address, refetchInterval: 5000 } })
   const { data: withdrawalDelay } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'withdrawalDelay' })
   const { data: withdrawRequest } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'withdrawRequests', args: address ? [address] : undefined, query: { enabled: !!address, refetchInterval: 5000 } })
-  const { data: usdcBalance } = useReadContract({ address: CONTRACTS.MockUSDC, abi: MockUSDCABI, functionName: 'balanceOf', args: address ? [address] : undefined, query: { enabled: !!address, refetchInterval: 5000 } })
+  const { data: tokenBalance } = useReadContract({ address: vault.tokenAddress, abi: ERC20ABI, functionName: 'balanceOf', args: address ? [address] : undefined, query: { enabled: !!address, refetchInterval: 5000 } })
   const { data: totalDepositedRaw } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'totalDeposited', query: { refetchInterval: 10000 } })
   const { data: totalWithdrawnRaw } = useReadContract({ address: vaultAddr, abi: TenorVaultABI, functionName: 'totalWithdrawn', query: { refetchInterval: 10000 } })
 
-  // Vault positions & orders
+  // Vault positions & orders (only for USDC vault)
   const { data: vaultPositions } = useReadContract({
     address: CONTRACTS.PositionManager as `0x${string}`,
     abi: PositionManagerABI,
@@ -102,7 +127,7 @@ export function Vault() {
   const hasPendingWithdraw = pendingReq && pendingReq[0] > 0n
   const delayHours = withdrawalDelay ? Number(withdrawalDelay as bigint) / 3600 : 24
 
-  // APR (30d) calculation
+  // APY calculation
   const totalDep = (totalDepositedRaw as bigint) ?? 0n
   const totalWith = (totalWithdrawnRaw as bigint) ?? 0n
   const tvlBig = (totalValue as bigint) ?? 0n
@@ -124,7 +149,19 @@ export function Vault() {
     return m ? m.baseAsset : `#${id}`
   }, [markets])
 
-  // Fetch event data (user deposits, depositors, vault creation time)
+  // Contracts list for Snowscan links
+  const contractLinks = useMemo(() => [
+    { label: 'TLP Vault (USDC)', address: CONTRACTS.TenorVault },
+    { label: 'TLP Vault (USDT)', address: CONTRACTS.TenorVaultUSDT },
+    { label: 'TLP Vault (AUSD)', address: CONTRACTS.TenorVaultAUSD },
+    { label: 'OrderBook', address: CONTRACTS.OrderBook },
+    { label: 'ForwardMarket', address: CONTRACTS.ForwardMarket },
+    { label: 'PositionManager', address: CONTRACTS.PositionManager },
+    { label: 'InsuranceFund', address: CONTRACTS.InsuranceFund },
+    { label: 'Oracle', address: CONTRACTS.MockOracle },
+  ], [])
+
+  // Fetch event data
   useEffect(() => {
     if (!publicClient) return
     let cancelled = false
@@ -134,10 +171,10 @@ export function Vault() {
         const currentBlock = await publicClient!.getBlockNumber()
         const fromBlock = currentBlock > 50000n ? currentBlock - 50000n : 0n
 
-        // 1. Get vault creation time from first USDC transfer to vault
+        // 1. Get vault creation time
         const firstDeposits = await paginatedGetLogs(publicClient!, {
-          address: CONTRACTS.MockUSDC,
-          event: USDCTransferEvent,
+          address: vault.tokenAddress,
+          event: TransferEvent,
           args: { to: vaultAddr },
           fromBlock,
           toBlock: currentBlock,
@@ -189,10 +226,10 @@ export function Vault() {
         setUserDeposits(myDeposits)
         setUserTotalDeposited(myTotalDep)
 
-        // 3. TLP Transfer events from 0x0 (mints) for depositors
+        // 3. TLP mint events for depositors
         const mintLogs = await paginatedGetLogs(publicClient!, {
           address: vaultAddr,
-          event: TLPTransferEvent,
+          event: TransferEvent,
           args: { from: '0x0000000000000000000000000000000000000000' as `0x${string}` },
           fromBlock,
           toBlock: currentBlock,
@@ -232,15 +269,15 @@ export function Vault() {
     fetchEventData()
     const interval = setInterval(fetchEventData, 60000)
     return () => { cancelled = true; clearInterval(interval) }
-  }, [publicClient, address, sharePrice])
+  }, [publicClient, address, sharePrice, selectedVaultIdx])
 
   // Transaction handlers
   async function handleDeposit() {
     if (!depositInput || !address) return
     const amount = parseUnits(depositInput, 6)
     try {
-      toast.info('Approving USDC...')
-      writeApprove({ address: CONTRACTS.MockUSDC, abi: MockUSDCABI, functionName: 'approve', args: [vaultAddr, amount] })
+      toast.info(`Approving ${vault.symbol}...`)
+      writeApprove({ address: vault.tokenAddress, abi: ERC20ABI, functionName: 'approve', args: [vaultAddr, amount] })
       setTimeout(() => {
         toast.info('Depositing into vault...')
         writeVault({ address: vaultAddr, abi: TenorVaultABI, functionName: 'deposit', args: [amount] })
@@ -293,12 +330,40 @@ export function Vault() {
         {/* ════════ LEFT COLUMN ════════ */}
         <div className="flex-1 min-w-0 space-y-5">
 
-          {/* Header: title + description */}
+          {/* Header + Collateral Tabs */}
           <div className="bg-surface border border-border rounded-xl p-6">
-            <h1 className="text-2xl font-bold text-text mb-1">TLP Vault</h1>
-            <p className="text-sm text-text-secondary">
-              Deposit USDC, earn yield from trading fees. TLP share price increases as revenue flows in.
+            <div className="flex items-center justify-between mb-3">
+              <h1 className="text-2xl font-bold text-text">TLP Vault</h1>
+              <a
+                href={`${EXPLORER_URL}/address/${vaultAddr}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] text-primary hover:text-primary-hover font-mono"
+              >
+                {truncAddr(vaultAddr)}
+              </a>
+            </div>
+            <p className="text-sm text-text-secondary mb-4">
+              Deposit stablecoins, earn yield from trading fees. Share price increases as revenue flows in.
             </p>
+
+            {/* Collateral selector tabs */}
+            <div className="flex gap-2">
+              {VAULT_CONFIGS.map((vc, i) => (
+                <button
+                  key={vc.symbol}
+                  onClick={() => setSelectedVaultIdx(i)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                    i === selectedVaultIdx
+                      ? 'bg-primary/10 border border-primary/30 text-text'
+                      : 'bg-surface-2 border border-border text-text-secondary hover:text-text hover:border-border'
+                  }`}
+                >
+                  <AssetLogo asset={vc.symbol} size={20} />
+                  {vc.symbol}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Stat cards */}
@@ -311,7 +376,7 @@ export function Vault() {
             <div className="bg-surface border border-border rounded-xl p-5">
               <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2">Share Price</div>
               <div className="text-2xl font-bold font-mono text-text">${sharePriceNum.toFixed(4)}</div>
-              <div className="text-xs text-text-secondary mt-1">per TLP token</div>
+              <div className="text-xs text-text-secondary mt-1">per {vault.lpSymbol} token</div>
             </div>
             <div className="bg-surface border border-border rounded-xl p-5">
               <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-2">Fees Earned (LP)</div>
@@ -435,6 +500,31 @@ export function Vault() {
               </div>
             </div>
           )}
+
+          {/* Contracts (Snowscan) */}
+          <div className="bg-surface border border-border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-border">
+              <div className="text-xs font-semibold text-text">Contracts</div>
+            </div>
+            <div className="divide-y divide-border/50">
+              {contractLinks.map((c) => (
+                <div key={c.address} className="flex items-center justify-between px-4 py-2.5 text-xs hover:bg-surface-2/50">
+                  <span className="text-text-secondary">{c.label}</span>
+                  <a
+                    href={`${EXPLORER_URL}/address/${c.address}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary-hover font-mono flex items-center gap-1"
+                  >
+                    {truncAddr(c.address)}
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* ════════ RIGHT COLUMN (sidebar) ════════ */}
@@ -443,15 +533,18 @@ export function Vault() {
           {/* Deposit */}
           <div className="bg-surface border border-border rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
-              <div className="text-sm font-semibold text-text">Deposit</div>
+              <div className="text-sm font-semibold text-text flex items-center gap-2">
+                <AssetLogo asset={vault.symbol} size={18} />
+                Deposit {vault.symbol}
+              </div>
             </div>
             <div className="p-4 space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs text-text-secondary">Amount (USDC)</label>
-                  {isConnected && usdcBalance && (
-                    <button onClick={() => setDepositInput(formatUnits(usdcBalance as bigint, 6))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
-                      Max: ${fmtUsdc(usdcBalance as bigint)}
+                  <label className="text-xs text-text-secondary">Amount ({vault.symbol})</label>
+                  {isConnected && tokenBalance && (
+                    <button onClick={() => setDepositInput(formatUnits(tokenBalance as bigint, 6))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
+                      Max: ${fmtUsdc(tokenBalance as bigint)}
                     </button>
                   )}
                 </div>
@@ -465,7 +558,7 @@ export function Vault() {
               </div>
               {depositInput && Number(depositInput) > 0 && (
                 <div className="text-xs text-text-secondary">
-                  You'll receive ~<span className="text-text font-mono">{(Number(depositInput) / sharePriceNum).toFixed(2)}</span> TLP
+                  You'll receive ~<span className="text-text font-mono">{(Number(depositInput) / sharePriceNum).toFixed(2)}</span> {vault.lpSymbol}
                 </div>
               )}
               <button
@@ -473,7 +566,7 @@ export function Vault() {
                 disabled={!isConnected || !depositInput || Number(depositInput) <= 0 || isPending}
                 className="w-full py-2.5 text-sm font-semibold rounded-lg bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {isPending ? 'Processing...' : 'Deposit USDC'}
+                {isPending ? 'Processing...' : `Deposit ${vault.symbol}`}
               </button>
             </div>
           </div>
@@ -491,7 +584,7 @@ export function Vault() {
                 <div className="space-y-3">
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
                     <div className="text-xs text-text-secondary mb-1">Pending Withdrawal</div>
-                    <div className="text-sm font-mono text-text">{fmtTlp(pendingReq![0])} TLP</div>
+                    <div className="text-sm font-mono text-text">{fmtTlp(pendingReq![0])} {vault.lpSymbol}</div>
                     <div className="text-[10px] text-text-secondary mt-1">
                       Requested at {new Date(Number(pendingReq![1]) * 1000).toLocaleString()}
                     </div>
@@ -517,7 +610,7 @@ export function Vault() {
                 <>
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs text-text-secondary">TLP Shares</label>
+                      <label className="text-xs text-text-secondary">{vault.lpSymbol} Shares</label>
                       {isConnected && mySharesBig > 0n && (
                         <button onClick={() => setWithdrawInput(formatUnits(mySharesBig, 18))} className="text-[10px] text-primary hover:text-primary-hover cursor-pointer">
                           Max: {fmtTlp(mySharesBig)}
@@ -534,7 +627,7 @@ export function Vault() {
                   </div>
                   {withdrawInput && Number(withdrawInput) > 0 && (
                     <div className="text-xs text-text-secondary">
-                      You'll receive ~<span className="text-text font-mono">${(Number(withdrawInput) * sharePriceNum).toFixed(2)}</span> USDC after {delayHours}h delay
+                      You'll receive ~<span className="text-text font-mono">${(Number(withdrawInput) * sharePriceNum).toFixed(2)}</span> {vault.symbol} after {delayHours}h delay
                     </div>
                   )}
                   <button
@@ -560,7 +653,7 @@ export function Vault() {
             <div className="bg-surface border border-border rounded-xl p-4">
               <div className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Redeemable</div>
               <div className="text-lg font-bold font-mono text-text">
-                {isConnected ? `${fmtTlp(mySharesBig)} TLP` : '—'}
+                {isConnected ? `${fmtTlp(mySharesBig)} ${vault.lpSymbol}` : '—'}
               </div>
             </div>
             <div className="bg-surface border border-border rounded-xl p-4">
@@ -588,8 +681,8 @@ export function Vault() {
                   <thead>
                     <tr className="text-text-secondary border-b border-border">
                       <th className="text-left px-3 py-2 font-medium">Date</th>
-                      <th className="text-right px-3 py-2 font-medium">USDC</th>
-                      <th className="text-right px-3 py-2 font-medium">TLP</th>
+                      <th className="text-right px-3 py-2 font-medium">{vault.symbol}</th>
+                      <th className="text-right px-3 py-2 font-medium">{vault.lpSymbol}</th>
                     </tr>
                   </thead>
                   <tbody>
