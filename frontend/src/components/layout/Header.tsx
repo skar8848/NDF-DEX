@@ -26,12 +26,12 @@ export function Header() {
   return (
     <header className="border-b border-border bg-surface px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-8">
-        <Link to="/" className="flex items-center gap-2 no-underline">
+        <a href="/" className="flex items-center gap-2 no-underline">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center font-bold text-white text-sm">
             T
           </div>
           <span className="text-lg font-bold text-text">Tenor</span>
-        </Link>
+        </a>
 
         <nav className="flex gap-1">
           {navLinks.map((link) => {
