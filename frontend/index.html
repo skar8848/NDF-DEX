@@ -677,20 +677,29 @@
       navBar=document.getElementById('navBar'),btnLaunch=document.getElementById('btnLaunch'),
       navDocs=document.getElementById('navDocs'),eyeImg=document.getElementById('eyeImg');
 
-  var LINE_COUNT=3,GAP=32,R=65,WIDTHS=[10,8.5,7],COLORS=['#0a0a0a','#1a1a1a','#2a2a2a'];
+  var LINE_COUNT=3,GAP=20,R=65,WIDTHS=[10,8.5,7],COLORS=['#0a0a0a','#1a1a1a','#2a2a2a'];
   var W,H;
 
   // ── PHASES ──
-  // A (0→PA):     scroll title → text#1
-  // B (PA→PB):    FROZEN on text#1 (pathA: left descent + turn + horizontal + turn + right descent)
-  // C (PB→PC):    scroll text#1 → text#2 (SVG scroll-up 1, tail retracts start)
-  // D (PC→PD):    FROZEN on text#2 (pathA: right descent continues + exit turn + exit right)
-  // E (PD→PE):    scroll text#2 → text#3 (SVG scroll-up 2, pathA tail finishes, pathB enters from left)
-  // F (PE→PF):    FROZEN on text#3 (pathB: horizontal crossing)
-  // G (PF→1.0):   scroll text#3 → text#4 → dark sections (with CLOB freeze)
-  var PA=0.04,PB=0.16,PC=0.24,PD=0.36,PE=0.44,PF=0.52;
-  var PCL1=0.72,PCL2=0.86;
-  var scrollUpDist1=0,scrollUpDist2=0,clobOffset=0;
+  // Each transition: freeze (draw) → freeze (retract) → scroll + scroll-up
+  //
+  // PA:  scroll title → text#1
+  // PB:  frozen text#1 — pathA draws (U-shape)
+  // PR1: frozen text#1 — pathA tail retracts
+  // PC:  scroll text#1→text#2 + SVG scroll-up 1
+  // PD:  frozen text#2 — pathA continues (exit turn + exit right)
+  // PR2: frozen text#2 — pathA fully retracts
+  // PE:  scroll text#2→text#3 + SVG scroll-up 2 + pathB enters
+  // PF:  frozen text#3 — pathB crosses
+  // PR3: frozen text#3 — pathB retracts
+  // PG:  scroll text#3→text#4 + SVG scroll-up 3 + pathC enters from right
+  // PH:  frozen — pathC draws (cross left + turn + descent left)
+  // rest: scroll to dark sections
+  var PA=0.03,PB=0.13,PR1=0.18,PC=0.23;
+  var PD=0.31,PR2=0.36,PE=0.41;
+  var PF=0.48,PR3=0.52,PG=0.58,PH=0.64;
+  var PCL1=0.78,PCL2=0.90;
+  var scrollUpDist1=0,scrollUpDist2=0,scrollUpDist3=0,clobOffset=0;
 
   function computeOffsets(){
     var el=document.getElementById('clobSection');
@@ -699,41 +708,44 @@
 
   function getContentScroll(t){
     var total=track.scrollHeight-H;
-    if(t<=PA) return(t/PA)*H;
-    if(t<=PB) return H;
-    if(t<=PC) return H+((t-PB)/(PC-PB))*H;
-    if(t<=PD) return 2*H;
-    if(t<=PE) return 2*H+((t-PD)/(PE-PD))*H;
-    if(t<=PF) return 3*H;
+    if(t<=PA) return(t/PA)*H;          // scroll to text#1
+    if(t<=PR1) return H;               // frozen text#1 (draw + retract)
+    if(t<=PC) return H+((t-PR1)/(PC-PR1))*H; // scroll to text#2
+    if(t<=PR2) return 2*H;             // frozen text#2 (draw + retract)
+    if(t<=PE) return 2*H+((t-PR2)/(PE-PR2))*H; // scroll to text#3
+    if(t<=PR3) return 3*H;             // frozen text#3 (draw + retract)
+    if(t<=PG) return 3*H+((t-PR3)/(PG-PR3))*H; // scroll to text#4 + pathC
+    if(t<=PH) return 4*H;              // frozen — pathC finishes
     if(clobOffset>0){
-      if(t<=PCL1) return 3*H+((t-PF)/(PCL1-PF))*(clobOffset-3*H);
+      if(t<=PCL1) return 4*H+((t-PH)/(PCL1-PH))*(clobOffset-4*H);
       if(t<=PCL2) return clobOffset;
       return clobOffset+((t-PCL2)/(1-PCL2))*(total-clobOffset);
     }
-    return 3*H+((t-PF)/(1-PF))*(total-3*H);
+    return 4*H+((t-PH)/(1-PH))*(total-4*H);
   }
 
-  // SVG group scrolls up in TWO stages
+  // SVG group scrolls up in THREE stages (each AFTER retract)
   function getGroupScrollUp(t){
-    // Stage 1: during C (PB→PC) — brings right descent to top
-    var up1=0;
-    if(t>PB) up1=Math.min(1,(t-PB)/(PC-PB));
-    // Stage 2: during E (PD→PE) — brings pathB reentry to top
-    var up2=0;
-    if(t>PD) up2=Math.min(1,(t-PD)/(PE-PD));
-    return ease(up1)*scrollUpDist1 + ease(up2)*scrollUpDist2;
+    var up1=0,up2=0,up3=0;
+    if(t>PR1) up1=Math.min(1,(t-PR1)/(PC-PR1));
+    if(t>PR2) up2=Math.min(1,(t-PR2)/(PE-PR2));
+    if(t>PR3) up3=Math.min(1,(t-PR3)/(PG-PR3));
+    return ease(up1)*scrollUpDist1 + ease(up2)*scrollUpDist2 + ease(up3)*scrollUpDist3;
   }
 
-  // PathA: U-shape (descend left → cross → descend right) + exit turn + exit right
-  // PathB: enter from left → horizontal crossing
+  // PathA: U-shape + exit right
+  // PathB: horizontal crossing left→right
+  // PathC: enter from right, cross right→left, turn down, descend left
   var linesGroup;
-  var pathAEls=[],pathBEls=[],pathALens=[],pathBLens=[],descentStarts=[];
+  var pathAEls=[],pathBEls=[],pathCEls=[];
+  var pathALens=[],pathBLens=[],pathCLens=[];
   var turnYVal=0;
 
   function buildLines(){
     W=window.innerWidth; H=window.innerHeight;
     svg.innerHTML='';
-    pathAEls=[]; pathBEls=[]; pathALens=[]; pathBLens=[]; descentStarts=[];
+    pathAEls=[]; pathBEls=[]; pathCEls=[];
+    pathALens=[]; pathBLens=[]; pathCLens=[];
 
     var margin=80;
     turnYVal=H*0.78;
@@ -749,17 +761,14 @@
       var rx=W-margin-off;
       var ty=turnYVal+off;
 
-      // exitTurnY: near bottom of viewport after first scroll-up
+      // exitTurnY: near bottom of viewport after scroll-up 1
       var exitTY=scrollUpDist1+H*0.78+off;
-      // reentryY: below exit, will be scrolled up in stage 2
-      var ry=exitTY+R+80+off;
+      // pathB reentryY: below exit
+      var ryB=exitTY+R+80+off;
+      // pathC reentryY: below pathB
+      var ryC=ryB+H*0.78+R+80+off;
 
-      // scrollUpDist2: bring reentryY to 80px from viewport top
-      // total scroll = scrollUpDist1 + scrollUpDist2
-      // ry - (scrollUpDist1 + scrollUpDist2) = 80
-      // scrollUpDist2 = ry - scrollUpDist1 - 80
-
-      // PathA: full U-shape + exit turn right + exit off-screen
+      // ── PathA: U-shape + exit turn right ──
       var dA='M '+lx+' -10'+
         ' L '+lx+' '+(ty-R)+
         ' Q '+lx+' '+ty+' '+(lx+R)+' '+ty+
@@ -768,34 +777,41 @@
         ' L '+rx+' '+(exitTY-R)+
         ' Q '+rx+' '+exitTY+' '+(rx+R)+' '+exitTY+
         ' L '+(W+200)+' '+exitTY;
-
       var pA=document.createElementNS('http://www.w3.org/2000/svg','path');
       pA.setAttribute('d',dA); pA.setAttribute('class','line-path');
       pA.setAttribute('stroke',COLORS[i]); pA.setAttribute('stroke-width',WIDTHS[i]);
       linesGroup.appendChild(pA);
 
-      // Compute descentStart: path length up to where right descent begins
-      var vertL=(ty-R)-(-10);
-      var arc=Math.PI*R/2;
-      var horiz=(rx-R)-(lx+R);
-      descentStarts.push(vertL+arc+horiz+arc);
-
-      // PathB: enter from left → horizontal crossing
-      var dB='M -200 '+ry+' L '+(W+200)+' '+ry;
+      // ── PathB: horizontal crossing left→right ──
+      var dB='M -200 '+ryB+' L '+(W+200)+' '+ryB;
       var pB=document.createElementNS('http://www.w3.org/2000/svg','path');
       pB.setAttribute('d',dB); pB.setAttribute('class','line-path');
       pB.setAttribute('stroke',COLORS[i]); pB.setAttribute('stroke-width',WIDTHS[i]);
       linesGroup.appendChild(pB);
 
-      pathAEls.push(pA); pathBEls.push(pB);
+      // ── PathC: enter right → cross → turn down → descend left ──
+      var dC='M '+(W+200)+' '+ryC+
+        ' L '+(lx+R)+' '+ryC+
+        ' Q '+lx+' '+ryC+' '+lx+' '+(ryC+R)+
+        ' L '+lx+' '+(ryC+H*1.5);
+      var pC=document.createElementNS('http://www.w3.org/2000/svg','path');
+      pC.setAttribute('d',dC); pC.setAttribute('class','line-path');
+      pC.setAttribute('stroke',COLORS[i]); pC.setAttribute('stroke-width',WIDTHS[i]);
+      linesGroup.appendChild(pC);
+
+      pathAEls.push(pA); pathBEls.push(pB); pathCEls.push(pC);
       pathALens.push(pA.getTotalLength());
       pathBLens.push(pB.getTotalLength());
+      pathCLens.push(pC.getTotalLength());
     }
 
-    // scrollUpDist2 from line 0 (others are close enough)
+    // Compute scroll-up distances from line 0
     var exitTY0=scrollUpDist1+H*0.78;
-    var ry0=exitTY0+R+80;
-    scrollUpDist2=ry0-scrollUpDist1-80;
+    var ryB0=exitTY0+R+80;
+    scrollUpDist2=ryB0-scrollUpDist1-80;
+
+    var ryC0=ryB0+H*0.78+R+80;
+    scrollUpDist3=ryC0-(scrollUpDist1+scrollUpDist2)-80;
 
     computeOffsets();
   }
@@ -803,13 +819,16 @@
   function ease(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
   function clamp01(v){return Math.min(1,Math.max(0,v));}
 
-  // PathA head: draws continuously from t=0 to PD+0.04
-  function headA(t){var E=PD+0.04;if(t<=0)return 0;if(t>=E)return 1;return t/E;}
-  // PathA tail retract: from PB (scroll-up 1 starts) to PE+0.04
-  // Retracts up to descentStart first, then everything
-  function retractA(t){var S=PB,E=PE+0.04;if(t<=S)return 0;if(t>=E)return 1;return(t-S)/(E-S);}
-  // PathB head: from PD to PF
-  function headB(t){if(t<=PD)return 0;if(t>=PF)return 1;return(t-PD)/(PF-PD);}
+  // PathA head: 0→1 from 0 → PD+0.02
+  function headA(t){var E=PD+0.02;if(t<=0)return 0;if(t>=E)return 1;return t/E;}
+  // PathA retract: PR1 → PR2+0.02 (retracts during BOTH retract phases)
+  function retractA(t){if(t<=PR1)return 0;if(t>=PR2+0.02)return 1;return(t-PR1)/(PR2+0.02-PR1);}
+  // PathB head: PE-0.02 → PF
+  function headB(t){var S=PE-0.02;if(t<=S)return 0;if(t>=PF)return 1;return(t-S)/(PF-S);}
+  // PathB retract: PR3 → PR3+0.03
+  function retractB(t){if(t<=PR3)return 0;if(t>=PR3+0.03)return 1;return(t-PR3)/0.03;}
+  // PathC head: PG-0.02 → PH
+  function headC(t){var S=PG-0.02;if(t<=S)return 0;if(t>=PH)return 1;return(t-S)/(PH-S);}
 
   var chartsDrawn=false,bookStarted=false;
 
@@ -837,31 +856,36 @@
     svg.style.opacity=lineOpacity;
 
     // Draw lines
-    var hA=headA(t), rA=retractA(t), hB=headB(t);
+    var hA=headA(t),rA=retractA(t),hB=headB(t),rB=retractB(t),hC=headC(t);
 
     for(var i=0;i<LINE_COUNT;i++){
-      var stag=i*0.02;
-      var lenA=pathALens[i], lenB=pathBLens[i];
+      var stag=i*0.015;
+      var lenA=pathALens[i],lenB=pathBLens[i],lenC=pathCLens[i];
 
-      // PathA — head draws continuously
+      // PathA
       var hAi=ease(clamp01((hA-stag)/(1-stag)));
-      var drawEndA=hAi*lenA;
-
-      // PathA — tail retracts (up to full length)
       var rAi=ease(clamp01((rA-stag)/(1-stag)));
-      var drawStartA=rAi*lenA;
-
-      var visA=Math.max(0,drawEndA-drawStartA);
+      var dEndA=hAi*lenA, dStartA=rAi*lenA;
+      var visA=Math.max(0,dEndA-dStartA);
       if(visA<=0){pathAEls[i].style.strokeDasharray='0 '+lenA;}
-      else{pathAEls[i].style.strokeDasharray='0 '+drawStartA+' '+visA+' '+lenA;}
+      else{pathAEls[i].style.strokeDasharray='0 '+dStartA+' '+visA+' '+lenA;}
       pathAEls[i].style.strokeDashoffset='0';
 
-      // PathB — horizontal re-entry
+      // PathB
       var hBi=ease(clamp01((hB-stag)/(1-stag)));
-      var drawEndB=hBi*lenB;
-      if(drawEndB<=0){pathBEls[i].style.strokeDasharray='0 '+lenB;}
-      else{pathBEls[i].style.strokeDasharray=drawEndB+' '+lenB;}
+      var rBi=ease(clamp01((rB-stag)/(1-stag)));
+      var dEndB=hBi*lenB, dStartB=rBi*lenB;
+      var visB=Math.max(0,dEndB-dStartB);
+      if(visB<=0){pathBEls[i].style.strokeDasharray='0 '+lenB;}
+      else{pathBEls[i].style.strokeDasharray='0 '+dStartB+' '+visB+' '+lenB;}
       pathBEls[i].style.strokeDashoffset='0';
+
+      // PathC
+      var hCi=ease(clamp01((hC-stag)/(1-stag)));
+      var dEndC=hCi*lenC;
+      if(dEndC<=0){pathCEls[i].style.strokeDasharray='0 '+lenC;}
+      else{pathCEls[i].style.strokeDasharray=dEndC+' '+lenC;}
+      pathCEls[i].style.strokeDashoffset='0';
     }
 
     // Section reveal
@@ -899,8 +923,8 @@
       document.querySelectorAll('.flow-step').forEach(function(el){el.classList.remove('active');});
     }
 
-    if(!chartsDrawn&&t>0.55){chartsDrawn=true;setTimeout(initCharts,100);}
-    if(!bookStarted&&t>0.65){bookStarted=true;renderBook();setInterval(simulateBook,1200);}
+    if(!chartsDrawn&&t>0.60){chartsDrawn=true;setTimeout(initCharts,100);}
+    if(!bookStarted&&t>0.70){bookStarted=true;renderBook();setInterval(simulateBook,1200);}
   }
 
   // ═══ PAYOFF CHARTS ═══
