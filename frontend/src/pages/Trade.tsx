@@ -322,7 +322,7 @@ export default function Trade() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex flex-col min-h-0">
           {/* Chart + OrderBook row */}
           <div className="flex-1 flex min-h-0">
             {/* Price Chart */}
@@ -426,7 +426,7 @@ export default function Trade() {
 
       {/* Trade Form - full height right column, scrollable */}
       <div className="w-[280px] shrink-0 border-l border-border overflow-y-auto no-scrollbar">
-        <div className="px-3 py-1 border-b border-border">
+        <div className="px-3 py-1">
           <h3 className="text-xs font-semibold text-text">Place Order</h3>
         </div>
         <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} bestBid={bestBid} bestAsk={bestAsk} bookDepthAsk={bookDepthAsk} bookDepthBid={bookDepthBid} />

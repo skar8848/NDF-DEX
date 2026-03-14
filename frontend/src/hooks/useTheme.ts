@@ -8,7 +8,7 @@ type ThemeContextValue = {
 }
 
 export const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'light',
+  theme: 'dark',
   toggleTheme: () => {},
 })
 
@@ -19,9 +19,9 @@ export function useTheme() {
 export function useThemeProvider() {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('tenor-theme') as Theme) || 'light'
+      return (localStorage.getItem('tenor-theme') as Theme) || 'dark'
     }
-    return 'light'
+    return 'dark'
   })
 
   useEffect(() => {
