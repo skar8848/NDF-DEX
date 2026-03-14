@@ -786,6 +786,12 @@
       pA.setAttribute('stroke',COLORS[i]); pA.setAttribute('stroke-width',WIDTHS[i]);
       linesGroup.appendChild(pA);
 
+      // Compute descentStart: path length up to where right descent begins
+      var vertL=(ty-R)-(-10);
+      var arc=Math.PI*R/2;
+      var horiz=(rx-R)-(lx+R);
+      descentStarts.push(vertL+arc+horiz+arc);
+
       // ── PathB: horizontal crossing left→right ──
       var dB='M -200 '+ryB+' L '+(W+200)+' '+ryB;
       var pB=document.createElementNS('http://www.w3.org/2000/svg','path');
