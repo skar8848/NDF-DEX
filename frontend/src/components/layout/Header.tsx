@@ -27,9 +27,7 @@ export function Header() {
     <header className="border-b border-border bg-surface px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-8">
         <a href="/" className="flex items-center gap-2 no-underline">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center font-bold text-white text-sm">
-            T
-          </div>
+          <img src="/tenor_logo.png" alt="Tenor" className="w-8 h-8 rounded-lg object-cover" />
           <span className="text-lg font-bold text-text">Tenor</span>
         </a>
 
