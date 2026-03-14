@@ -137,12 +137,12 @@
   .section:nth-child(2) { justify-content: center; }
   .section:nth-child(2) .section-with-icon { display: flex; align-items: center; gap: 3rem; max-width: 1100px; width: 100%; }
   .section:nth-child(2) .section-inner { text-align: left; flex: 1; }
-  .section:nth-child(2) .icon-canvas { width: clamp(250px, 28vw, 400px); height: clamp(250px, 28vw, 400px); flex-shrink: 0; margin-top: -2rem; }
+  .section:nth-child(2) .icon-canvas { width: clamp(250px, 28vw, 400px); height: clamp(250px, 28vw, 400px); flex-shrink: 0; margin-top: -4rem; }
   .section:nth-child(3) { justify-content: center; }
   .section:nth-child(3) .section-with-icon { display: flex; align-items: center; gap: 3rem; max-width: 1100px; width: 100%; }
   .section:nth-child(3) .section-inner { text-align: right; flex: 1; }
   .section:nth-child(3) p { margin-left: auto; }
-  .section:nth-child(3) .icon-canvas { width: clamp(300px, 32vw, 460px); height: clamp(300px, 32vw, 460px); flex-shrink: 0; }
+  .section:nth-child(3) .icon-canvas { width: clamp(340px, 36vw, 520px); height: clamp(340px, 36vw, 520px); flex-shrink: 0; margin-top: -4rem; }
   .section:nth-child(4) { justify-content: flex-end; }
   .section:nth-child(4) .section-inner { text-align: right; margin-right: 8%; }
   .section:nth-child(4) p { margin-left: auto; }
@@ -1186,14 +1186,14 @@
     }
     function drawHelix(){
       ht+=0.008;ctx.clearRect(0,0,S,S);
-      for(var pass=0;pass<2;pass++){for(var strand=0;strand<2;strand++){var off=strand*Math.PI;ctx.lineWidth=strand===0?3.5:2.8;ctx.lineCap='round';var inSeg=false;for(var i=0;i<=250;i++){var frac=i/250;var p=hp(frac,off,ht);var isFront=p.z>0;var shouldDraw=pass===0?!isFront:isFront;if(shouldDraw){var dA=pass===0?0.12:(0.18+p.z*0.35);ctx.globalAlpha=dA*(0.4+p.frac*0.6);if(!inSeg){ctx.beginPath();ctx.moveTo(p.x,p.y);inSeg=true;}else ctx.lineTo(p.x,p.y);}else if(inSeg){ctx.strokeStyle='#0a0a0a';ctx.stroke();inSeg=false;}}if(inSeg){ctx.strokeStyle='#0a0a0a';ctx.stroke();}}}
-      for(var i=0;i<28;i++){var frac=(i+0.5)/28;var p1=hp(frac,0,ht),p2=hp(frac,Math.PI,ht);var vis=Math.max(p1.z,p2.z);if(vis>-0.3){ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.strokeStyle='#0a0a0a';ctx.lineWidth=1;ctx.globalAlpha=(0.08+vis*0.1)*(0.3+frac*0.7);ctx.stroke();[p1,p2].forEach(function(p){if(p.z>0){ctx.beginPath();ctx.arc(p.x,p.y,(2.5+p.z*2)*p.perspScale,0,Math.PI*2);ctx.globalAlpha=(0.15+p.z*0.4)*(0.3+p.frac*0.7);ctx.fillStyle='#0a0a0a';ctx.fill();}});}}
-      for(var i=0;i<10;i++){var phase=ht*1.2+i*0.65;var frac=phase%1;var p=hp(frac,(i%2)*Math.PI,ht);if(p.z>0.15){ctx.beginPath();ctx.arc(p.x,p.y,2.5*p.perspScale,0,Math.PI*2);ctx.globalAlpha=p.z*0.7*(0.3+frac*0.7);ctx.fillStyle='#0a0a0a';ctx.fill();}}
+      for(var pass=0;pass<2;pass++){for(var strand=0;strand<2;strand++){var off=strand*Math.PI;ctx.lineWidth=strand===0?4:3.2;ctx.lineCap='round';var inSeg=false;for(var i=0;i<=250;i++){var frac=i/250;var p=hp(frac,off,ht);var isFront=p.z>0;var shouldDraw=pass===0?!isFront:isFront;if(shouldDraw){var dA=pass===0?0.2:(0.3+p.z*0.5);ctx.globalAlpha=dA*(0.4+p.frac*0.6);if(!inSeg){ctx.beginPath();ctx.moveTo(p.x,p.y);inSeg=true;}else ctx.lineTo(p.x,p.y);}else if(inSeg){ctx.strokeStyle='#0a0a0a';ctx.stroke();inSeg=false;}}if(inSeg){ctx.strokeStyle='#0a0a0a';ctx.stroke();}}}
+      for(var i=0;i<28;i++){var frac=(i+0.5)/28;var p1=hp(frac,0,ht),p2=hp(frac,Math.PI,ht);var vis=Math.max(p1.z,p2.z);if(vis>-0.3){ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.strokeStyle='#0a0a0a';ctx.lineWidth=1.2;ctx.globalAlpha=(0.15+vis*0.18)*(0.3+frac*0.7);ctx.stroke();[p1,p2].forEach(function(p){if(p.z>0){ctx.beginPath();ctx.arc(p.x,p.y,(3+p.z*2.5)*p.perspScale,0,Math.PI*2);ctx.globalAlpha=(0.25+p.z*0.55)*(0.3+p.frac*0.7);ctx.fillStyle='#0a0a0a';ctx.fill();}});}}
+      for(var i=0;i<10;i++){var phase=ht*1.2+i*0.65;var frac=phase%1;var p=hp(frac,(i%2)*Math.PI,ht);if(p.z>0.15){ctx.beginPath();ctx.arc(p.x,p.y,3*p.perspScale,0,Math.PI*2);ctx.globalAlpha=p.z*0.9*(0.3+frac*0.7);ctx.fillStyle='#0a0a0a';ctx.fill();}}
       // LONG / SHORT labels
       var lp1=hp(0.85,0,ht),lp2=hp(0.85,Math.PI,ht);
-      ctx.globalAlpha=0.3;ctx.font="500 "+Math.round(S*0.025)+"px 'JetBrains Mono',monospace";ctx.textAlign='center';ctx.fillStyle='#0a0a0a';
-      ctx.fillText('LONG',lp1.x+20,lp1.y-12);ctx.fillText('SHORT',lp2.x-20,lp2.y+16);
-      ctx.globalAlpha=0.12;ctx.font=Math.round(S*0.02)+"px 'JetBrains Mono',monospace";
+      ctx.globalAlpha=0.45;ctx.font="500 "+Math.round(S*0.028)+"px 'JetBrains Mono',monospace";ctx.textAlign='center';ctx.fillStyle='#0a0a0a';
+      ctx.fillText('LONG',lp1.x+22,lp1.y-14);ctx.fillText('SHORT',lp2.x-22,lp2.y+18);
+      ctx.globalAlpha=0.18;ctx.font=Math.round(S*0.02)+"px 'JetBrains Mono',monospace";
       ctx.fillText('SYMMETRIC \u00B7 ZERO-SUM \u00B7 NO PREMIUM',cxh,cyh+S*0.42);
       ctx.globalAlpha=1;requestAnimationFrame(drawHelix);
     }
