@@ -1,5 +1,9 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/trade/:path*", "destination": "/app.html" },
+    { "source": "/markets", "destination": "/app.html" },
+    { "source": "/portfolio", "destination": "/app.html" },
+    { "source": "/vault", "destination": "/app.html" },
+    { "source": "/docs", "destination": "/app.html" }
   ]
 }
