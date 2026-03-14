@@ -1,16 +1,428 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tenor | Forward Trading on Avalanche</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tenor Protocol — Decentralized Forward Exchange</title>
+<link rel="icon" type="image/png" href="/tenor_logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Monoton&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #FF4500; --fg: #0a0a0a; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  .scroll-runway { height: 1000vh; }
+
+  .frame {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+  }
+
+  .lines-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .lines-layer svg {
+    width: 100%; height: 100%;
+    overflow: visible;
+  }
+  .line-path {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .content-track {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    z-index: 5;
+    will-change: transform;
+  }
+
+  .section {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 4rem 6rem;
+  }
+
+  .section-inner {
+    max-width: 520px;
+    opacity: 0;
+    transform: translateY(50px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .section-inner.visible { opacity: 1; transform: translateY(0); }
+
+  /* Section 1 — Title, centered */
+  .section:nth-child(1) { justify-content: center; }
+  .section:nth-child(1) .section-inner { text-align: center; margin: 0 auto; }
+
+  /* Section 2 — Right-aligned */
+  .section:nth-child(2) { justify-content: flex-end; }
+  .section:nth-child(2) .section-inner { text-align: right; margin-right: 8%; }
+  .section:nth-child(2) p { margin-left: auto; }
+
+  /* Section 3 — Bottom-left */
+  .section:nth-child(3) { justify-content: flex-start; align-items: flex-end; }
+  .section:nth-child(3) .section-inner { margin-left: 8%; margin-bottom: 8%; }
+
+  /* Section 4 — Right-aligned */
+  .section:nth-child(4) { justify-content: flex-end; }
+  .section:nth-child(4) .section-inner { text-align: right; margin-right: 8%; }
+  .section:nth-child(4) p { margin-left: auto; }
+
+  /* Section 5 — Centered */
+  .section:nth-child(5) { justify-content: center; }
+  .section:nth-child(5) .section-inner { text-align: center; margin: 0 auto; }
+
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(3rem, 6vw, 5.5rem);
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+  }
+  h1 em { font-style: italic; opacity: 0.6; }
+
+  h2 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.8rem;
+  }
+
+  p { font-size: 1rem; line-height: 1.75; opacity: 0.4; max-width: 400px; }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.3;
+    margin-bottom: 1.4rem;
+    font-weight: 500;
+  }
+
+  .logo-img {
+    width: clamp(160px, 24vw, 280px);
+    border-radius: 12px;
+    mix-blend-mode: multiply;
+  }
+
+  .subtitle {
+    margin-top: 1.2rem;
+    font-size: clamp(0.85rem, 1.2vw, 1.05rem);
+    opacity: 0.35;
+    letter-spacing: 0.04em;
+  }
+
+  .scroll-hint {
+    position: fixed;
+    bottom: 2rem; left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.3;
+    transition: opacity 0.5s;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .scroll-hint.hidden { opacity: 0; }
+  .scroll-hint .dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--fg);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:.3; transform:scale(1); }
+    50% { opacity:1; transform:scale(1.5); }
+  }
+
+  .progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 1px;
+    background: var(--fg);
+    opacity: 0.3;
+    z-index: 100;
+  }
+
+  @media (max-width: 768px) {
+    .section { padding: 2rem 1.5rem; }
+    .section:nth-child(2) .section-inner { margin-right: 4%; }
+    .section:nth-child(3) .section-inner { margin-left: 4%; margin-bottom: 4%; }
+    .section:nth-child(4) .section-inner { margin-right: 4%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="scroll-runway"></div>
+
+<div class="frame">
+  <div class="lines-layer">
+    <svg id="svg"></svg>
+  </div>
+
+  <div class="content-track" id="track">
+
+    <!-- Section 0 — Title -->
+    <section class="section">
+      <div class="section-inner">
+        <h1 style="font-family: 'Monoton', cursive; font-size: clamp(3.5rem, 7vw, 7rem); margin-bottom: 1.5rem;">Tenor</h1>
+        <img src="/tenor_logo.png" alt="Tenor Protocol" class="logo-img" />
+        <p class="subtitle">The First Decentralized Forward Exchange on Avalanche</p>
+      </div>
+    </section>
+
+    <!-- Section 1 — Forward Thinking -->
+    <section class="section">
+      <div class="section-inner">
+        <div class="tag">001 — Forward Thinking</div>
+        <h2>The turn</h2>
+        <p>$7 trillion traded daily in forwards. None of it on-chain — until now. Tenor brings non-deliverable forwards to DeFi, fully collateralized and trustless.</p>
+      </div>
+    </section>
+
+    <!-- Section 2 — Settlement -->
+    <section class="section">
+      <div class="section-inner">
+        <div class="tag">002 — Settlement</div>
+        <h2>Crossing</h2>
+        <p>Pure price exposure. Chainlink oracles settle the difference in USDC at expiry. No physical delivery, no counterparty risk. Just math.</p>
+      </div>
+    </section>
+
+    <!-- Section 3 — Architecture -->
+    <section class="section">
+      <div class="section-inner">
+        <div class="tag">003 — Architecture</div>
+        <h2>Descent</h2>
+        <p>A fully on-chain order book. Automated keeper bots for liquidation and settlement. An AI-native MCP layer. Every trade verifiable, every settlement trustless.</p>
+      </div>
+    </section>
+
+    <!-- Section 4 — CTA -->
+    <section class="section">
+      <div class="section-inner">
+        <div class="tag">004</div>
+        <h2><em>Enter the forward curve</em></h2>
+        <p>The future of derivatives is decentralized. Tenor Protocol — live on Avalanche.</p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="scroll-hint" id="hint">
+  <div class="dot"></div>
+  scroll
+</div>
+
+<script>
+(function () {
+  const track      = document.getElementById('track');
+  const svg        = document.getElementById('svg');
+  const progressEl = document.getElementById('progress');
+  const hint       = document.getElementById('hint');
+  const sectionEls = document.querySelectorAll('.section-inner');
+
+  const LINE_COUNT = 3;
+  const GAP        = 32;
+  const R          = 65;
+  const WIDTHS     = [10, 8.5, 7];
+  const COLORS     = ['#0a0a0a', '#1a1a1a', '#2a2a2a'];
+
+  let W, H;
+
+  // ──────────────────────────────────────────────
+  // PHASES — content layer
+  //
+  // A  (0.00 → 0.05)  Scroll: title → "The turn"
+  // B  (0.05 → 0.27)  Frozen on "The turn"
+  // C  (0.27 → 0.36)  Scroll up: "The turn" → "Crossing"
+  // D  (0.36 → 0.50)  Frozen on "Crossing" (lines descend right)
+  // E  (0.50 → 1.0)   Scroll remaining sections
+  // ──────────────────────────────────────────────
+
+  const PA = 0.05;
+  const PB = 0.27;
+  const PC = 0.36;
+  const PD = 0.50;
+
+  let scrollUpDistance = 0;
+
+  function getContentScroll(t) {
+    const total = 4 * H;
+    if (t <= PA) return (t / PA) * H;
+    if (t <= PB) return H;
+    if (t <= PC) {
+      const local = (t - PB) / (PC - PB);
+      return H + local * H;
+    }
+    if (t <= PD) return 2 * H;
+    const local = (t - PD) / (1 - PD);
+    return 2 * H + local * (total - 2 * H);
+  }
+
+  function getGroupScrollUp(t) {
+    if (t <= PB) return 0;
+    if (t >= PC) return 1;
+    return (t - PB) / (PC - PB);
+  }
+
+  function getHeadProgress(t) {
+    if (t <= 0) return 0;
+    if (t >= PD) return 1;
+    return t / PD;
+  }
+
+  function getRetractProgress(t) {
+    const S = PC;
+    const E = PC + (PD - PC) * 0.7;
+    if (t <= S) return 0;
+    if (t >= E) return 1;
+    return (t - S) / (E - S);
+  }
+
+  // ─── BUILD ───
+
+  let linesGroup;
+  let pathEls = [], totalLens = [], descentStarts = [];
+  let turnYVal = 0;
+
+  function buildLines() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    svg.innerHTML = '';
+    pathEls = [];
+    totalLens = [];
+    descentStarts = [];
+
+    const margin = 80;
+    turnYVal = H * 0.78;
+    const startY = -10;
+    const extBot = H * 1.5;
+
+    scrollUpDistance = turnYVal + R + 20;
+
+    linesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    linesGroup.setAttribute('id', 'linesG');
+    svg.appendChild(linesGroup);
+
+    for (let i = 0; i < LINE_COUNT; i++) {
+      const off = i * GAP;
+      const lx = margin + off;
+      const rx = W - margin - off;
+      const ty = turnYVal + off;
+
+      const d = [
+        `M ${lx} ${startY}`,
+        `L ${lx} ${ty - R}`,
+        `Q ${lx} ${ty} ${lx + R} ${ty}`,
+        `L ${rx - R} ${ty}`,
+        `Q ${rx} ${ty} ${rx} ${ty + R}`,
+        `L ${rx} ${H + extBot}`
+      ].join(' ');
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('class', 'line-path');
+      path.setAttribute('stroke', COLORS[i]);
+      path.setAttribute('stroke-width', WIDTHS[i]);
+      linesGroup.appendChild(path);
+
+      const len = path.getTotalLength();
+      const vertL = (ty - R) - startY;
+      const arc   = Math.PI * R / 2;
+      const horiz = (rx - R) - (lx + R);
+      const ds    = vertL + arc + horiz + arc;
+
+      pathEls.push(path);
+      totalLens.push(len);
+      descentStarts.push(ds);
+    }
+  }
+
+  function ease(t) {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+  function clamp01(v) { return Math.min(1, Math.max(0, v)); }
+
+  function update() {
+    const scrollTop = window.scrollY;
+    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    const t = clamp01(scrollTop / maxScroll);
+
+    progressEl.style.width = (t * 100) + '%';
+    hint.classList.toggle('hidden', t > 0.015);
+
+    // Content
+    track.style.transform = `translateY(${-getContentScroll(t)}px)`;
+
+    // SVG group scroll up
+    const gup = ease(getGroupScrollUp(t));
+    linesGroup.setAttribute('transform', `translate(0, ${-gup * scrollUpDistance})`);
+
+    // Lines
+    const hp = getHeadProgress(t);
+    const rp = getRetractProgress(t);
+
+    for (let i = 0; i < LINE_COUNT; i++) {
+      const stag     = i * 0.02;
+      const totalLen = totalLens[i];
+      const ds       = descentStarts[i];
+
+      const headT   = ease(clamp01((hp - stag) / (1 - stag)));
+      const drawEnd = headT * totalLen;
+
+      const retractT  = ease(clamp01((rp - stag) / (1 - stag)));
+      const drawStart = retractT * ds;
+
+      const visible = Math.max(0, drawEnd - drawStart);
+      if (visible <= 0) {
+        pathEls[i].style.strokeDasharray = `0 ${totalLen}`;
+      } else {
+        pathEls[i].style.strokeDasharray = `0 ${drawStart} ${visible} ${totalLen}`;
+      }
+      pathEls[i].style.strokeDashoffset = '0';
+    }
+
+    // Sections
+    sectionEls.forEach(el => {
+      const rect = el.getBoundingClientRect();
+      el.classList.toggle('visible', rect.top < H * 0.82);
+    });
+  }
+
+  buildLines();
+  update();
+
+  window.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
+  window.addEventListener('resize', () => { buildLines(); update(); });
+})();
+</script>
+</body>
 </html>
