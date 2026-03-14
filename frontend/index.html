@@ -30,13 +30,56 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  .scroll-runway { height: 1800vh; }
+  .scroll-runway { height: 2000vh; }
 
   .frame {
     position: fixed;
     top: 0; left: 0;
     width: 100vw; height: 100vh;
     overflow: hidden;
+  }
+
+  /* ── NAV ── */
+  .nav-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 2.5rem;
+  }
+  .nav-logo {
+    font-family: 'Monoton', cursive;
+    font-size: 1.2rem;
+    color: var(--fg);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+  }
+  .btn-launch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.4rem;
+    background: var(--fg);
+    color: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-launch:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+  .btn-launch-dark {
+    background: var(--dark-fg);
+    color: var(--dark-bg);
   }
 
   .lines-layer {
@@ -105,7 +148,6 @@
     letter-spacing: -0.03em;
     margin-bottom: 1rem;
   }
-  h1 em { font-style: italic; opacity: 0.6; }
 
   h2 {
     font-family: 'DM Sans', sans-serif;
@@ -142,11 +184,12 @@
   }
 
   .subtitle {
-    margin-top: 1.2rem;
+    margin: 1.2rem auto 0;
     font-size: clamp(1rem, 1.4vw, 1.2rem);
     opacity: 0.45;
     letter-spacing: 0.02em;
     font-weight: 400;
+    max-width: 500px;
   }
 
   .scroll-hint {
@@ -213,7 +256,7 @@
     max-width: 700px;
   }
   .dark-transition h2 { color: var(--dark-fg); }
-  .dark-transition p { color: var(--dark-fg); }
+  .dark-transition p { color: var(--dark-fg); margin: 0 auto; }
   .dark-transition .tag { color: var(--dark-fg); }
 
   .section-header { margin-bottom: 3rem; }
@@ -243,7 +286,7 @@
     color: var(--dark-fg);
   }
 
-  /* ── PAYOFF CHARTS ── */
+  /* ── PAYOFF CARDS ── */
   .payoff-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -257,23 +300,21 @@
     padding: 1.8rem;
     position: relative;
     overflow: hidden;
+    transition: transform 0.6s ease, box-shadow 0.6s ease, border-color 0.5s ease;
   }
-  .payoff-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--orange);
-    opacity: 0;
-    transition: opacity 0.3s;
+  .payoff-card.elevated {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 48px rgba(255, 69, 0, 0.12), 0 4px 16px rgba(255, 69, 0, 0.06);
+    border-color: rgba(255, 69, 0, 0.18);
   }
-  .payoff-card:hover::before { opacity: 1; }
 
   .card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 1.2rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
   .card-title {
     font-weight: 600;
@@ -507,13 +548,16 @@
     border-radius: 10px;
     background: rgba(255,255,255,0.015);
     border: 1px solid rgba(232,224,212,0.04);
-    transition: all 0.4s;
-    opacity: 0.4;
+    transition: all 0.5s ease;
+    opacity: 0.25;
+    transform: translateY(4px);
   }
   .flow-step.active {
     opacity: 1;
-    border-color: var(--orange);
+    transform: translateY(0);
+    border-color: rgba(255, 69, 0, 0.4);
     background: var(--orange-dim);
+    box-shadow: 0 8px 32px rgba(255, 69, 0, 0.1);
   }
   .flow-num {
     font-family: 'JetBrains Mono', monospace;
@@ -543,54 +587,26 @@
     max-width: none;
   }
 
-  /* ── SETTLEMENT ── */
-  .settlement-visual {
-    margin-top: 2.5rem;
+  /* ── EXPIRY COMPARISON ── */
+  .expiry-summary {
+    margin-top: 1.5rem;
+    padding: 1.2rem 1.8rem;
+    border-radius: 12px;
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(232,224,212,0.06);
-    border-radius: 12px;
-    padding: 2rem;
+    text-align: center;
+    transition: transform 0.6s ease, box-shadow 0.6s ease, border-color 0.5s ease;
   }
-  .settlement-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.5rem;
+  .expiry-summary.elevated {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 36px rgba(255, 69, 0, 0.1);
+    border-color: rgba(255, 69, 0, 0.15);
   }
-  .settlement-pair {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 500;
-    font-size: 0.9rem;
-    color: var(--dark-fg);
+  .expiry-summary .card-title {
+    font-size: 1.05rem;
   }
-  .settlement-expiry {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    opacity: 0.35;
-    color: var(--dark-fg);
-  }
-  .pnl-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(232,224,212,0.04);
-    font-size: 0.82rem;
-    color: var(--dark-fg);
-  }
-  .pnl-row:last-child { border-bottom: none; }
-  .pnl-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    opacity: 0.5;
-  }
-  .pnl-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-  }
-  .pnl-value { font-weight: 600; font-family: 'JetBrains Mono', monospace; }
 
-  /* ── FADE-IN for dark sections ── */
+  /* ── FADE-IN ── */
   .fade-in {
     opacity: 0;
     transform: translateY(30px);
@@ -609,6 +625,8 @@
     .payoff-grid { grid-template-columns: 1fr; }
     .clob-wrapper { grid-template-columns: 1fr; }
     .dark-section { padding: 3rem 1.5rem; }
+    .nav-bar { padding: 1rem 1.2rem; }
+    .btn-launch { padding: 0.5rem 1rem; font-size: 0.75rem; }
   }
 </style>
 </head>
@@ -616,6 +634,11 @@
 
 <div class="progress" id="progress"></div>
 <div class="scroll-runway"></div>
+
+<nav class="nav-bar" id="navBar">
+  <a class="nav-logo" href="#">Tenor</a>
+  <a class="btn-launch" id="btnLaunch" href="https://tenor-protocol.vercel.app/trade">Launch App &rarr;</a>
+</nav>
 
 <div class="frame">
   <div class="lines-layer">
@@ -674,11 +697,11 @@
       <div class="section-inner">
         <div class="tag" style="color: var(--dark-fg);">Deep Dive</div>
         <h2>How Tenor Works</h2>
-        <p style="margin: 0 auto;">Interactive breakdowns of payoff structure, order matching, and settlement mechanics.</p>
+        <p>Interactive breakdowns of payoff structure, order matching, and settlement mechanics.</p>
       </div>
     </div>
 
-    <!-- ═══ SECTION 6 — Payoff Structure ═══ -->
+    <!-- ═══ DARK 1 — Payoff Structure ═══ -->
     <div class="dark-section" style="padding-top: 4rem;">
       <div class="section-inner fade-in">
         <div class="section-header">
@@ -741,11 +764,14 @@
           </div>
         </div>
 
-        <!-- Interactive slider -->
+        <!-- Interactive comparison -->
         <div class="payoff-card" style="margin-bottom: 2rem;">
           <div class="card-header">
-            <span class="card-title">Interactive: drag settlement price</span>
-            <span class="card-badge badge-forward" id="pnlBadge">PnL: $0</span>
+            <span class="card-title">Interactive: drag to compare</span>
+            <div style="display: flex; gap: 0.5rem;">
+              <span class="card-badge badge-forward" id="pnlBadgeFwd">Forward: $0</span>
+              <span class="card-badge badge-option" id="pnlBadgeOpt">Option: -$1,600</span>
+            </div>
           </div>
           <div class="chart-container"><canvas id="chartInteractive"></canvas></div>
           <div class="price-control">
@@ -796,8 +822,8 @@
       </div>
     </div>
 
-    <!-- ═══ SECTION 7 — Order Book ═══ -->
-    <div class="dark-section">
+    <!-- ═══ DARK 2 — CLOB (scroll-frozen) ═══ -->
+    <div class="dark-section" id="clobSection">
       <div class="section-inner fade-in">
         <div class="section-header">
           <div class="section-label">02 — Order Book</div>
@@ -850,41 +876,93 @@
       </div>
     </div>
 
-    <!-- ═══ SECTION 8 — Settlement ═══ -->
+    <!-- ═══ DARK 3 — Forward vs Option at Expiry ═══ -->
     <div class="dark-section" style="padding-bottom: 8rem;">
       <div class="section-inner fade-in">
         <div class="section-header">
-          <div class="section-label">03 — Settlement</div>
-          <div class="section-title">Cash Settlement, Zero Delivery</div>
-          <p class="section-sub">No tokens change hands. At expiry, only the price difference is settled in USDC via Chainlink oracle. Collateral is returned.</p>
+          <div class="section-label">03 — At Expiry</div>
+          <div class="section-title">Forward vs Option: Who Wins?</div>
+          <p class="section-sub">Same trade, same direction, same settlement price. The difference is what you paid to get in.</p>
         </div>
 
-        <div class="settlement-visual">
-          <div class="settlement-header">
-            <span class="settlement-pair">ETH / USDC — 30 Day</span>
-            <span class="settlement-expiry">Expires in 30d 00h 00m</span>
+        <div class="price-control" style="margin-top: 0; margin-bottom: 2rem;">
+          <label>Settlement Price</label>
+          <input type="range" id="expirySlider" min="1800" max="3200" value="2800" step="10">
+          <span class="price-readout" id="expiryReadout">$2,800</span>
+        </div>
+
+        <div class="payoff-grid">
+          <!-- Forward card -->
+          <div class="payoff-card" id="fwdExpiryCard">
+            <div class="card-header">
+              <span class="card-title">Long Forward (Tenor)</span>
+              <span class="card-badge badge-forward" id="fwdExpiryBadge">+$1,500</span>
+            </div>
+            <div class="card-stats" style="border-top: none; padding-top: 0;">
+              <div class="stat-item">
+                <span class="stat-label">Entry Price</span>
+                <span class="stat-value">$2,500</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Contracts</span>
+                <span class="stat-value">5</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Upfront Cost</span>
+                <span class="stat-value stat-green">$0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Collateral</span>
+                <span class="stat-value">$25,000 (returned)</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">PnL at Expiry</span>
+                <span class="stat-value stat-green" id="fwdPnl">+$1,500</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Net Return</span>
+                <span class="stat-value stat-green" id="fwdReturn">+$1,500</span>
+              </div>
+            </div>
           </div>
 
-          <div class="price-control" style="margin-top: 0;">
-            <label>Settlement Price</label>
-            <input type="range" id="settlementSlider" min="2000" max="3000" value="2800" step="10">
-            <span class="price-readout" id="settlementReadout">$2,800</span>
+          <!-- Option card -->
+          <div class="payoff-card" id="optExpiryCard">
+            <div class="card-header">
+              <span class="card-title">Long Call Option</span>
+              <span class="card-badge badge-option" id="optExpiryBadge">-$100</span>
+            </div>
+            <div class="card-stats" style="border-top: none; padding-top: 0;">
+              <div class="stat-item">
+                <span class="stat-label">Strike Price</span>
+                <span class="stat-value">$2,500</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Contracts</span>
+                <span class="stat-value">5</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Premium Paid</span>
+                <span class="stat-value stat-red">-$1,600</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Intrinsic Value</span>
+                <span class="stat-value" id="optIntrinsic">$1,500</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">PnL at Expiry</span>
+                <span class="stat-value stat-red" id="optPnl">-$100</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Net Return</span>
+                <span class="stat-value stat-red" id="optReturn">-$100</span>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div style="margin-top: 2rem;">
-            <div class="pnl-row">
-              <span class="pnl-label"><span class="pnl-dot" style="background: var(--green);"></span> Alice (LONG at $2,500 x 5)</span>
-              <span class="pnl-value" id="alicePnl" style="color: var(--green);">+$1,500</span>
-            </div>
-            <div class="pnl-row">
-              <span class="pnl-label"><span class="pnl-dot" style="background: var(--red);"></span> Bob (SHORT at $2,500 x 5)</span>
-              <span class="pnl-value" id="bobPnl" style="color: var(--red);">-$1,500</span>
-            </div>
-            <div class="pnl-row" style="opacity: 0.4;">
-              <span class="pnl-label">Net (zero-sum)</span>
-              <span class="pnl-value" style="color: var(--dark-fg);">$0</span>
-            </div>
-          </div>
+        <div class="expiry-summary" id="advantageCard">
+          <span class="card-title" id="advantageText">Forward advantage: <span style="color: var(--green);">+$1,600</span> saved vs option premium</span>
         </div>
       </div>
     </div>
@@ -899,38 +977,56 @@
 
 <script>
 (function () {
-  const track      = document.getElementById('track');
-  const svg        = document.getElementById('svg');
-  const progressEl = document.getElementById('progress');
-  const hint       = document.getElementById('hint');
-  const sectionEls = document.querySelectorAll('.section-inner');
+  var track      = document.getElementById('track');
+  var svg        = document.getElementById('svg');
+  var progressEl = document.getElementById('progress');
+  var hint       = document.getElementById('hint');
+  var sectionEls = document.querySelectorAll('.section-inner');
+  var navBar     = document.getElementById('navBar');
+  var btnLaunch  = document.getElementById('btnLaunch');
 
-  const LINE_COUNT = 3;
-  const GAP        = 32;
-  const R          = 65;
-  const WIDTHS     = [10, 8.5, 7];
-  const COLORS     = ['#0a0a0a', '#1a1a1a', '#2a2a2a'];
+  var LINE_COUNT = 3;
+  var GAP        = 32;
+  var R          = 65;
+  var WIDTHS     = [10, 8.5, 7];
+  var COLORS     = ['#0a0a0a', '#1a1a1a', '#2a2a2a'];
 
-  let W, H;
+  var W, H;
 
-  const PA = 0.05;
-  const PB = 0.27;
-  const PC = 0.36;
-  const PD = 0.50;
+  var PA = 0.05;
+  var PB = 0.27;
+  var PC = 0.36;
+  var PD = 0.50;
+  var PE1 = 0.68;
+  var PE2 = 0.84;
 
-  let scrollUpDistance = 0;
+  var scrollUpDistance = 0;
+  var clobOffset = 0;
+
+  function computeOffsets() {
+    var clobEl = document.getElementById('clobSection');
+    if (clobEl) clobOffset = clobEl.offsetTop;
+  }
 
   function getContentScroll(t) {
-    const total = track.scrollHeight - H;
+    var total = track.scrollHeight - H;
     if (t <= PA) return (t / PA) * H;
     if (t <= PB) return H;
-    if (t <= PC) {
-      const local = (t - PB) / (PC - PB);
-      return H + local * H;
-    }
+    if (t <= PC) return H + ((t - PB) / (PC - PB)) * H;
     if (t <= PD) return 2 * H;
-    const local = (t - PD) / (1 - PD);
-    return 2 * H + local * (total - 2 * H);
+
+    if (clobOffset > 0) {
+      if (t <= PE1) {
+        var local = (t - PD) / (PE1 - PD);
+        return 2 * H + local * (clobOffset - 2 * H);
+      }
+      if (t <= PE2) return clobOffset;
+      var local2 = (t - PE2) / (1 - PE2);
+      return clobOffset + local2 * (total - clobOffset);
+    }
+
+    var fallback = (t - PD) / (1 - PD);
+    return 2 * H + fallback * (total - 2 * H);
   }
 
   function getGroupScrollUp(t) {
@@ -946,16 +1042,16 @@
   }
 
   function getRetractProgress(t) {
-    const S = PC;
-    const E = PC + (PD - PC) * 0.7;
+    var S = PC;
+    var E = PC + (PD - PC) * 0.7;
     if (t <= S) return 0;
     if (t >= E) return 1;
     return (t - S) / (E - S);
   }
 
-  let linesGroup;
-  let pathEls = [], totalLens = [], descentStarts = [];
-  let turnYVal = 0;
+  var linesGroup;
+  var pathEls = [], totalLens = [], descentStarts = [];
+  var turnYVal = 0;
 
   function buildLines() {
     W = window.innerWidth;
@@ -965,10 +1061,10 @@
     totalLens = [];
     descentStarts = [];
 
-    const margin = 80;
+    var margin = 80;
     turnYVal = H * 0.78;
-    const startY = -10;
-    const extBot = H * 1.5;
+    var startY = -10;
+    var extBot = H * 1.5;
 
     scrollUpDistance = turnYVal + R + 20;
 
@@ -976,38 +1072,38 @@
     linesGroup.setAttribute('id', 'linesG');
     svg.appendChild(linesGroup);
 
-    for (let i = 0; i < LINE_COUNT; i++) {
-      const off = i * GAP;
-      const lx = margin + off;
-      const rx = W - margin - off;
-      const ty = turnYVal + off;
+    for (var i = 0; i < LINE_COUNT; i++) {
+      var off = i * GAP;
+      var lx = margin + off;
+      var rx = W - margin - off;
+      var ty = turnYVal + off;
 
-      const d = [
-        `M ${lx} ${startY}`,
-        `L ${lx} ${ty - R}`,
-        `Q ${lx} ${ty} ${lx + R} ${ty}`,
-        `L ${rx - R} ${ty}`,
-        `Q ${rx} ${ty} ${rx} ${ty + R}`,
-        `L ${rx} ${H + extBot}`
-      ].join(' ');
+      var d = 'M ' + lx + ' ' + startY +
+        ' L ' + lx + ' ' + (ty - R) +
+        ' Q ' + lx + ' ' + ty + ' ' + (lx + R) + ' ' + ty +
+        ' L ' + (rx - R) + ' ' + ty +
+        ' Q ' + rx + ' ' + ty + ' ' + rx + ' ' + (ty + R) +
+        ' L ' + rx + ' ' + (H + extBot);
 
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', d);
       path.setAttribute('class', 'line-path');
       path.setAttribute('stroke', COLORS[i]);
       path.setAttribute('stroke-width', WIDTHS[i]);
       linesGroup.appendChild(path);
 
-      const len = path.getTotalLength();
-      const vertL = (ty - R) - startY;
-      const arc   = Math.PI * R / 2;
-      const horiz = (rx - R) - (lx + R);
-      const ds    = vertL + arc + horiz + arc;
+      var len = path.getTotalLength();
+      var vertL = (ty - R) - startY;
+      var arc   = Math.PI * R / 2;
+      var horiz = (rx - R) - (lx + R);
+      var ds    = vertL + arc + horiz + arc;
 
       pathEls.push(path);
       totalLens.push(len);
       descentStarts.push(ds);
     }
+
+    computeOffsets();
   }
 
   function ease(t) {
@@ -1015,101 +1111,135 @@
   }
   function clamp01(v) { return Math.min(1, Math.max(0, v)); }
 
-  // ── Charts drawn? ──
-  let chartsDrawn = false;
+  var chartsDrawn = false;
+  var bookStarted = false;
 
   function update() {
-    const scrollTop = window.scrollY;
-    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    const t = clamp01(scrollTop / maxScroll);
+    var scrollTop = window.scrollY;
+    var maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    var t = clamp01(scrollTop / maxScroll);
 
     progressEl.style.width = (t * 100) + '%';
     hint.classList.toggle('hidden', t > 0.015);
 
-    track.style.transform = `translateY(${-getContentScroll(t)}px)`;
+    // Nav style: dark when in dark sections
+    var inDark = t > 0.48;
+    if (inDark) {
+      navBar.style.color = 'var(--dark-fg)';
+      btnLaunch.classList.add('btn-launch-dark');
+    } else {
+      navBar.style.color = '';
+      btnLaunch.classList.remove('btn-launch-dark');
+    }
 
-    const gup = ease(getGroupScrollUp(t));
-    linesGroup.setAttribute('transform', `translate(0, ${-gup * scrollUpDistance})`);
+    track.style.transform = 'translateY(' + (-getContentScroll(t)) + 'px)';
 
-    // Hide SVG lines when entering dark sections
-    const lineOpacity = t > 0.48 ? Math.max(0, 1 - (t - 0.48) / 0.04) : 1;
+    var gup = ease(getGroupScrollUp(t));
+    linesGroup.setAttribute('transform', 'translate(0, ' + (-gup * scrollUpDistance) + ')');
+
+    // Fade SVG lines entering dark sections
+    var lineOpacity = t > 0.48 ? Math.max(0, 1 - (t - 0.48) / 0.04) : 1;
     svg.style.opacity = lineOpacity;
 
-    const hp = getHeadProgress(t);
-    const rp = getRetractProgress(t);
+    var hp = getHeadProgress(t);
+    var rp = getRetractProgress(t);
 
-    for (let i = 0; i < LINE_COUNT; i++) {
-      const stag     = i * 0.02;
-      const totalLen = totalLens[i];
-      const ds       = descentStarts[i];
+    for (var i = 0; i < LINE_COUNT; i++) {
+      var stag     = i * 0.02;
+      var totalLen = totalLens[i];
+      var ds       = descentStarts[i];
 
-      const headT   = ease(clamp01((hp - stag) / (1 - stag)));
-      const drawEnd = headT * totalLen;
+      var headT   = ease(clamp01((hp - stag) / (1 - stag)));
+      var drawEnd = headT * totalLen;
 
-      const retractT  = ease(clamp01((rp - stag) / (1 - stag)));
-      const drawStart = retractT * ds;
+      var retractT  = ease(clamp01((rp - stag) / (1 - stag)));
+      var drawStart = retractT * ds;
 
-      const visible = Math.max(0, drawEnd - drawStart);
+      var visible = Math.max(0, drawEnd - drawStart);
       if (visible <= 0) {
-        pathEls[i].style.strokeDasharray = `0 ${totalLen}`;
+        pathEls[i].style.strokeDasharray = '0 ' + totalLen;
       } else {
-        pathEls[i].style.strokeDasharray = `0 ${drawStart} ${visible} ${totalLen}`;
+        pathEls[i].style.strokeDasharray = '0 ' + drawStart + ' ' + visible + ' ' + totalLen;
       }
       pathEls[i].style.strokeDashoffset = '0';
     }
 
-    // Section reveal
-    sectionEls.forEach(el => {
-      const rect = el.getBoundingClientRect();
+    // Section reveal (animated orange sections)
+    sectionEls.forEach(function(el) {
+      var rect = el.getBoundingClientRect();
       el.classList.toggle('visible', rect.top < H * 0.82);
     });
 
     // Fade-in for dark sections
-    document.querySelectorAll('.fade-in').forEach(el => {
-      const rect = el.getBoundingClientRect();
+    document.querySelectorAll('.fade-in').forEach(function(el) {
+      var rect = el.getBoundingClientRect();
       if (rect.top < H * 0.85) el.classList.add('visible');
     });
 
-    // Draw charts when they become visible
-    if (!chartsDrawn && t > 0.45) {
+    // Card elevation + orange glow
+    document.querySelectorAll('.payoff-card, .expiry-summary').forEach(function(el) {
+      var rect = el.getBoundingClientRect();
+      el.classList.toggle('elevated', rect.top < H * 0.78 && rect.bottom > 0);
+    });
+
+    // CLOB flow steps — scroll-driven during freeze phase
+    if (t > PE1 && t <= PE2 && clobOffset > 0) {
+      var clobT = (t - PE1) / (PE2 - PE1);
+      var activeStep = Math.min(3, Math.floor(clobT * 4));
+      document.querySelectorAll('.flow-step').forEach(function(el, idx) {
+        el.classList.toggle('active', idx <= activeStep);
+      });
+    } else if (t <= PE1) {
+      document.querySelectorAll('.flow-step').forEach(function(el) {
+        el.classList.remove('active');
+      });
+    }
+
+    // Init charts when approaching dark sections
+    if (!chartsDrawn && t > 0.42) {
       chartsDrawn = true;
       setTimeout(initCharts, 100);
+    }
+
+    // Start orderbook when approaching CLOB
+    if (!bookStarted && t > 0.55) {
+      bookStarted = true;
+      renderBook();
+      setInterval(simulateBook, 1200);
     }
   }
 
   // ═══════════════════════════════════════════
   // PAYOFF CHARTS
   // ═══════════════════════════════════════════
-  const var_green = '#22c55e';
-  const var_bg = '#0a0a0a';
+  var var_green = '#22c55e';
+  var var_bg_dark = '#0a0a0a';
 
   function drawPayoff(canvasId, type) {
-    const canvas = document.getElementById(canvasId);
+    var canvas = document.getElementById(canvasId);
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.parentElement.getBoundingClientRect();
+    var ctx = canvas.getContext('2d');
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.parentElement.getBoundingClientRect();
     if (rect.width === 0) return;
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
-    const CW = rect.width, CH = rect.height;
+    var CW = rect.width, CH = rect.height;
 
-    const pad = { top: 20, right: 20, bottom: 30, left: 50 };
-    const cw = CW - pad.left - pad.right;
-    const ch = CH - pad.top - pad.bottom;
+    var pad = { top: 20, right: 20, bottom: 30, left: 50 };
+    var cw = CW - pad.left - pad.right;
+    var ch = CH - pad.top - pad.bottom;
 
-    const strike = 2500, premium = 320, collateral = 5000, contracts = 5;
+    var strike = 2500, premium = 320, collateral = 5000, contracts = 5;
     function priceToX(p) { return pad.left + ((p - 1800) / 1400) * cw; }
     function pnlToY(pnl) { return pad.top + ch/2 - (pnl / 2000) * (ch/2); }
 
     ctx.strokeStyle = 'rgba(232,224,212,0.04)';
     ctx.lineWidth = 1;
-    for (let p = 1800; p <= 3200; p += 200) {
-      const x = priceToX(p);
-      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, CH - pad.bottom); ctx.stroke();
+    for (var p = 1800; p <= 3200; p += 200) {
+      ctx.beginPath(); ctx.moveTo(priceToX(p), pad.top); ctx.lineTo(priceToX(p), CH - pad.bottom); ctx.stroke();
     }
-
     ctx.strokeStyle = 'rgba(232,224,212,0.1)';
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.moveTo(pad.left, pnlToY(0)); ctx.lineTo(CW - pad.right, pnlToY(0)); ctx.stroke();
@@ -1118,257 +1248,202 @@
     ctx.fillStyle = 'rgba(232,224,212,0.25)';
     ctx.font = '10px "JetBrains Mono"';
     ctx.textAlign = 'center';
-    for (let p = 2000; p <= 3200; p += 400) ctx.fillText('$' + p, priceToX(p), CH - pad.bottom + 16);
+    for (p = 2000; p <= 3200; p += 400) ctx.fillText('$' + p, priceToX(p), CH - pad.bottom + 16);
     ctx.textAlign = 'right';
     ctx.fillText('+$2k', pad.left - 6, pnlToY(2000) + 3);
     ctx.fillText('$0', pad.left - 6, pnlToY(0) + 3);
     ctx.fillText('-$2k', pad.left - 6, pnlToY(-2000) + 3);
 
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
     if (type === 'option') {
       ctx.beginPath();
-      for (let p = 1800; p <= 3200; p += 5) {
-        const pnl = p <= strike ? -premium : (p - strike) * contracts / contracts - premium;
-        const scaled = pnl / premium * 320;
-        const x = priceToX(p), y = pnlToY(scaled);
-        if (p === 1800) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      for (p = 1800; p <= 3200; p += 5) {
+        var pnl = p <= strike ? -premium : (p - strike) - premium;
+        var scaled = pnl / premium * 320;
+        if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(scaled)); else ctx.lineTo(priceToX(p), pnlToY(scaled));
       }
-      ctx.lineTo(priceToX(3200), pnlToY(0));
-      ctx.lineTo(priceToX(1800), pnlToY(0));
-      ctx.closePath();
-      const grad = ctx.createLinearGradient(0, pnlToY(1500), 0, pnlToY(-500));
-      grad.addColorStop(0, 'rgba(34,197,94,0.08)');
-      grad.addColorStop(0.5, 'rgba(34,197,94,0)');
-      grad.addColorStop(1, 'rgba(239,68,68,0.06)');
-      ctx.fillStyle = grad;
-      ctx.fill();
+      ctx.lineTo(priceToX(3200), pnlToY(0)); ctx.lineTo(priceToX(1800), pnlToY(0)); ctx.closePath();
+      var grad = ctx.createLinearGradient(0, pnlToY(1500), 0, pnlToY(-500));
+      grad.addColorStop(0, 'rgba(34,197,94,0.08)'); grad.addColorStop(0.5, 'rgba(34,197,94,0)'); grad.addColorStop(1, 'rgba(239,68,68,0.06)');
+      ctx.fillStyle = grad; ctx.fill();
 
       ctx.beginPath();
-      for (let p = 1800; p <= 3200; p += 5) {
-        const pnl = p <= strike ? -premium : (p - strike) * contracts / contracts - premium;
-        const scaled = pnl / premium * 320;
-        const x = priceToX(p), y = pnlToY(scaled);
-        if (p === 1800) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      for (p = 1800; p <= 3200; p += 5) {
+        pnl = p <= strike ? -premium : (p - strike) - premium;
+        scaled = pnl / premium * 320;
+        if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(scaled)); else ctx.lineTo(priceToX(p), pnlToY(scaled));
       }
-      ctx.strokeStyle = '#ef4444';
-      ctx.stroke();
-
-      ctx.fillStyle = 'rgba(239,68,68,0.4)';
-      ctx.font = '9px "JetBrains Mono"';
-      ctx.textAlign = 'center';
-      ctx.fillText('premium lost', priceToX(2150), pnlToY(-premium / premium * 320) - 8);
+      ctx.strokeStyle = '#ef4444'; ctx.stroke();
+      ctx.fillStyle = 'rgba(239,68,68,0.4)'; ctx.font = '9px "JetBrains Mono"'; ctx.textAlign = 'center';
+      ctx.fillText('premium lost', priceToX(2150), pnlToY(-320) - 8);
     } else {
       ctx.beginPath();
-      for (let p = 1800; p <= 3200; p += 5) {
-        const pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
-        const x = priceToX(p), y = pnlToY(pnl);
-        if (p === 1800) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      for (p = 1800; p <= 3200; p += 5) {
+        pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
+        if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(pnl)); else ctx.lineTo(priceToX(p), pnlToY(pnl));
       }
-      ctx.lineTo(priceToX(3200), pnlToY(0));
-      ctx.lineTo(priceToX(1800), pnlToY(0));
-      ctx.closePath();
-      const grad = ctx.createLinearGradient(0, pnlToY(2000), 0, pnlToY(-2000));
-      grad.addColorStop(0, 'rgba(34,197,94,0.1)');
-      grad.addColorStop(0.5, 'transparent');
-      grad.addColorStop(1, 'rgba(239,68,68,0.08)');
-      ctx.fillStyle = grad;
-      ctx.fill();
+      ctx.lineTo(priceToX(3200), pnlToY(0)); ctx.lineTo(priceToX(1800), pnlToY(0)); ctx.closePath();
+      grad = ctx.createLinearGradient(0, pnlToY(2000), 0, pnlToY(-2000));
+      grad.addColorStop(0, 'rgba(34,197,94,0.1)'); grad.addColorStop(0.5, 'transparent'); grad.addColorStop(1, 'rgba(239,68,68,0.08)');
+      ctx.fillStyle = grad; ctx.fill();
 
       ctx.beginPath();
-      for (let p = 1800; p <= 3200; p += 5) {
-        const pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
-        const x = priceToX(p), y = pnlToY(pnl);
-        if (p === 1800) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      for (p = 1800; p <= 3200; p += 5) {
+        pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
+        if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(pnl)); else ctx.lineTo(priceToX(p), pnlToY(pnl));
       }
-      ctx.strokeStyle = var_green;
-      ctx.stroke();
-
-      ctx.fillStyle = 'rgba(255,69,0,0.5)';
-      ctx.font = '9px "JetBrains Mono"';
-      ctx.textAlign = 'center';
+      ctx.strokeStyle = var_green; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,69,0,0.5)'; ctx.font = '9px "JetBrains Mono"'; ctx.textAlign = 'center';
       ctx.fillText('entry $2,500', priceToX(2500), pnlToY(0) - 10);
     }
 
-    ctx.setLineDash([3, 3]);
-    ctx.strokeStyle = 'rgba(255,69,0,0.3)';
-    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(255,69,0,0.3)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(priceToX(strike), pad.top); ctx.lineTo(priceToX(strike), CH - pad.bottom); ctx.stroke();
     ctx.setLineDash([]);
   }
 
   function drawInteractive(settlement) {
-    const canvas = document.getElementById('chartInteractive');
+    var canvas = document.getElementById('chartInteractive');
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.parentElement.getBoundingClientRect();
+    var ctx = canvas.getContext('2d');
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.parentElement.getBoundingClientRect();
     if (rect.width === 0) return;
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
-    const CW = rect.width, CH = rect.height;
+    var CW = rect.width, CH = rect.height;
 
-    const pad = { top: 20, right: 20, bottom: 30, left: 50 };
-    const cw = CW - pad.left - pad.right;
-    const ch = CH - pad.top - pad.bottom;
-    const strike = 2500, contracts = 5, collateral = 5000, premium = 320;
+    var pad = { top: 20, right: 20, bottom: 30, left: 50 };
+    var cw = CW - pad.left - pad.right;
+    var ch = CH - pad.top - pad.bottom;
+    var strike = 2500, contracts = 5, collateral = 5000, premium = 320, totalPremium = 1600;
 
     function priceToX(p) { return pad.left + ((p - 1800) / 1400) * cw; }
     function pnlToY(pnl) { return pad.top + ch/2 - (pnl / 2000) * (ch/2); }
 
-    ctx.strokeStyle = 'rgba(232,224,212,0.04)';
-    ctx.lineWidth = 1;
-    for (let p = 1800; p <= 3200; p += 200) {
-      const x = priceToX(p);
-      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, CH - pad.bottom); ctx.stroke();
+    // Grid
+    ctx.strokeStyle = 'rgba(232,224,212,0.04)'; ctx.lineWidth = 1;
+    for (var p = 1800; p <= 3200; p += 200) {
+      ctx.beginPath(); ctx.moveTo(priceToX(p), pad.top); ctx.lineTo(priceToX(p), CH - pad.bottom); ctx.stroke();
     }
-    ctx.strokeStyle = 'rgba(232,224,212,0.08)';
-    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = 'rgba(232,224,212,0.08)'; ctx.setLineDash([4,4]);
     ctx.beginPath(); ctx.moveTo(pad.left, pnlToY(0)); ctx.lineTo(CW-pad.right, pnlToY(0)); ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = 'rgba(232,224,212,0.25)';
-    ctx.font = '10px "JetBrains Mono"';
-    ctx.textAlign = 'center';
-    for (let p = 2000; p <= 3200; p += 400) ctx.fillText('$'+p, priceToX(p), CH-pad.bottom+16);
+    ctx.fillStyle = 'rgba(232,224,212,0.25)'; ctx.font = '10px "JetBrains Mono"'; ctx.textAlign = 'center';
+    for (p = 2000; p <= 3200; p += 400) ctx.fillText('$'+p, priceToX(p), CH-pad.bottom+16);
 
-    // Option payoff (dimmed)
-    ctx.beginPath();
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.3;
-    for (let p = 1800; p <= 3200; p += 5) {
-      const pnl = p <= strike ? -premium : (p - strike) * contracts / contracts - premium;
-      const scaled = pnl / premium * 320;
-      const x = priceToX(p), y = pnlToY(scaled);
-      if (p === 1800) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    // Option payoff line
+    ctx.beginPath(); ctx.lineWidth = 2; ctx.globalAlpha = 0.6;
+    for (p = 1800; p <= 3200; p += 5) {
+      var optPnl = (p <= strike ? 0 : (p - strike) * contracts) - totalPremium;
+      if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(optPnl)); else ctx.lineTo(priceToX(p), pnlToY(optPnl));
     }
-    ctx.strokeStyle = '#ef4444';
-    ctx.stroke();
-    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#ef4444'; ctx.stroke(); ctx.globalAlpha = 1;
 
-    // Forward
-    const pnlFwd = Math.max(-collateral, Math.min(collateral, (settlement - strike) * contracts));
+    // Forward payoff
+    var pnlFwd = Math.max(-collateral, Math.min(collateral, (settlement - strike) * contracts));
+    var optSettlePnl = (settlement <= strike ? 0 : (settlement - strike) * contracts) - totalPremium;
 
+    // Forward fill
     ctx.beginPath();
-    for (let p = 1800; p <= settlement; p += 5) {
-      const pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
-      const x = priceToX(p), y = pnlToY(pnl);
-      if (p === 1800) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    for (p = 1800; p <= settlement; p += 5) {
+      var fPnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
+      if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(fPnl)); else ctx.lineTo(priceToX(p), pnlToY(fPnl));
     }
-    ctx.lineTo(priceToX(settlement), pnlToY(0));
-    ctx.lineTo(priceToX(1800), pnlToY(0));
-    ctx.closePath();
-    const isProfit = pnlFwd >= 0;
-    ctx.fillStyle = isProfit ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
-    ctx.fill();
+    ctx.lineTo(priceToX(settlement), pnlToY(0)); ctx.lineTo(priceToX(1800), pnlToY(0)); ctx.closePath();
+    ctx.fillStyle = pnlFwd >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'; ctx.fill();
 
-    ctx.beginPath();
-    ctx.lineWidth = 2.5;
-    for (let p = 1800; p <= 3200; p += 5) {
-      const pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
-      const x = priceToX(p), y = pnlToY(pnl);
-      if (p === 1800) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    // Forward line
+    ctx.beginPath(); ctx.lineWidth = 2.5;
+    for (p = 1800; p <= 3200; p += 5) {
+      fPnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
+      if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(fPnl)); else ctx.lineTo(priceToX(p), pnlToY(fPnl));
     }
-    ctx.strokeStyle = var_green;
-    ctx.stroke();
+    ctx.strokeStyle = var_green; ctx.stroke();
 
-    const sx = priceToX(settlement), sy = pnlToY(pnlFwd);
-    ctx.setLineDash([3,3]);
-    ctx.strokeStyle = 'rgba(255,69,0,0.5)';
-    ctx.lineWidth = 1;
+    // Settlement vertical
+    var sx = priceToX(settlement);
+    ctx.setLineDash([3,3]); ctx.strokeStyle = 'rgba(255,69,0,0.5)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(sx, pad.top); ctx.lineTo(sx, CH - pad.bottom); ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.beginPath();
-    ctx.arc(sx, sy, 6, 0, Math.PI*2);
-    ctx.fillStyle = isProfit ? var_green : '#ef4444';
-    ctx.fill();
-    ctx.strokeStyle = var_bg;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    // Forward dot + label
+    var syFwd = pnlToY(pnlFwd);
+    ctx.beginPath(); ctx.arc(sx, syFwd, 6, 0, Math.PI*2);
+    ctx.fillStyle = pnlFwd >= 0 ? var_green : '#ef4444'; ctx.fill();
+    ctx.strokeStyle = var_bg_dark; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = pnlFwd >= 0 ? var_green : '#ef4444';
+    ctx.font = 'bold 11px "JetBrains Mono"'; ctx.textAlign = 'left';
+    var fSign = pnlFwd >= 0 ? '+' : '';
+    ctx.fillText('FWD ' + fSign + '$' + pnlFwd.toLocaleString(), sx + 12, syFwd - 4);
 
-    ctx.fillStyle = isProfit ? var_green : '#ef4444';
-    ctx.font = 'bold 12px "JetBrains Mono"';
-    ctx.textAlign = 'center';
-    const sign = pnlFwd >= 0 ? '+' : '';
-    ctx.fillText(sign + '$' + pnlFwd.toLocaleString(), sx, sy - 14);
+    // Option dot + label
+    var syOpt = pnlToY(optSettlePnl);
+    ctx.beginPath(); ctx.arc(sx, syOpt, 5, 0, Math.PI*2);
+    ctx.fillStyle = optSettlePnl >= 0 ? var_green : '#ef4444'; ctx.fill();
+    ctx.strokeStyle = var_bg_dark; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = optSettlePnl >= 0 ? var_green : '#ef4444';
+    ctx.font = 'bold 11px "JetBrains Mono"'; ctx.textAlign = 'left';
+    var oSign = optSettlePnl >= 0 ? '+' : '';
+    ctx.fillText('OPT ' + oSign + '$' + optSettlePnl.toLocaleString(), sx + 12, syOpt + 14);
 
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = '#ef4444';
-    ctx.font = '9px "JetBrains Mono"';
-    ctx.textAlign = 'left';
+    // Legend
+    ctx.font = '9px "JetBrains Mono"'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#ef4444'; ctx.globalAlpha = 0.6;
     ctx.fillText('-- Option payoff', pad.left + 5, pad.top + 12);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = var_green;
+    ctx.globalAlpha = 1; ctx.fillStyle = var_green;
     ctx.fillText('-- Forward payoff', pad.left + 5, pad.top + 24);
   }
 
   // ═══════════════════════════════════════════
   // ORDERBOOK
   // ═══════════════════════════════════════════
-  const baseAsks = [
+  var baseAsks = [
     { price: 2512, size: 3.2 }, { price: 2510, size: 5.8 },
     { price: 2508, size: 8.1 }, { price: 2506, size: 2.4 }, { price: 2504, size: 4.5 }
   ];
-  const baseBids = [
+  var baseBids = [
     { price: 2501, size: 6.2 }, { price: 2499, size: 3.8 },
     { price: 2497, size: 9.1 }, { price: 2495, size: 4.4 }, { price: 2493, size: 2.9 }
   ];
 
-  let asks = JSON.parse(JSON.stringify(baseAsks));
-  let bids = JSON.parse(JSON.stringify(baseBids));
-  let matchPhase = false;
+  var asks = JSON.parse(JSON.stringify(baseAsks));
+  var bids = JSON.parse(JSON.stringify(baseBids));
+  var matchPhase = false;
 
   function renderBook() {
-    const maxSize = Math.max(...asks.map(a=>a.size), ...bids.map(b=>b.size));
-    const asksDiv = document.getElementById('asks');
-    const bidsDiv = document.getElementById('bids');
+    var maxSize = Math.max.apply(null, asks.map(function(a){return a.size;}).concat(bids.map(function(b){return b.size;})));
+    var asksDiv = document.getElementById('asks');
+    var bidsDiv = document.getElementById('bids');
     if (!asksDiv || !bidsDiv) return;
 
-    asksDiv.innerHTML = asks.map((a, i) => {
-      const total = asks.slice(i).reduce((s,x) => s+x.size, 0);
-      const depth = (a.size / maxSize * 100);
-      return '<div class="ob-row ask" data-idx="'+i+'">' +
-        '<div class="ob-match"></div>' +
-        '<div class="depth-bar" style="width:'+depth+'%"></div>' +
-        '<span>'+a.size.toFixed(1)+'</span>' +
-        '<span>'+a.price.toFixed(2)+'</span>' +
-        '<span>'+total.toFixed(1)+'</span></div>';
+    asksDiv.innerHTML = asks.map(function(a, i) {
+      var total = asks.slice(i).reduce(function(s,x){return s+x.size;}, 0);
+      var depth = (a.size / maxSize * 100);
+      return '<div class="ob-row ask"><div class="ob-match"></div><div class="depth-bar" style="width:'+depth+'%"></div><span>'+a.size.toFixed(1)+'</span><span>'+a.price.toFixed(2)+'</span><span>'+total.toFixed(1)+'</span></div>';
     }).join('');
 
-    bidsDiv.innerHTML = bids.map((b, i) => {
-      const total = bids.slice(0, i+1).reduce((s,x) => s+x.size, 0);
-      const depth = (b.size / maxSize * 100);
-      return '<div class="ob-row bid" data-idx="'+i+'">' +
-        '<div class="ob-match"></div>' +
-        '<div class="depth-bar" style="width:'+depth+'%"></div>' +
-        '<span>'+b.size.toFixed(1)+'</span>' +
-        '<span>'+b.price.toFixed(2)+'</span>' +
-        '<span>'+total.toFixed(1)+'</span></div>';
+    bidsDiv.innerHTML = bids.map(function(b, i) {
+      var total = bids.slice(0, i+1).reduce(function(s,x){return s+x.size;}, 0);
+      var depth = (b.size / maxSize * 100);
+      return '<div class="ob-row bid"><div class="ob-match"></div><div class="depth-bar" style="width:'+depth+'%"></div><span>'+b.size.toFixed(1)+'</span><span>'+b.price.toFixed(2)+'</span><span>'+total.toFixed(1)+'</span></div>';
     }).join('');
 
-    const spread = asks[asks.length - 1].price - bids[0].price;
+    var spread = asks[asks.length - 1].price - bids[0].price;
     document.getElementById('spreadDisplay').textContent = 'Spread: $' + spread.toFixed(2);
-  }
-
-  function updateFlowSteps(step) {
-    document.querySelectorAll('.flow-step').forEach(function(el, i) {
-      el.classList.toggle('active', i === step);
-    });
   }
 
   function simulateBook() {
     asks.forEach(function(a) { a.size = Math.max(0.5, a.size + (Math.random()-0.5)*1.5); });
     bids.forEach(function(b) { b.size = Math.max(0.5, b.size + (Math.random()-0.5)*1.5); });
 
-    if (Math.random() < 0.15 && !matchPhase) {
+    if (Math.random() < 0.12 && !matchPhase) {
       matchPhase = true;
-      const origPrice = asks[asks.length-1].price;
+      var origPrice = asks[asks.length-1].price;
       asks[asks.length-1].price = bids[0].price;
-      updateFlowSteps(1);
       renderBook();
 
       setTimeout(function() {
@@ -1378,61 +1453,80 @@
         if (bidRows.length) bidRows[0].classList.add('matched');
       }, 100);
 
-      setTimeout(function() { updateFlowSteps(2); }, 800);
-      setTimeout(function() { updateFlowSteps(3); }, 1600);
-
       setTimeout(function() {
         asks[asks.length-1].price = origPrice;
         matchPhase = false;
-        updateFlowSteps(0);
         renderBook();
-      }, 2800);
+      }, 1500);
       return;
     }
     renderBook();
   }
 
   // ═══════════════════════════════════════════
-  // SETTLEMENT SLIDER
+  // EXPIRY COMPARISON (replaces Alice/Bob)
   // ═══════════════════════════════════════════
-  function updateSettlement(price) {
-    var entry = 2500, contracts = 5;
-    var pnl = (price - entry) * contracts;
-    document.getElementById('settlementReadout').textContent = '$' + price.toLocaleString();
-    document.getElementById('alicePnl').textContent = (pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toLocaleString();
-    document.getElementById('alicePnl').style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
-    document.getElementById('bobPnl').textContent = (-pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toLocaleString();
-    document.getElementById('bobPnl').style.color = -pnl >= 0 ? 'var(--green)' : 'var(--red)';
+  function updateExpiry(price) {
+    var entry = 2500, contracts = 5, totalPremium = 1600;
+
+    var fwdPnl = (price - entry) * contracts;
+    var intrinsic = Math.max(0, price - entry) * contracts;
+    var optPnl = intrinsic - totalPremium;
+    var advantage = fwdPnl - optPnl;
+
+    document.getElementById('expiryReadout').textContent = '$' + price.toLocaleString();
+
+    // Forward
+    var fSign = fwdPnl >= 0 ? '+' : '';
+    document.getElementById('fwdExpiryBadge').textContent = fSign + '$' + fwdPnl.toLocaleString();
+    document.getElementById('fwdExpiryBadge').className = 'card-badge ' + (fwdPnl >= 0 ? 'badge-forward' : 'badge-option');
+    document.getElementById('fwdPnl').textContent = fSign + '$' + Math.abs(fwdPnl).toLocaleString();
+    document.getElementById('fwdPnl').className = 'stat-value ' + (fwdPnl >= 0 ? 'stat-green' : 'stat-red');
+    document.getElementById('fwdReturn').textContent = fSign + '$' + Math.abs(fwdPnl).toLocaleString();
+    document.getElementById('fwdReturn').className = 'stat-value ' + (fwdPnl >= 0 ? 'stat-green' : 'stat-red');
+
+    // Option
+    var oSign = optPnl >= 0 ? '+' : '';
+    document.getElementById('optExpiryBadge').textContent = oSign + '$' + Math.abs(optPnl).toLocaleString();
+    document.getElementById('optExpiryBadge').className = 'card-badge ' + (optPnl >= 0 ? 'badge-forward' : 'badge-option');
+    document.getElementById('optIntrinsic').textContent = '$' + intrinsic.toLocaleString();
+    document.getElementById('optPnl').textContent = oSign + '$' + Math.abs(optPnl).toLocaleString();
+    document.getElementById('optPnl').className = 'stat-value ' + (optPnl >= 0 ? 'stat-green' : 'stat-red');
+    document.getElementById('optReturn').textContent = oSign + '$' + Math.abs(optPnl).toLocaleString();
+    document.getElementById('optReturn').className = 'stat-value ' + (optPnl >= 0 ? 'stat-green' : 'stat-red');
+
+    // Advantage
+    var aSign = advantage >= 0 ? '+' : '';
+    var advColor = advantage >= 0 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('advantageText').innerHTML = 'Forward advantage: <span style="color:' + advColor + ';">' + aSign + '$' + Math.abs(advantage).toLocaleString() + '</span> vs option';
   }
 
   // ═══════════════════════════════════════════
-  // INIT CHARTS + INTERACTIVE
+  // INIT
   // ═══════════════════════════════════════════
   function initCharts() {
     drawPayoff('chartOption', 'option');
     drawPayoff('chartForward', 'forward');
     drawInteractive(2500);
-    renderBook();
-    updateFlowSteps(0);
+    updateExpiry(2800);
 
-    var slider = document.getElementById('priceSlider');
-    slider.addEventListener('input', function() {
-      var v = parseInt(slider.value);
+    document.getElementById('priceSlider').addEventListener('input', function() {
+      var v = parseInt(this.value);
       document.getElementById('priceReadout').textContent = '$' + v.toLocaleString();
-      var pnl = (v - 2500) * 5;
-      var badge = document.getElementById('pnlBadge');
-      var s = pnl >= 0 ? '+' : '';
-      badge.textContent = 'PnL: ' + s + '$' + pnl.toLocaleString();
-      badge.className = 'card-badge ' + (pnl >= 0 ? 'badge-forward' : 'badge-option');
+      var fPnl = (v - 2500) * 5;
+      var oPnl = (v <= 2500 ? 0 : (v - 2500) * 5) - 1600;
+      var fBadge = document.getElementById('pnlBadgeFwd');
+      var oBadge = document.getElementById('pnlBadgeOpt');
+      fBadge.textContent = 'Forward: ' + (fPnl >= 0 ? '+' : '') + '$' + fPnl.toLocaleString();
+      fBadge.className = 'card-badge ' + (fPnl >= 0 ? 'badge-forward' : 'badge-option');
+      oBadge.textContent = 'Option: ' + (oPnl >= 0 ? '+' : '') + '$' + oPnl.toLocaleString();
+      oBadge.className = 'card-badge ' + (oPnl >= 0 ? 'badge-forward' : 'badge-option');
       drawInteractive(v);
     });
 
-    var sSlider = document.getElementById('settlementSlider');
-    sSlider.addEventListener('input', function() {
-      updateSettlement(parseInt(sSlider.value));
+    document.getElementById('expirySlider').addEventListener('input', function() {
+      updateExpiry(parseInt(this.value));
     });
-
-    setInterval(simulateBook, 1200);
   }
 
   // ═══════════════════════════════════════════
@@ -1448,8 +1542,7 @@
     if (chartsDrawn) {
       drawPayoff('chartOption', 'option');
       drawPayoff('chartForward', 'forward');
-      var v = parseInt(document.getElementById('priceSlider').value);
-      drawInteractive(v);
+      drawInteractive(parseInt(document.getElementById('priceSlider').value));
     }
   });
 })();
