@@ -143,9 +143,10 @@
   .section:nth-child(3) .section-inner { text-align: right; flex: 1; }
   .section:nth-child(3) p { margin-left: auto; }
   .section:nth-child(3) .icon-canvas { width: clamp(340px, 36vw, 520px); height: clamp(340px, 36vw, 520px); flex-shrink: 0; margin-top: -4rem; }
-  .section:nth-child(4) { justify-content: flex-end; }
-  .section:nth-child(4) .section-inner { text-align: right; margin-right: 8%; }
-  .section:nth-child(4) p { margin-left: auto; }
+  .section:nth-child(4) { justify-content: center; }
+  .section:nth-child(4) .section-with-icon { display: flex; align-items: center; gap: 3rem; max-width: 1100px; width: 100%; }
+  .section:nth-child(4) .section-inner { text-align: left; flex: 1; }
+  .section:nth-child(4) .icon-canvas { width: clamp(300px, 32vw, 460px); height: clamp(300px, 32vw, 460px); flex-shrink: 0; margin-top: -4rem; }
 
   /* Section 5 — "Enter the forward curve" split layout */
   .section:nth-child(5) { justify-content: center; padding: 4rem 6rem; }
@@ -515,12 +516,15 @@
       </div>
     </section>
 
-    <!-- 3 — On-Chain CLOB -->
+    <!-- 3 — On-Chain CLOB + Circuit -->
     <section class="section">
-      <div class="section-inner">
-        <div class="tag">003 — Architecture</div>
-        <h2>Fully On-Chain<br>Order Book</h2>
-        <p>A decentralized CLOB with price-time priority. No AMM, no slippage curves. Automated keeper bots handle liquidation and settlement.</p>
+      <div class="section-with-icon">
+        <div class="section-inner">
+          <div class="tag">003 — Architecture</div>
+          <h2>Fully On-Chain<br>Order Book</h2>
+          <p>A decentralized CLOB with price-time priority. No AMM, no slippage curves. Automated keeper bots handle liquidation and settlement.</p>
+        </div>
+        <canvas id="circuit" class="icon-canvas"></canvas>
       </div>
     </section>
 
@@ -1198,6 +1202,56 @@
       ctx.globalAlpha=1;requestAnimationFrame(drawHelix);
     }
     drawHelix();
+  })();
+
+  // ═══ CIRCUIT (section 3) ═══
+  (function(){
+    var cc=document.getElementById('circuit');if(!cc)return;
+    var dpr=window.devicePixelRatio||1;
+    var rect=cc.getBoundingClientRect();var S=rect.width;
+    cc.width=S*dpr;cc.height=S*dpr;
+    var ctx=cc.getContext('2d');ctx.scale(dpr,dpr);
+    var fg='#0a0a0a',bg='#FF4500',TAU=Math.PI*2;
+    var cxc=S/2,cyc=S/2,cs=S*0.06,margin=S*0.05,ct=0;
+    var pins=[],pps=5;
+    for(var i=0;i<pps;i++){var f=(i+0.5)/pps;pins.push({x:cxc-cs+f*cs*2,y:cyc-cs,side:'top'});}
+    for(var i=0;i<pps;i++){var f=(i+0.5)/pps;pins.push({x:cxc-cs+f*cs*2,y:cyc+cs,side:'bottom'});}
+    for(var i=0;i<pps;i++){var f=(i+0.5)/pps;pins.push({x:cxc-cs,y:cyc-cs+f*cs*2,side:'left'});}
+    for(var i=0;i<pps;i++){var f=(i+0.5)/pps;pins.push({x:cxc+cs,y:cyc-cs+f*cs*2,side:'right'});}
+    var traces=[];
+    pins.forEach(function(pin){
+      var padX,padY,side=pin.side;
+      if(Math.random()<0.25){var o=['top','bottom','left','right'].filter(function(e){return e!==pin.side;});side=o[Math.floor(Math.random()*o.length)];}
+      switch(side){case'top':padX=margin+Math.random()*(S-margin*2);padY=margin*0.4;break;case'bottom':padX=margin+Math.random()*(S-margin*2);padY=S-margin*0.4;break;case'left':padX=margin*0.4;padY=margin+Math.random()*(S-margin*2);break;case'right':padX=S-margin*0.4;padY=margin+Math.random()*(S-margin*2);break;}
+      var px=pin.x,py=pin.y;var midX=padX+(px-padX)*(0.35+Math.random()*0.3),midY=padY+(py-padY)*(0.35+Math.random()*0.3);
+      var segs=[{x1:padX,y1:padY,x2:midX,y2:padY},{x1:midX,y1:padY,x2:midX,y2:midY},{x1:midX,y1:midY,x2:px,y2:midY},{x1:px,y1:midY,x2:px,y2:py}];
+      var totalLen=0;segs.forEach(function(s){s.len=Math.sqrt(Math.pow(s.x2-s.x1,2)+Math.pow(s.y2-s.y1,2));s.startLen=totalLen;totalLen+=s.len;});
+      traces.push({segs:segs,totalLen:totalLen,padX:padX,padY:padY,pinX:px,pinY:py});
+    });
+    var pulses=[],flashes=[];
+    function spawnPulse(){var idx=Math.floor(Math.random()*traces.length);pulses.push({traceIdx:idx,progress:0,speed:0.003+Math.random()*0.003,size:2+Math.random()*1.5,alpha:0.45+Math.random()*0.25,trail:[]});}
+    function getPt(trace,progress){var dist=progress*trace.totalLen;for(var i=0;i<trace.segs.length;i++){var seg=trace.segs[i];if(dist>=seg.startLen&&dist<=seg.startLen+seg.len){var f=seg.len>0?(dist-seg.startLen)/seg.len:0;return{x:seg.x1+(seg.x2-seg.x1)*f,y:seg.y1+(seg.y2-seg.y1)*f};}}var last=trace.segs[trace.segs.length-1];return{x:last.x2,y:last.y2};}
+    function nearChip(x,y,pad){return Math.abs(x-cxc)<cs+pad&&Math.abs(y-cyc)<cs+pad;}
+    function drawCircuit(){
+      ct+=0.01;ctx.clearRect(0,0,S,S);
+      traces.forEach(function(trace){ctx.beginPath();var penDown=false;trace.segs.forEach(function(seg){var in1=nearChip(seg.x1,seg.y1,2),in2=nearChip(seg.x2,seg.y2,2);if(in1&&in2){penDown=false;return;}if(!penDown){ctx.moveTo(seg.x1,seg.y1);penDown=true;}ctx.lineTo(seg.x2,seg.y2);if(in2)penDown=false;});ctx.strokeStyle=fg;ctx.lineWidth=1.2;ctx.globalAlpha=0.12;ctx.stroke();
+      trace.segs.forEach(function(seg){if(!nearChip(seg.x1,seg.y1,3)){ctx.beginPath();ctx.arc(seg.x1,seg.y1,1.8,0,TAU);ctx.fillStyle=fg;ctx.globalAlpha=0.08;ctx.fill();}});
+      ctx.beginPath();ctx.arc(trace.padX,trace.padY,3.5,0,TAU);ctx.fillStyle=fg;ctx.globalAlpha=0.1;ctx.fill();ctx.beginPath();ctx.arc(trace.padX,trace.padY,6,0,TAU);ctx.strokeStyle=fg;ctx.lineWidth=0.6;ctx.globalAlpha=0.06;ctx.stroke();});
+      ctx.fillStyle=bg;ctx.globalAlpha=1;ctx.fillRect(cxc-cs-3,cyc-cs-3,cs*2+6,cs*2+6);
+      ctx.fillStyle=fg;ctx.globalAlpha=0.18+Math.sin(ct*3)*0.03;ctx.fillRect(cxc-cs,cyc-cs,cs*2,cs*2);
+      ctx.strokeStyle=fg;ctx.lineWidth=1.8;ctx.globalAlpha=0.3;ctx.strokeRect(cxc-cs,cyc-cs,cs*2,cs*2);
+      ctx.globalAlpha=0.1;ctx.lineWidth=0.8;ctx.strokeRect(cxc-cs*0.55,cyc-cs*0.55,cs*1.1,cs*1.1);
+      pins.forEach(function(pin){ctx.beginPath();ctx.arc(pin.x,pin.y,1.8,0,TAU);ctx.fillStyle=fg;ctx.globalAlpha=0.15;ctx.fill();});
+      if(Math.random()<0.05)spawnPulse();
+      for(var i=pulses.length-1;i>=0;i--){var p=pulses[i];var trace=traces[p.traceIdx];p.progress+=p.speed;var pos=getPt(trace,Math.min(1,p.progress));
+      if(nearChip(pos.x,pos.y,-1)||p.progress>=1.01){flashes.push({x:trace.pinX,y:trace.pinY,r:2,alpha:0.35});pulses.splice(i,1);continue;}
+      p.trail.push({x:pos.x,y:pos.y});if(p.trail.length>10)p.trail.shift();
+      for(var ti=0;ti<p.trail.length;ti++){var pt=p.trail[ti];if(nearChip(pt.x,pt.y,2))continue;var frac=(ti+1)/p.trail.length;ctx.beginPath();ctx.arc(pt.x,pt.y,p.size*0.4*frac,0,TAU);ctx.fillStyle=fg;ctx.globalAlpha=p.alpha*0.15*frac;ctx.fill();}
+      ctx.beginPath();ctx.arc(pos.x,pos.y,p.size,0,TAU);ctx.fillStyle=fg;ctx.globalAlpha=p.alpha;ctx.fill();ctx.beginPath();ctx.arc(pos.x,pos.y,p.size*3,0,TAU);ctx.globalAlpha=p.alpha*0.08;ctx.fill();}
+      for(var i=flashes.length-1;i>=0;i--){var f=flashes[i];f.r+=1;f.alpha*=0.87;ctx.beginPath();ctx.arc(f.x,f.y,f.r,0,TAU);ctx.strokeStyle=fg;ctx.lineWidth=1.5;ctx.globalAlpha=f.alpha;ctx.stroke();if(f.alpha<0.004)flashes.splice(i,1);}
+      ctx.globalAlpha=1;requestAnimationFrame(drawCircuit);
+    }
+    drawCircuit();
   })();
 })();
 </script>
