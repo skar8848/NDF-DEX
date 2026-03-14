@@ -682,15 +682,15 @@
 
   // ── PHASES ──
   // A (0→PA):     scroll title → text#1
-  // B (PA→PB):    FROZEN on text#1 (pathA draws: descent + turn + crossing)
-  // C (PB→PC):    scroll text#1 → text#2 (pathA continues toward right edge)
-  // D (PC→PD):    FROZEN on text#2 (pathA exits right, tail retracts)
-  // E (PD→PE):    scroll text#2 → text#3 (SVG scrolls up, pathB enters from left)
-  // F (PE→PF):    FROZEN on text#3 (pathB turns down + descends)
+  // B (PA→PB):    FROZEN on text#1 (pathA: left descent + turn + horizontal + turn + right descent)
+  // C (PB→PC):    scroll text#1 → text#2 (SVG scroll-up 1, tail retracts start)
+  // D (PC→PD):    FROZEN on text#2 (pathA: right descent continues + exit turn + exit right)
+  // E (PD→PE):    scroll text#2 → text#3 (SVG scroll-up 2, pathA tail finishes, pathB enters from left)
+  // F (PE→PF):    FROZEN on text#3 (pathB: horizontal crossing)
   // G (PF→1.0):   scroll text#3 → text#4 → dark sections (with CLOB freeze)
-  var PA=0.04,PB=0.18,PC=0.26,PD=0.38,PE=0.46,PF=0.56;
-  var PCL1=0.74,PCL2=0.88; // CLOB freeze within phase G
-  var scrollUpDistance=0,clobOffset=0;
+  var PA=0.04,PB=0.16,PC=0.24,PD=0.36,PE=0.44,PF=0.52;
+  var PCL1=0.72,PCL2=0.86;
+  var scrollUpDist1=0,scrollUpDist2=0,clobOffset=0;
 
   function computeOffsets(){
     var el=document.getElementById('clobSection');
@@ -705,7 +705,6 @@
     if(t<=PD) return 2*H;
     if(t<=PE) return 2*H+((t-PD)/(PE-PD))*H;
     if(t<=PF) return 3*H;
-    // Phase G: scroll text#3 → rest, with CLOB freeze
     if(clobOffset>0){
       if(t<=PCL1) return 3*H+((t-PF)/(PCL1-PF))*(clobOffset-3*H);
       if(t<=PCL2) return clobOffset;
@@ -714,27 +713,31 @@
     return 3*H+((t-PF)/(1-PF))*(total-3*H);
   }
 
-  // SVG group scrolls up during phase E (text#2 → text#3)
+  // SVG group scrolls up in TWO stages
   function getGroupScrollUp(t){
-    if(t<=PD) return 0;
-    if(t>=PE) return 1;
-    return(t-PD)/(PE-PD);
+    // Stage 1: during C (PB→PC) — brings right descent to top
+    var up1=0;
+    if(t>PB) up1=Math.min(1,(t-PB)/(PC-PB));
+    // Stage 2: during E (PD→PE) — brings pathB reentry to top
+    var up2=0;
+    if(t>PD) up2=Math.min(1,(t-PD)/(PE-PD));
+    return ease(up1)*scrollUpDist1 + ease(up2)*scrollUpDist2;
   }
 
-  // PathA: descend left, turn right, exit right
-  // PathB: enter from left, turn down, descend right
+  // PathA: U-shape (descend left → cross → descend right) + exit turn + exit right
+  // PathB: enter from left → horizontal crossing
   var linesGroup;
-  var pathAEls=[],pathBEls=[],pathALens=[],pathBLens=[];
+  var pathAEls=[],pathBEls=[],pathALens=[],pathBLens=[],descentStarts=[];
   var turnYVal=0;
 
   function buildLines(){
     W=window.innerWidth; H=window.innerHeight;
     svg.innerHTML='';
-    pathAEls=[]; pathBEls=[]; pathALens=[]; pathBLens=[];
+    pathAEls=[]; pathBEls=[]; pathALens=[]; pathBLens=[]; descentStarts=[];
 
     var margin=80;
     turnYVal=H*0.78;
-    scrollUpDistance=turnYVal+R+20;
+    scrollUpDist1=turnYVal+R+20;
 
     linesGroup=document.createElementNS('http://www.w3.org/2000/svg','g');
     linesGroup.setAttribute('id','linesG');
@@ -745,17 +748,40 @@
       var lx=margin+off;
       var rx=W-margin-off;
       var ty=turnYVal+off;
-      var ry=scrollUpDistance+80+off; // reentry Y
 
-      // PathA: descend left → turn right → exit right off-screen
-      var dA='M '+lx+' -10 L '+lx+' '+(ty-R)+' Q '+lx+' '+ty+' '+(lx+R)+' '+ty+' L '+(W+150)+' '+ty;
+      // exitTurnY: near bottom of viewport after first scroll-up
+      var exitTY=scrollUpDist1+H*0.78+off;
+      // reentryY: below exit, will be scrolled up in stage 2
+      var ry=exitTY+R+80+off;
+
+      // scrollUpDist2: bring reentryY to 80px from viewport top
+      // total scroll = scrollUpDist1 + scrollUpDist2
+      // ry - (scrollUpDist1 + scrollUpDist2) = 80
+      // scrollUpDist2 = ry - scrollUpDist1 - 80
+
+      // PathA: full U-shape + exit turn right + exit off-screen
+      var dA='M '+lx+' -10'+
+        ' L '+lx+' '+(ty-R)+
+        ' Q '+lx+' '+ty+' '+(lx+R)+' '+ty+
+        ' L '+(rx-R)+' '+ty+
+        ' Q '+rx+' '+ty+' '+rx+' '+(ty+R)+
+        ' L '+rx+' '+(exitTY-R)+
+        ' Q '+rx+' '+exitTY+' '+(rx+R)+' '+exitTY+
+        ' L '+(W+200)+' '+exitTY;
+
       var pA=document.createElementNS('http://www.w3.org/2000/svg','path');
       pA.setAttribute('d',dA); pA.setAttribute('class','line-path');
       pA.setAttribute('stroke',COLORS[i]); pA.setAttribute('stroke-width',WIDTHS[i]);
       linesGroup.appendChild(pA);
 
-      // PathB: enter from left off-screen → cross to right pos → turn down → descend
-      var dB='M -150 '+ry+' L '+(rx-R)+' '+ry+' Q '+rx+' '+ry+' '+rx+' '+(ry+R)+' L '+rx+' '+(H+H*1.5);
+      // Compute descentStart: path length up to where right descent begins
+      var vertL=(ty-R)-(-10);
+      var arc=Math.PI*R/2;
+      var horiz=(rx-R)-(lx+R);
+      descentStarts.push(vertL+arc+horiz+arc);
+
+      // PathB: enter from left → horizontal crossing
+      var dB='M -200 '+ry+' L '+(W+200)+' '+ry;
       var pB=document.createElementNS('http://www.w3.org/2000/svg','path');
       pB.setAttribute('d',dB); pB.setAttribute('class','line-path');
       pB.setAttribute('stroke',COLORS[i]); pB.setAttribute('stroke-width',WIDTHS[i]);
@@ -765,17 +791,24 @@
       pathALens.push(pA.getTotalLength());
       pathBLens.push(pB.getTotalLength());
     }
+
+    // scrollUpDist2 from line 0 (others are close enough)
+    var exitTY0=scrollUpDist1+H*0.78;
+    var ry0=exitTY0+R+80;
+    scrollUpDist2=ry0-scrollUpDist1-80;
+
     computeOffsets();
   }
 
   function ease(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
   function clamp01(v){return Math.min(1,Math.max(0,v));}
 
-  // PathA head: draws through text#1 and text#2, completes at PD
-  function headA(t){if(t<=0)return 0;if(t>=PD)return 1;return t/PD;}
-  // PathA tail retract: starts at PD (text#2→text#3 scroll), done by PE+0.06
-  function retractA(t){var S=PD,E=PE+0.06;if(t<=S)return 0;if(t>=E)return 1;return(t-S)/(E-S);}
-  // PathB head: starts at PD (entering from left), completes at PF (end of frozen-on-text#3)
+  // PathA head: draws continuously from t=0 to PD+0.04
+  function headA(t){var E=PD+0.04;if(t<=0)return 0;if(t>=E)return 1;return t/E;}
+  // PathA tail retract: from PB (scroll-up 1 starts) to PE+0.04
+  // Retracts up to descentStart first, then everything
+  function retractA(t){var S=PB,E=PE+0.04;if(t<=S)return 0;if(t>=E)return 1;return(t-S)/(E-S);}
+  // PathB head: from PD to PF
   function headB(t){if(t<=PD)return 0;if(t>=PF)return 1;return(t-PD)/(PF-PD);}
 
   var chartsDrawn=false,bookStarted=false;
@@ -797,8 +830,8 @@
 
     track.style.transform='translateY('+(-getContentScroll(t))+'px)';
 
-    var gup=ease(getGroupScrollUp(t));
-    linesGroup.setAttribute('transform','translate(0,'+(-gup*scrollUpDistance)+')');
+    var gup=getGroupScrollUp(t);
+    linesGroup.setAttribute('transform','translate(0,'+(-gup)+')');
 
     var lineOpacity=contentY>4.5*H?Math.max(0,1-(contentY-4.5*H)/(0.5*H)):1;
     svg.style.opacity=lineOpacity;
@@ -810,17 +843,20 @@
       var stag=i*0.02;
       var lenA=pathALens[i], lenB=pathBLens[i];
 
-      // PathA
+      // PathA — head draws continuously
       var hAi=ease(clamp01((hA-stag)/(1-stag)));
-      var rAi=ease(clamp01((rA-stag)/(1-stag)));
       var drawEndA=hAi*lenA;
+
+      // PathA — tail retracts (up to full length)
+      var rAi=ease(clamp01((rA-stag)/(1-stag)));
       var drawStartA=rAi*lenA;
+
       var visA=Math.max(0,drawEndA-drawStartA);
       if(visA<=0){pathAEls[i].style.strokeDasharray='0 '+lenA;}
       else{pathAEls[i].style.strokeDasharray='0 '+drawStartA+' '+visA+' '+lenA;}
       pathAEls[i].style.strokeDashoffset='0';
 
-      // PathB
+      // PathB — horizontal re-entry
       var hBi=ease(clamp01((hB-stag)/(1-stag)));
       var drawEndB=hBi*lenB;
       if(drawEndB<=0){pathBEls[i].style.strokeDasharray='0 '+lenB;}
