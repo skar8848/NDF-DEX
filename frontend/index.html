@@ -5,7 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tenor Protocol — Decentralized Forward Exchange</title>
 <link rel="icon" type="image/png" href="/tenor_logo.png">
-<link href="https://fonts.googleapis.com/css2?family=Monoton&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Monoton&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=block" rel="stylesheet">
+<style>
+  .title-mono { font-family: 'Monoton', cursive; visibility: hidden; }
+</style>
+<script>
+  document.fonts.ready.then(function(){ var el=document.querySelector('.title-mono'); if(el) el.style.visibility='visible'; });
+</script>
 <style>
   :root {
     --bg: #FF4500;
@@ -473,7 +481,7 @@
     <!-- 0 — Title -->
     <section class="section">
       <div class="section-inner">
-        <h1 style="font-family:'Monoton',cursive;font-size:clamp(4rem,8vw,8rem);margin-bottom:1.5rem;letter-spacing:0.02em;">Tenor Protocol</h1>
+        <h1 class="title-mono" style="font-family:'Monoton',cursive;font-size:clamp(4rem,8vw,8rem);margin-bottom:1.5rem;letter-spacing:0.02em;">Tenor Protocol</h1>
         <img src="/tenor_logo.png" alt="Tenor Protocol" class="logo-img" />
         <p class="subtitle">The First Decentralized Forward Exchange on Avalanche</p>
       </div>
