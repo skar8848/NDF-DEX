@@ -12,7 +12,6 @@
     --fg: #0a0a0a;
     --dark-bg: #0a0a0a;
     --dark-fg: #e8e0d4;
-    --dim: rgba(232,224,212,0.3);
     --orange: #FF4500;
     --orange-dim: rgba(255,69,0,0.15);
     --green: #22c55e;
@@ -49,13 +48,19 @@
     justify-content: space-between;
     padding: 1.2rem 2.5rem;
   }
-  .nav-logo {
-    font-family: 'Monoton', cursive;
-    font-size: 1.2rem;
+  .nav-link {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
     color: var(--fg);
     text-decoration: none;
-    letter-spacing: 0.04em;
+    opacity: 0.6;
+    transition: opacity 0.2s;
   }
+  .nav-link:hover { opacity: 1; }
+  .nav-link-dark { color: var(--dark-fg); }
   .btn-launch {
     display: inline-flex;
     align-items: center;
@@ -71,15 +76,15 @@
     border-radius: 8px;
     cursor: pointer;
     text-decoration: none;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.3s, color 0.3s;
   }
   .btn-launch:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(0,0,0,0.3);
   }
   .btn-launch-dark {
-    background: var(--dark-fg);
-    color: var(--dark-bg);
+    background: var(--orange);
+    color: #fff;
   }
 
   .lines-layer {
@@ -89,10 +94,7 @@
     pointer-events: none;
     z-index: 1;
   }
-  .lines-layer svg {
-    width: 100%; height: 100%;
-    overflow: visible;
-  }
+  .lines-layer svg { width: 100%; height: 100%; overflow: visible; }
   .line-path {
     fill: none;
     stroke-linecap: round;
@@ -107,14 +109,13 @@
     will-change: transform;
   }
 
-  /* ── ANIMATED SECTIONS (orange bg) ── */
+  /* ── ANIMATED SECTIONS ── */
   .section {
     height: 100vh;
     display: flex;
     align-items: center;
     padding: 4rem 6rem;
   }
-
   .section-inner {
     max-width: 580px;
     opacity: 0;
@@ -125,20 +126,42 @@
 
   .section:nth-child(1) { justify-content: center; }
   .section:nth-child(1) .section-inner { text-align: center; margin: 0 auto; max-width: 700px; }
-
   .section:nth-child(2) { justify-content: flex-end; }
   .section:nth-child(2) .section-inner { text-align: right; margin-right: 8%; }
   .section:nth-child(2) p { margin-left: auto; }
-
   .section:nth-child(3) { justify-content: flex-start; align-items: flex-end; }
   .section:nth-child(3) .section-inner { margin-left: 8%; margin-bottom: 8%; }
-
   .section:nth-child(4) { justify-content: flex-end; }
   .section:nth-child(4) .section-inner { text-align: right; margin-right: 8%; }
   .section:nth-child(4) p { margin-left: auto; }
 
-  .section:nth-child(5) { justify-content: center; }
-  .section:nth-child(5) .section-inner { text-align: center; margin: 0 auto; }
+  /* Section 5 — "Enter the forward curve" split layout */
+  .section:nth-child(5) { justify-content: center; padding: 4rem 6rem; }
+  .section-split {
+    display: flex;
+    align-items: center;
+    gap: 4rem;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .section-split .section-inner {
+    flex: 1;
+    text-align: left;
+    max-width: 480px;
+  }
+  .section-split .eye-img {
+    flex: 1;
+    max-width: 500px;
+    border-radius: 16px;
+    opacity: 0;
+    transform: translateX(40px);
+    transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
+  }
+  .section-split .eye-img.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
 
   h1 {
     font-family: 'Instrument Serif', serif;
@@ -148,7 +171,6 @@
     letter-spacing: -0.03em;
     margin-bottom: 1rem;
   }
-
   h2 {
     font-family: 'DM Sans', sans-serif;
     font-weight: 700;
@@ -157,7 +179,6 @@
     letter-spacing: -0.03em;
     margin-bottom: 0.8rem;
   }
-
   p {
     font-size: clamp(1.05rem, 1.3vw, 1.2rem);
     line-height: 1.75;
@@ -165,7 +186,6 @@
     max-width: 460px;
     font-weight: 400;
   }
-
   .tag {
     display: inline-block;
     font-family: 'JetBrains Mono', monospace;
@@ -176,13 +196,11 @@
     margin-bottom: 1.4rem;
     font-weight: 500;
   }
-
   .logo-img {
     width: clamp(160px, 24vw, 280px);
     border-radius: 12px;
     mix-blend-mode: multiply;
   }
-
   .subtitle {
     margin: 1.2rem auto 0;
     font-size: clamp(1rem, 1.4vw, 1.2rem);
@@ -218,14 +236,9 @@
     0%,100% { opacity:.3; transform:scale(1); }
     50% { opacity:1; transform:scale(1.5); }
   }
-
   .progress {
-    position: fixed;
-    top: 0; left: 0;
-    height: 2px;
-    background: var(--fg);
-    opacity: 0.3;
-    z-index: 100;
+    position: fixed; top: 0; left: 0;
+    height: 2px; background: var(--fg); opacity: 0.3; z-index: 100;
   }
 
   /* ── DARK SECTIONS ── */
@@ -238,23 +251,14 @@
     align-items: center;
     justify-content: center;
   }
-  .dark-section .section-inner {
-    max-width: 1200px;
-    width: 100%;
-  }
+  .dark-section .section-inner { max-width: 1200px; width: 100%; }
 
   .dark-transition {
     height: 100vh;
     background: linear-gradient(to bottom, var(--bg), var(--dark-bg));
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
   }
-  .dark-transition .section-inner {
-    text-align: center;
-    margin: 0 auto;
-    max-width: 700px;
-  }
+  .dark-transition .section-inner { text-align: center; margin: 0 auto; max-width: 700px; }
   .dark-transition h2 { color: var(--dark-fg); }
   .dark-transition p { color: var(--dark-fg); margin: 0 auto; }
   .dark-transition .tag { color: var(--dark-fg); }
@@ -262,360 +266,170 @@
   .section-header { margin-bottom: 3rem; }
   .section-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: var(--orange);
-    margin-bottom: 0.8rem;
-    font-weight: 500;
+    font-size: 0.65rem; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--orange);
+    margin-bottom: 0.8rem; font-weight: 500;
   }
   .section-title {
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 700;
+    font-family: 'DM Sans', sans-serif; font-weight: 700;
     font-size: clamp(1.8rem, 3vw, 2.5rem);
-    letter-spacing: -0.02em;
-    line-height: 1.2;
-    color: var(--dark-fg);
+    letter-spacing: -0.02em; line-height: 1.2; color: var(--dark-fg);
   }
   .section-sub {
-    margin-top: 0.8rem;
-    opacity: 0.4;
-    max-width: 550px;
-    line-height: 1.65;
-    font-size: 1rem;
-    color: var(--dark-fg);
+    margin-top: 0.8rem; opacity: 0.4; max-width: 550px;
+    line-height: 1.65; font-size: 1rem; color: var(--dark-fg);
   }
 
   /* ── PAYOFF CARDS ── */
-  .payoff-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-  }
+  .payoff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
   .payoff-card {
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(232,224,212,0.06);
-    border-radius: 12px;
-    padding: 1.8rem;
-    position: relative;
-    overflow: hidden;
+    border-radius: 12px; padding: 1.8rem;
+    position: relative; overflow: hidden;
     transition: transform 0.6s ease, box-shadow 0.6s ease, border-color 0.5s ease;
   }
   .payoff-card.elevated {
     transform: translateY(-6px);
-    box-shadow: 0 16px 48px rgba(255, 69, 0, 0.12), 0 4px 16px rgba(255, 69, 0, 0.06);
-    border-color: rgba(255, 69, 0, 0.18);
+    box-shadow: 0 16px 48px rgba(255,69,0,0.12), 0 4px 16px rgba(255,69,0,0.06);
+    border-color: rgba(255,69,0,0.18);
   }
-
-  .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.2rem;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .card-title {
-    font-weight: 600;
-    font-size: 1rem;
-    letter-spacing: -0.01em;
-    color: var(--dark-fg);
-  }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 0.5rem; }
+  .card-title { font-weight: 600; font-size: 1rem; letter-spacing: -0.01em; color: var(--dark-fg); }
   .card-badge {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 0.25rem 0.6rem;
-    border-radius: 4px;
-    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.25rem 0.6rem; border-radius: 4px; font-weight: 500;
   }
   .badge-option { background: var(--red-dim); color: var(--red); }
   .badge-forward { background: var(--green-dim); color: var(--green); }
-
-  .chart-container {
-    position: relative;
-    width: 100%;
-    height: 220px;
-  }
+  .chart-container { position: relative; width: 100%; height: 220px; }
   .chart-container canvas { width: 100%; height: 100%; }
-
   .card-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.8rem;
-    margin-top: 1.2rem;
-    padding-top: 1rem;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;
+    margin-top: 1.2rem; padding-top: 1rem;
     border-top: 1px solid rgba(232,224,212,0.06);
   }
   .stat-item { display: flex; flex-direction: column; gap: 0.15rem; }
-  .stat-label {
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    opacity: 0.35;
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--dark-fg);
-  }
-  .stat-value {
-    font-weight: 600;
-    font-size: 0.85rem;
-    letter-spacing: -0.01em;
-    color: var(--dark-fg);
-  }
+  .stat-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.35; font-family: 'JetBrains Mono', monospace; color: var(--dark-fg); }
+  .stat-value { font-weight: 600; font-size: 0.85rem; letter-spacing: -0.01em; color: var(--dark-fg); }
   .stat-green { color: var(--green) !important; }
   .stat-red { color: var(--red) !important; }
 
-  /* ── COMPARISON TABLE ── */
-  .compare-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 2rem;
-    font-size: 0.88rem;
-  }
-  .compare-table th {
-    text-align: left;
-    padding: 0.8rem 1rem;
-    font-weight: 500;
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--orange);
-    border-bottom: 1px solid rgba(232,224,212,0.1);
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .compare-table td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid rgba(232,224,212,0.04);
-    line-height: 1.5;
-    color: var(--dark-fg);
-  }
+  /* ── TABLE ── */
+  .compare-table { width: 100%; border-collapse: collapse; margin-top: 2rem; font-size: 0.88rem; }
+  .compare-table th { text-align: left; padding: 0.8rem 1rem; font-weight: 500; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--orange); border-bottom: 1px solid rgba(232,224,212,0.1); font-family: 'JetBrains Mono', monospace; }
+  .compare-table td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(232,224,212,0.04); line-height: 1.5; color: var(--dark-fg); }
   .compare-table tr:hover td { background: rgba(255,255,255,0.015); }
   .compare-table .label-col { opacity: 0.4; font-weight: 400; width: 30%; }
   .cross { color: var(--red); opacity: 0.7; }
   .check { color: var(--green); opacity: 0.7; }
 
-  /* ── PRICE SLIDER ── */
-  .price-control {
-    margin-top: 2rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  .price-control label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    opacity: 0.35;
-    font-family: 'JetBrains Mono', monospace;
-    white-space: nowrap;
-    color: var(--dark-fg);
-  }
-  .price-control input[type="range"] {
-    flex: 1;
-    -webkit-appearance: none;
-    height: 3px;
-    background: rgba(232,224,212,0.1);
-    border-radius: 2px;
-    outline: none;
-  }
-  .price-control input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px; height: 16px;
-    background: var(--orange);
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid var(--dark-bg);
-    box-shadow: 0 0 10px rgba(255,69,0,0.4);
-  }
-  .price-readout {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 500;
-    font-size: 0.9rem;
-    min-width: 70px;
-    text-align: right;
-    color: var(--dark-fg);
-  }
+  /* ── SLIDER ── */
+  .price-control { margin-top: 2rem; display: flex; align-items: center; gap: 1rem; }
+  .price-control label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.35; font-family: 'JetBrains Mono', monospace; white-space: nowrap; color: var(--dark-fg); }
+  .price-control input[type="range"] { flex: 1; -webkit-appearance: none; height: 3px; background: rgba(232,224,212,0.1); border-radius: 2px; outline: none; }
+  .price-control input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: var(--orange); border-radius: 50%; cursor: pointer; border: 2px solid var(--dark-bg); box-shadow: 0 0 10px rgba(255,69,0,0.4); }
+  .price-readout { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 0.9rem; min-width: 70px; text-align: right; color: var(--dark-fg); }
 
   /* ── CLOB ── */
-  .clob-wrapper {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    margin-top: 2rem;
-  }
-  .orderbook {
-    background: rgba(255,255,255,0.02);
-    border: 1px solid rgba(232,224,212,0.06);
-    border-radius: 12px;
-    padding: 1.5rem;
-    overflow: hidden;
-  }
-  .ob-title {
-    font-weight: 600;
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--dark-fg);
-  }
-  .ob-title .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--green);
-    animation: blink 2s ease infinite;
-  }
-  @keyframes blink {
-    0%,100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
-  .ob-header {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(232,224,212,0.06);
-    margin-bottom: 0.4rem;
-  }
-  .ob-header span {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.55rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    opacity: 0.3;
-    color: var(--dark-fg);
-  }
+  .clob-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
+  .orderbook { background: rgba(255,255,255,0.02); border: 1px solid rgba(232,224,212,0.06); border-radius: 12px; padding: 1.5rem; overflow: hidden; }
+  .ob-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--dark-fg); }
+  .ob-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2s ease infinite; }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  .ob-header { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(232,224,212,0.06); margin-bottom: 0.4rem; }
+  .ob-header span { font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.3; color: var(--dark-fg); }
   .ob-header span:last-child { text-align: right; }
   .ob-header span:nth-child(2) { text-align: center; }
-  .ob-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 0.5rem;
-    padding: 0.3rem 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem;
-    font-weight: 400;
-    position: relative;
-    transition: all 0.3s;
-  }
+  .ob-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; padding: 0.3rem 0; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 400; position: relative; transition: all 0.3s; }
   .ob-row span:last-child { text-align: right; }
   .ob-row span:nth-child(2) { text-align: center; }
   .ob-row.ask { color: var(--red); }
   .ob-row.bid { color: var(--green); }
-  .ob-row .depth-bar {
-    position: absolute;
-    top: 0; bottom: 0;
-    opacity: 0.06;
-    transition: width 0.5s ease;
-  }
+  .ob-row .depth-bar { position: absolute; top: 0; bottom: 0; opacity: 0.06; transition: width 0.5s ease; }
   .ob-row.ask .depth-bar { right: 0; background: var(--red); }
   .ob-row.bid .depth-bar { left: 0; background: var(--green); }
-  .ob-spread {
-    text-align: center;
-    padding: 0.6rem 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    opacity: 0.3;
-    border-top: 1px solid rgba(232,224,212,0.04);
-    border-bottom: 1px solid rgba(232,224,212,0.04);
-    margin: 0.3rem 0;
-    color: var(--dark-fg);
-  }
-  .ob-match {
-    position: absolute;
-    inset: 0;
-    background: var(--orange);
-    opacity: 0;
-    border-radius: 3px;
-    transition: opacity 0.15s;
-    pointer-events: none;
-  }
+  .ob-spread { text-align: center; padding: 0.6rem 0; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; opacity: 0.3; border-top: 1px solid rgba(232,224,212,0.04); border-bottom: 1px solid rgba(232,224,212,0.04); margin: 0.3rem 0; color: var(--dark-fg); }
+  .ob-match { position: absolute; inset: 0; background: var(--orange); opacity: 0; border-radius: 3px; transition: opacity 0.15s; pointer-events: none; }
   .ob-row.matched .ob-match { opacity: 0.15; }
 
-  .clob-flow {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    justify-content: center;
-  }
+  .clob-flow { display: flex; flex-direction: column; gap: 1rem; justify-content: center; }
   .flow-step {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem;
-    border-radius: 10px;
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: 1rem; border-radius: 10px;
     background: rgba(255,255,255,0.015);
     border: 1px solid rgba(232,224,212,0.04);
     transition: all 0.5s ease;
-    opacity: 0.25;
-    transform: translateY(4px);
+    opacity: 0.25; transform: translateY(4px);
   }
   .flow-step.active {
-    opacity: 1;
-    transform: translateY(0);
-    border-color: rgba(255, 69, 0, 0.4);
+    opacity: 1; transform: translateY(0);
+    border-color: rgba(255,69,0,0.4);
     background: var(--orange-dim);
-    box-shadow: 0 8px 32px rgba(255, 69, 0, 0.1);
+    box-shadow: 0 8px 32px rgba(255,69,0,0.1);
   }
   .flow-num {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    font-weight: 500;
-    color: var(--orange);
-    background: var(--orange-dim);
-    width: 24px; height: 24px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 0.7rem; font-weight: 500;
+    color: var(--orange); background: var(--orange-dim);
+    width: 28px; height: 28px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
-    margin-top: 2px;
+    text-align: center; line-height: 1;
   }
-  .flow-text h4 {
-    font-weight: 600;
-    font-size: 0.85rem;
-    margin-bottom: 0.2rem;
-    color: var(--dark-fg);
-  }
-  .flow-text p {
-    font-size: 0.78rem;
-    opacity: 0.45;
-    line-height: 1.5;
-    color: var(--dark-fg);
-    max-width: none;
-  }
+  .flow-text h4 { font-weight: 600; font-size: 0.85rem; margin-bottom: 0.2rem; color: var(--dark-fg); }
+  .flow-text p { font-size: 0.78rem; opacity: 0.45; line-height: 1.5; color: var(--dark-fg); max-width: none; }
 
   /* ── EXPIRY COMPARISON ── */
   .expiry-summary {
-    margin-top: 1.5rem;
-    padding: 1.2rem 1.8rem;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.02);
-    border: 1px solid rgba(232,224,212,0.06);
+    margin-top: 1.5rem; padding: 1.2rem 1.8rem; border-radius: 12px;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(232,224,212,0.06);
     text-align: center;
     transition: transform 0.6s ease, box-shadow 0.6s ease, border-color 0.5s ease;
   }
   .expiry-summary.elevated {
     transform: translateY(-4px);
-    box-shadow: 0 12px 36px rgba(255, 69, 0, 0.1);
-    border-color: rgba(255, 69, 0, 0.15);
+    box-shadow: 0 12px 36px rgba(255,69,0,0.1);
+    border-color: rgba(255,69,0,0.15);
   }
-  .expiry-summary .card-title {
-    font-size: 1.05rem;
+  .expiry-summary .card-title { font-size: 1.05rem; }
+
+  /* ── FOOTER ── */
+  .footer-section {
+    min-height: auto !important;
+    padding: 4rem 2rem !important;
+    border-top: 1px solid rgba(232,224,212,0.06);
   }
+  .footer-inner {
+    max-width: 1200px; width: 100%; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 2rem;
+  }
+  .footer-links { display: flex; gap: 2rem; align-items: center; }
+  .footer-links a {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--dark-fg);
+    text-decoration: none; opacity: 0.4;
+    transition: opacity 0.2s;
+  }
+  .footer-links a:hover { opacity: 1; }
+  .footer-badge {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.1em;
+    text-transform: uppercase; opacity: 0.35;
+    color: var(--dark-fg);
+  }
+  .footer-badge img { width: 20px; height: 20px; border-radius: 50%; }
 
   /* ── FADE-IN ── */
   .fade-in {
-    opacity: 0;
-    transform: translateY(30px);
+    opacity: 0; transform: translateY(30px);
     transition: opacity 0.6s ease, transform 0.6s ease;
   }
-  .fade-in.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
 
   @media (max-width: 768px) {
     .section { padding: 2rem 1.5rem; }
@@ -627,6 +441,9 @@
     .dark-section { padding: 3rem 1.5rem; }
     .nav-bar { padding: 1rem 1.2rem; }
     .btn-launch { padding: 0.5rem 1rem; font-size: 0.75rem; }
+    .section-split { flex-direction: column; gap: 2rem; }
+    .section-split .eye-img { max-width: 100%; }
+    .footer-inner { flex-direction: column; text-align: center; }
   }
 </style>
 </head>
@@ -636,27 +453,25 @@
 <div class="scroll-runway"></div>
 
 <nav class="nav-bar" id="navBar">
-  <a class="nav-logo" href="#">Tenor</a>
+  <a class="nav-link" id="navDocs" href="https://github.com/skar8848/Tenor-Protocol/tree/main/docs" target="_blank">Docs</a>
   <a class="btn-launch" id="btnLaunch" href="https://tenor-protocol.vercel.app/trade">Launch App &rarr;</a>
 </nav>
 
 <div class="frame">
-  <div class="lines-layer">
-    <svg id="svg"></svg>
-  </div>
+  <div class="lines-layer"><svg id="svg"></svg></div>
 
   <div class="content-track" id="track">
 
-    <!-- ═══ SECTION 0 — Title ═══ -->
+    <!-- 0 — Title -->
     <section class="section">
       <div class="section-inner">
-        <h1 style="font-family: 'Monoton', cursive; font-size: clamp(4rem, 8vw, 8rem); margin-bottom: 1.5rem; letter-spacing: 0.02em;">Tenor Protocol</h1>
+        <h1 style="font-family:'Monoton',cursive;font-size:clamp(4rem,8vw,8rem);margin-bottom:1.5rem;letter-spacing:0.02em;">Tenor Protocol</h1>
         <img src="/tenor_logo.png" alt="Tenor Protocol" class="logo-img" />
         <p class="subtitle">The First Decentralized Forward Exchange on Avalanche</p>
       </div>
     </section>
 
-    <!-- ═══ SECTION 1 — Why Forwards ═══ -->
+    <!-- 1 — Why Forwards -->
     <section class="section">
       <div class="section-inner">
         <div class="tag">001 — The Instrument</div>
@@ -665,7 +480,7 @@
       </div>
     </section>
 
-    <!-- ═══ SECTION 2 — Symmetric Risk ═══ -->
+    <!-- 2 — Symmetric Risk -->
     <section class="section">
       <div class="section-inner">
         <div class="tag">002 — Zero Premium</div>
@@ -674,7 +489,7 @@
       </div>
     </section>
 
-    <!-- ═══ SECTION 3 — On-Chain CLOB ═══ -->
+    <!-- 3 — On-Chain CLOB -->
     <section class="section">
       <div class="section-inner">
         <div class="tag">003 — Architecture</div>
@@ -683,92 +498,61 @@
       </div>
     </section>
 
-    <!-- ═══ SECTION 4 — CTA / Transition ═══ -->
+    <!-- 4 — CTA with eye image -->
     <section class="section">
-      <div class="section-inner">
-        <div class="tag">004</div>
-        <h2><em>Enter the<br>forward curve</em></h2>
-        <p>The future of derivatives is decentralized. Scroll to explore the mechanics.</p>
+      <div class="section-split">
+        <div class="section-inner">
+          <div class="tag">004</div>
+          <h2><em>Enter the<br>forward curve</em></h2>
+          <p>The future of derivatives is decentralized. Scroll to explore the mechanics.</p>
+        </div>
+        <img src="/eye_tenor.png" alt="" class="eye-img" id="eyeImg" />
       </div>
     </section>
 
-    <!-- ═══ TRANSITION — Orange → Dark ═══ -->
+    <!-- TRANSITION -->
     <div class="dark-transition">
       <div class="section-inner">
-        <div class="tag" style="color: var(--dark-fg);">Deep Dive</div>
+        <div class="tag" style="color:var(--dark-fg);">Deep Dive</div>
         <h2>How Tenor Works</h2>
         <p>Interactive breakdowns of payoff structure, order matching, and settlement mechanics.</p>
       </div>
     </div>
 
-    <!-- ═══ DARK 1 — Payoff Structure ═══ -->
-    <div class="dark-section" style="padding-top: 4rem;">
+    <!-- DARK 1 — Payoff -->
+    <div class="dark-section" style="padding-top:4rem;">
       <div class="section-inner fade-in">
         <div class="section-header">
           <div class="section-label">01 — Payoff Structure</div>
           <div class="section-title">Symmetric vs Asymmetric Risk</div>
           <p class="section-sub">Options give you asymmetry — but you pay for it with a premium that can expire worthless. Forwards split the risk evenly.</p>
         </div>
-
         <div class="payoff-grid">
           <div class="payoff-card">
-            <div class="card-header">
-              <span class="card-title">Long Call Option</span>
-              <span class="card-badge badge-option">Option</span>
-            </div>
+            <div class="card-header"><span class="card-title">Long Call Option</span><span class="card-badge badge-option">Option</span></div>
             <div class="chart-container"><canvas id="chartOption"></canvas></div>
             <div class="card-stats">
-              <div class="stat-item">
-                <span class="stat-label">Upfront Cost</span>
-                <span class="stat-value stat-red">-$320 premium</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Max Loss</span>
-                <span class="stat-value stat-red">-$320 (premium)</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Breakeven</span>
-                <span class="stat-value">$2,820</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Complexity</span>
-                <span class="stat-value stat-red">Greeks, IV, Theta</span>
-              </div>
+              <div class="stat-item"><span class="stat-label">Upfront Cost</span><span class="stat-value stat-red">-$320 premium</span></div>
+              <div class="stat-item"><span class="stat-label">Max Loss</span><span class="stat-value stat-red">-$320 (premium)</span></div>
+              <div class="stat-item"><span class="stat-label">Breakeven</span><span class="stat-value">$2,820</span></div>
+              <div class="stat-item"><span class="stat-label">Complexity</span><span class="stat-value stat-red">Greeks, IV, Theta</span></div>
             </div>
           </div>
-
           <div class="payoff-card">
-            <div class="card-header">
-              <span class="card-title">Long Forward (NDF)</span>
-              <span class="card-badge badge-forward">Forward</span>
-            </div>
+            <div class="card-header"><span class="card-title">Long Forward (NDF)</span><span class="card-badge badge-forward">Forward</span></div>
             <div class="chart-container"><canvas id="chartForward"></canvas></div>
             <div class="card-stats">
-              <div class="stat-item">
-                <span class="stat-label">Upfront Cost</span>
-                <span class="stat-value stat-green">$0 (collateral returned)</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Max Loss</span>
-                <span class="stat-value">Bounded by collateral</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Breakeven</span>
-                <span class="stat-value">$2,500 (entry price)</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Complexity</span>
-                <span class="stat-value stat-green">None</span>
-              </div>
+              <div class="stat-item"><span class="stat-label">Upfront Cost</span><span class="stat-value stat-green">$0 (collateral returned)</span></div>
+              <div class="stat-item"><span class="stat-label">Max Loss</span><span class="stat-value">Bounded by collateral</span></div>
+              <div class="stat-item"><span class="stat-label">Breakeven</span><span class="stat-value">$2,500 (entry price)</span></div>
+              <div class="stat-item"><span class="stat-label">Complexity</span><span class="stat-value stat-green">None</span></div>
             </div>
           </div>
         </div>
-
-        <!-- Interactive comparison -->
-        <div class="payoff-card" style="margin-bottom: 2rem;">
+        <div class="payoff-card" style="margin-bottom:2rem;">
           <div class="card-header">
             <span class="card-title">Interactive: drag to compare</span>
-            <div style="display: flex; gap: 0.5rem;">
+            <div style="display:flex;gap:0.5rem;">
               <span class="card-badge badge-forward" id="pnlBadgeFwd">Forward: $0</span>
               <span class="card-badge badge-option" id="pnlBadgeOpt">Option: -$1,600</span>
             </div>
@@ -780,49 +564,21 @@
             <span class="price-readout" id="priceReadout">$2,500</span>
           </div>
         </div>
-
-        <!-- Comparison table -->
         <table class="compare-table">
-          <thead>
-            <tr><th></th><th>Options</th><th>Forwards (Tenor)</th></tr>
-          </thead>
+          <thead><tr><th></th><th>Options</th><th>Forwards (Tenor)</th></tr></thead>
           <tbody>
-            <tr>
-              <td class="label-col">Upfront Cost</td>
-              <td><span class="cross">&#10007;</span> Premium paid (lost if OTM)</td>
-              <td><span class="check">&#10003;</span> Collateral only (returned +/- PnL)</td>
-            </tr>
-            <tr>
-              <td class="label-col">Seller Risk</td>
-              <td><span class="cross">&#10007;</span> Potentially unlimited</td>
-              <td><span class="check">&#10003;</span> Bounded by collateral</td>
-            </tr>
-            <tr>
-              <td class="label-col">Time Decay</td>
-              <td><span class="cross">&#10007;</span> Theta eats your position daily</td>
-              <td><span class="check">&#10003;</span> No decay — hold to expiry for free</td>
-            </tr>
-            <tr>
-              <td class="label-col">Pricing Model</td>
-              <td><span class="cross">&#10007;</span> Black-Scholes, IV surface, Greeks</td>
-              <td><span class="check">&#10003;</span> Spot + basis. That's it.</td>
-            </tr>
-            <tr>
-              <td class="label-col">Breakeven</td>
-              <td>Strike + premium paid</td>
-              <td>Entry price (immediate)</td>
-            </tr>
-            <tr>
-              <td class="label-col">Settlement</td>
-              <td>Exercise or expire worthless</td>
-              <td>Automatic cash settlement via Chainlink</td>
-            </tr>
+            <tr><td class="label-col">Upfront Cost</td><td><span class="cross">&#10007;</span> Premium paid (lost if OTM)</td><td><span class="check">&#10003;</span> Collateral only (returned +/- PnL)</td></tr>
+            <tr><td class="label-col">Seller Risk</td><td><span class="cross">&#10007;</span> Potentially unlimited</td><td><span class="check">&#10003;</span> Bounded by collateral</td></tr>
+            <tr><td class="label-col">Time Decay</td><td><span class="cross">&#10007;</span> Theta eats your position daily</td><td><span class="check">&#10003;</span> No decay — hold to expiry for free</td></tr>
+            <tr><td class="label-col">Pricing Model</td><td><span class="cross">&#10007;</span> Black-Scholes, IV surface, Greeks</td><td><span class="check">&#10003;</span> Spot + basis. That's it.</td></tr>
+            <tr><td class="label-col">Breakeven</td><td>Strike + premium paid</td><td>Entry price (immediate)</td></tr>
+            <tr><td class="label-col">Settlement</td><td>Exercise or expire worthless</td><td>Automatic cash settlement via Chainlink</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- ═══ DARK 2 — CLOB (scroll-frozen) ═══ -->
+    <!-- DARK 2 — CLOB -->
     <div class="dark-section" id="clobSection">
       <div class="section-inner fade-in">
         <div class="section-header">
@@ -830,139 +586,78 @@
           <div class="section-title">On-Chain CLOB with Price-Time Priority</div>
           <p class="section-sub">A fully on-chain central limit order book. Orders match when prices cross — no AMM, no slippage curves, no impermanent loss.</p>
         </div>
-
         <div class="clob-wrapper">
           <div class="orderbook" id="orderbook">
             <div class="ob-title"><span class="dot"></span> ETH/USDC 30-Day Forward</div>
-            <div class="ob-header">
-              <span>Size</span><span>Price</span><span>Total</span>
-            </div>
+            <div class="ob-header"><span>Size</span><span>Price</span><span>Total</span></div>
             <div id="asks"></div>
             <div class="ob-spread" id="spreadDisplay">Spread: $3.00</div>
             <div id="bids"></div>
           </div>
-
           <div class="clob-flow" id="flowSteps">
-            <div class="flow-step" data-step="0">
-              <div class="flow-num">1</div>
-              <div class="flow-text">
-                <h4>Place Order</h4>
-                <p>Submit a limit order with price, size, and direction. USDC collateral is locked in the smart contract.</p>
-              </div>
-            </div>
-            <div class="flow-step" data-step="1">
-              <div class="flow-num">2</div>
-              <div class="flow-text">
-                <h4>Price-Time Matching</h4>
-                <p>When a bid >= ask, orders match instantly on-chain. Partial fills supported — leftover stays in the book.</p>
-              </div>
-            </div>
-            <div class="flow-step" data-step="2">
-              <div class="flow-num">3</div>
-              <div class="flow-text">
-                <h4>Position Opens</h4>
-                <p>Matched orders become positions. Set TP/SL immediately or let the keeper bot manage risk.</p>
-              </div>
-            </div>
-            <div class="flow-step" data-step="3">
-              <div class="flow-num">4</div>
-              <div class="flow-text">
-                <h4>Oracle Settlement</h4>
-                <p>At expiry, Chainlink delivers the final price. The contract computes PnL and distributes USDC — automatically.</p>
-              </div>
-            </div>
+            <div class="flow-step"><div class="flow-num">1</div><div class="flow-text"><h4>Place Order</h4><p>Submit a limit order with price, size, and direction. USDC collateral is locked in the smart contract.</p></div></div>
+            <div class="flow-step"><div class="flow-num">2</div><div class="flow-text"><h4>Price-Time Matching</h4><p>When a bid >= ask, orders match instantly on-chain. Partial fills supported — leftover stays in the book.</p></div></div>
+            <div class="flow-step"><div class="flow-num">3</div><div class="flow-text"><h4>Position Opens</h4><p>Matched orders become positions. Set TP/SL immediately or let the keeper bot manage risk.</p></div></div>
+            <div class="flow-step"><div class="flow-num">4</div><div class="flow-text"><h4>Oracle Settlement</h4><p>At expiry, Chainlink delivers the final price. The contract computes PnL and distributes USDC — automatically.</p></div></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ═══ DARK 3 — Forward vs Option at Expiry ═══ -->
-    <div class="dark-section" style="padding-bottom: 8rem;">
+    <!-- DARK 3 — Forward vs Option at Expiry -->
+    <div class="dark-section">
       <div class="section-inner fade-in">
         <div class="section-header">
           <div class="section-label">03 — At Expiry</div>
           <div class="section-title">Forward vs Option: Who Wins?</div>
           <p class="section-sub">Same trade, same direction, same settlement price. The difference is what you paid to get in.</p>
         </div>
-
-        <div class="price-control" style="margin-top: 0; margin-bottom: 2rem;">
+        <div class="price-control" style="margin-top:0;margin-bottom:2rem;">
           <label>Settlement Price</label>
           <input type="range" id="expirySlider" min="1800" max="3200" value="2800" step="10">
           <span class="price-readout" id="expiryReadout">$2,800</span>
         </div>
-
         <div class="payoff-grid">
-          <!-- Forward card -->
           <div class="payoff-card" id="fwdExpiryCard">
-            <div class="card-header">
-              <span class="card-title">Long Forward (Tenor)</span>
-              <span class="card-badge badge-forward" id="fwdExpiryBadge">+$1,500</span>
-            </div>
-            <div class="card-stats" style="border-top: none; padding-top: 0;">
-              <div class="stat-item">
-                <span class="stat-label">Entry Price</span>
-                <span class="stat-value">$2,500</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Contracts</span>
-                <span class="stat-value">5</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Upfront Cost</span>
-                <span class="stat-value stat-green">$0</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Collateral</span>
-                <span class="stat-value">$25,000 (returned)</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">PnL at Expiry</span>
-                <span class="stat-value stat-green" id="fwdPnl">+$1,500</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Net Return</span>
-                <span class="stat-value stat-green" id="fwdReturn">+$1,500</span>
-              </div>
+            <div class="card-header"><span class="card-title">Long Forward (Tenor)</span><span class="card-badge badge-forward" id="fwdExpiryBadge">+$1,500</span></div>
+            <div class="card-stats" style="border-top:none;padding-top:0;">
+              <div class="stat-item"><span class="stat-label">Entry Price</span><span class="stat-value">$2,500</span></div>
+              <div class="stat-item"><span class="stat-label">Contracts</span><span class="stat-value">5</span></div>
+              <div class="stat-item"><span class="stat-label">Upfront Cost</span><span class="stat-value stat-green">$0</span></div>
+              <div class="stat-item"><span class="stat-label">Collateral</span><span class="stat-value">$25,000 (returned)</span></div>
+              <div class="stat-item"><span class="stat-label">PnL at Expiry</span><span class="stat-value stat-green" id="fwdPnl">+$1,500</span></div>
+              <div class="stat-item"><span class="stat-label">Net Return</span><span class="stat-value stat-green" id="fwdReturn">+$1,500</span></div>
             </div>
           </div>
-
-          <!-- Option card -->
           <div class="payoff-card" id="optExpiryCard">
-            <div class="card-header">
-              <span class="card-title">Long Call Option</span>
-              <span class="card-badge badge-option" id="optExpiryBadge">-$100</span>
-            </div>
-            <div class="card-stats" style="border-top: none; padding-top: 0;">
-              <div class="stat-item">
-                <span class="stat-label">Strike Price</span>
-                <span class="stat-value">$2,500</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Contracts</span>
-                <span class="stat-value">5</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Premium Paid</span>
-                <span class="stat-value stat-red">-$1,600</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Intrinsic Value</span>
-                <span class="stat-value" id="optIntrinsic">$1,500</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">PnL at Expiry</span>
-                <span class="stat-value stat-red" id="optPnl">-$100</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Net Return</span>
-                <span class="stat-value stat-red" id="optReturn">-$100</span>
-              </div>
+            <div class="card-header"><span class="card-title">Long Call Option</span><span class="card-badge badge-option" id="optExpiryBadge">-$100</span></div>
+            <div class="card-stats" style="border-top:none;padding-top:0;">
+              <div class="stat-item"><span class="stat-label">Strike Price</span><span class="stat-value">$2,500</span></div>
+              <div class="stat-item"><span class="stat-label">Contracts</span><span class="stat-value">5</span></div>
+              <div class="stat-item"><span class="stat-label">Premium Paid</span><span class="stat-value stat-red">-$1,600</span></div>
+              <div class="stat-item"><span class="stat-label">Intrinsic Value</span><span class="stat-value" id="optIntrinsic">$1,500</span></div>
+              <div class="stat-item"><span class="stat-label">PnL at Expiry</span><span class="stat-value stat-red" id="optPnl">-$100</span></div>
+              <div class="stat-item"><span class="stat-label">Net Return</span><span class="stat-value stat-red" id="optReturn">-$100</span></div>
             </div>
           </div>
         </div>
-
         <div class="expiry-summary" id="advantageCard">
-          <span class="card-title" id="advantageText">Forward advantage: <span style="color: var(--green);">+$1,600</span> saved vs option premium</span>
+          <span class="card-title" id="advantageText">Forward advantage: <span style="color:var(--green);">+$1,600</span> vs option</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="dark-section footer-section">
+      <div class="footer-inner">
+        <div class="footer-links">
+          <a href="https://github.com/skar8848/Tenor-Protocol/tree/main/docs" target="_blank">Docs</a>
+          <a href="https://github.com/skar8848/Tenor-Protocol" target="_blank">GitHub</a>
+          <a href="https://x.com/0xhaizeka" target="_blank">Twitter</a>
+        </div>
+        <div class="footer-badge">
+          <img src="/avax_logo.png" alt="Avalanche" />
+          Built on Avalanche
         </div>
       </div>
     </div>
@@ -970,581 +665,345 @@
   </div>
 </div>
 
-<div class="scroll-hint" id="hint">
-  <div class="dot"></div>
-  scroll
-</div>
+<div class="scroll-hint" id="hint"><div class="dot"></div>scroll</div>
 
 <script>
-(function () {
-  var track      = document.getElementById('track');
-  var svg        = document.getElementById('svg');
-  var progressEl = document.getElementById('progress');
-  var hint       = document.getElementById('hint');
-  var sectionEls = document.querySelectorAll('.section-inner');
-  var navBar     = document.getElementById('navBar');
-  var btnLaunch  = document.getElementById('btnLaunch');
+(function(){
+  var track=document.getElementById('track'),svg=document.getElementById('svg'),
+      progressEl=document.getElementById('progress'),hint=document.getElementById('hint'),
+      sectionEls=document.querySelectorAll('.section-inner'),
+      navBar=document.getElementById('navBar'),btnLaunch=document.getElementById('btnLaunch'),
+      navDocs=document.getElementById('navDocs'),eyeImg=document.getElementById('eyeImg');
 
-  var LINE_COUNT = 3;
-  var GAP        = 32;
-  var R          = 65;
-  var WIDTHS     = [10, 8.5, 7];
-  var COLORS     = ['#0a0a0a', '#1a1a1a', '#2a2a2a'];
+  var LINE_COUNT=3,GAP=32,R=65,WIDTHS=[10,8.5,7],COLORS=['#0a0a0a','#1a1a1a','#2a2a2a'];
+  var W,H;
+  var PA=0.05,PB=0.27,PC=0.36,PD=0.50,PE1=0.68,PE2=0.84;
+  var scrollUpDistance=0,clobOffset=0;
 
-  var W, H;
-
-  var PA = 0.05;
-  var PB = 0.27;
-  var PC = 0.36;
-  var PD = 0.50;
-  var PE1 = 0.68;
-  var PE2 = 0.84;
-
-  var scrollUpDistance = 0;
-  var clobOffset = 0;
-
-  function computeOffsets() {
-    var clobEl = document.getElementById('clobSection');
-    if (clobEl) clobOffset = clobEl.offsetTop;
+  function computeOffsets(){
+    var el=document.getElementById('clobSection');
+    if(el) clobOffset=el.offsetTop;
   }
 
-  function getContentScroll(t) {
-    var total = track.scrollHeight - H;
-    if (t <= PA) return (t / PA) * H;
-    if (t <= PB) return H;
-    if (t <= PC) return H + ((t - PB) / (PC - PB)) * H;
-    if (t <= PD) return 2 * H;
-
-    if (clobOffset > 0) {
-      if (t <= PE1) {
-        var local = (t - PD) / (PE1 - PD);
-        return 2 * H + local * (clobOffset - 2 * H);
-      }
-      if (t <= PE2) return clobOffset;
-      var local2 = (t - PE2) / (1 - PE2);
-      return clobOffset + local2 * (total - clobOffset);
+  function getContentScroll(t){
+    var total=track.scrollHeight-H;
+    if(t<=PA) return(t/PA)*H;
+    if(t<=PB) return H;
+    if(t<=PC) return H+((t-PB)/(PC-PB))*H;
+    if(t<=PD) return 2*H;
+    if(clobOffset>0){
+      if(t<=PE1) return 2*H+((t-PD)/(PE1-PD))*(clobOffset-2*H);
+      if(t<=PE2) return clobOffset;
+      return clobOffset+((t-PE2)/(1-PE2))*(total-clobOffset);
     }
-
-    var fallback = (t - PD) / (1 - PD);
-    return 2 * H + fallback * (total - 2 * H);
+    return 2*H+((t-PD)/(1-PD))*(total-2*H);
   }
 
-  function getGroupScrollUp(t) {
-    if (t <= PB) return 0;
-    if (t >= PC) return 1;
-    return (t - PB) / (PC - PB);
+  function getGroupScrollUp(t){
+    if(t<=PB) return 0;
+    if(t>=PC) return 1;
+    return(t-PB)/(PC-PB);
   }
 
-  function getHeadProgress(t) {
-    if (t <= 0) return 0;
-    if (t >= PD) return 1;
-    return t / PD;
-  }
-
-  function getRetractProgress(t) {
-    var S = PC;
-    var E = PC + (PD - PC) * 0.7;
-    if (t <= S) return 0;
-    if (t >= E) return 1;
-    return (t - S) / (E - S);
-  }
-
+  // PathA: descend left, turn right, exit right
+  // PathB: enter from left, turn down, descend right
   var linesGroup;
-  var pathEls = [], totalLens = [], descentStarts = [];
-  var turnYVal = 0;
+  var pathAEls=[],pathBEls=[],pathALens=[],pathBLens=[];
+  var turnYVal=0;
 
-  function buildLines() {
-    W = window.innerWidth;
-    H = window.innerHeight;
-    svg.innerHTML = '';
-    pathEls = [];
-    totalLens = [];
-    descentStarts = [];
+  function buildLines(){
+    W=window.innerWidth; H=window.innerHeight;
+    svg.innerHTML='';
+    pathAEls=[]; pathBEls=[]; pathALens=[]; pathBLens=[];
 
-    var margin = 80;
-    turnYVal = H * 0.78;
-    var startY = -10;
-    var extBot = H * 1.5;
+    var margin=80;
+    turnYVal=H*0.78;
+    scrollUpDistance=turnYVal+R+20;
 
-    scrollUpDistance = turnYVal + R + 20;
-
-    linesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    linesGroup.setAttribute('id', 'linesG');
+    linesGroup=document.createElementNS('http://www.w3.org/2000/svg','g');
+    linesGroup.setAttribute('id','linesG');
     svg.appendChild(linesGroup);
 
-    for (var i = 0; i < LINE_COUNT; i++) {
-      var off = i * GAP;
-      var lx = margin + off;
-      var rx = W - margin - off;
-      var ty = turnYVal + off;
+    for(var i=0;i<LINE_COUNT;i++){
+      var off=i*GAP;
+      var lx=margin+off;
+      var rx=W-margin-off;
+      var ty=turnYVal+off;
+      var ry=scrollUpDistance+80+off; // reentry Y
 
-      var d = 'M ' + lx + ' ' + startY +
-        ' L ' + lx + ' ' + (ty - R) +
-        ' Q ' + lx + ' ' + ty + ' ' + (lx + R) + ' ' + ty +
-        ' L ' + (rx - R) + ' ' + ty +
-        ' Q ' + rx + ' ' + ty + ' ' + rx + ' ' + (ty + R) +
-        ' L ' + rx + ' ' + (H + extBot);
+      // PathA: descend left → turn right → exit right off-screen
+      var dA='M '+lx+' -10 L '+lx+' '+(ty-R)+' Q '+lx+' '+ty+' '+(lx+R)+' '+ty+' L '+(W+150)+' '+ty;
+      var pA=document.createElementNS('http://www.w3.org/2000/svg','path');
+      pA.setAttribute('d',dA); pA.setAttribute('class','line-path');
+      pA.setAttribute('stroke',COLORS[i]); pA.setAttribute('stroke-width',WIDTHS[i]);
+      linesGroup.appendChild(pA);
 
-      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', d);
-      path.setAttribute('class', 'line-path');
-      path.setAttribute('stroke', COLORS[i]);
-      path.setAttribute('stroke-width', WIDTHS[i]);
-      linesGroup.appendChild(path);
+      // PathB: enter from left off-screen → cross to right pos → turn down → descend
+      var dB='M -150 '+ry+' L '+(rx-R)+' '+ry+' Q '+rx+' '+ry+' '+rx+' '+(ry+R)+' L '+rx+' '+(H+H*1.5);
+      var pB=document.createElementNS('http://www.w3.org/2000/svg','path');
+      pB.setAttribute('d',dB); pB.setAttribute('class','line-path');
+      pB.setAttribute('stroke',COLORS[i]); pB.setAttribute('stroke-width',WIDTHS[i]);
+      linesGroup.appendChild(pB);
 
-      var len = path.getTotalLength();
-      var vertL = (ty - R) - startY;
-      var arc   = Math.PI * R / 2;
-      var horiz = (rx - R) - (lx + R);
-      var ds    = vertL + arc + horiz + arc;
-
-      pathEls.push(path);
-      totalLens.push(len);
-      descentStarts.push(ds);
+      pathAEls.push(pA); pathBEls.push(pB);
+      pathALens.push(pA.getTotalLength());
+      pathBLens.push(pB.getTotalLength());
     }
-
     computeOffsets();
   }
 
-  function ease(t) {
-    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-  }
-  function clamp01(v) { return Math.min(1, Math.max(0, v)); }
+  function ease(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+  function clamp01(v){return Math.min(1,Math.max(0,v));}
 
-  var chartsDrawn = false;
-  var bookStarted = false;
+  // PathA head: 0→1 over t=0→PB
+  function headA(t){if(t<=0)return 0;if(t>=PB)return 1;return t/PB;}
+  // PathA tail retract: 0→1 over t=PB→PC+0.06
+  function retractA(t){var S=PB,E=PC+0.06;if(t<=S)return 0;if(t>=E)return 1;return(t-S)/(E-S);}
+  // PathB head: 0→1 over t=PB→PD
+  function headB(t){if(t<=PB)return 0;if(t>=PD)return 1;return(t-PB)/(PD-PB);}
 
-  function update() {
-    var scrollTop = window.scrollY;
-    var maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    var t = clamp01(scrollTop / maxScroll);
+  var chartsDrawn=false,bookStarted=false;
 
-    progressEl.style.width = (t * 100) + '%';
-    hint.classList.toggle('hidden', t > 0.015);
+  function update(){
+    var scrollTop=window.scrollY;
+    var maxScroll=document.documentElement.scrollHeight-window.innerHeight;
+    var t=clamp01(scrollTop/maxScroll);
 
-    // Nav style: dark when in dark sections
-    var inDark = t > 0.48;
-    if (inDark) {
-      navBar.style.color = 'var(--dark-fg)';
-      btnLaunch.classList.add('btn-launch-dark');
-    } else {
-      navBar.style.color = '';
-      btnLaunch.classList.remove('btn-launch-dark');
+    progressEl.style.width=(t*100)+'%';
+    hint.classList.toggle('hidden',t>0.015);
+
+    var inDark=t>0.48;
+    navDocs.classList.toggle('nav-link-dark',inDark);
+    if(inDark){btnLaunch.classList.add('btn-launch-dark');}
+    else{btnLaunch.classList.remove('btn-launch-dark');}
+
+    track.style.transform='translateY('+(-getContentScroll(t))+'px)';
+
+    var gup=ease(getGroupScrollUp(t));
+    linesGroup.setAttribute('transform','translate(0,'+(-gup*scrollUpDistance)+')');
+
+    var lineOpacity=t>0.48?Math.max(0,1-(t-0.48)/0.04):1;
+    svg.style.opacity=lineOpacity;
+
+    // Draw lines
+    var hA=headA(t), rA=retractA(t), hB=headB(t);
+
+    for(var i=0;i<LINE_COUNT;i++){
+      var stag=i*0.02;
+      var lenA=pathALens[i], lenB=pathBLens[i];
+
+      // PathA
+      var hAi=ease(clamp01((hA-stag)/(1-stag)));
+      var rAi=ease(clamp01((rA-stag)/(1-stag)));
+      var drawEndA=hAi*lenA;
+      var drawStartA=rAi*lenA;
+      var visA=Math.max(0,drawEndA-drawStartA);
+      if(visA<=0){pathAEls[i].style.strokeDasharray='0 '+lenA;}
+      else{pathAEls[i].style.strokeDasharray='0 '+drawStartA+' '+visA+' '+lenA;}
+      pathAEls[i].style.strokeDashoffset='0';
+
+      // PathB
+      var hBi=ease(clamp01((hB-stag)/(1-stag)));
+      var drawEndB=hBi*lenB;
+      if(drawEndB<=0){pathBEls[i].style.strokeDasharray='0 '+lenB;}
+      else{pathBEls[i].style.strokeDasharray=drawEndB+' '+lenB;}
+      pathBEls[i].style.strokeDashoffset='0';
     }
 
-    track.style.transform = 'translateY(' + (-getContentScroll(t)) + 'px)';
+    // Section reveal
+    sectionEls.forEach(function(el){
+      var rect=el.getBoundingClientRect();
+      el.classList.toggle('visible',rect.top<H*0.82);
+    });
 
-    var gup = ease(getGroupScrollUp(t));
-    linesGroup.setAttribute('transform', 'translate(0, ' + (-gup * scrollUpDistance) + ')');
-
-    // Fade SVG lines entering dark sections
-    var lineOpacity = t > 0.48 ? Math.max(0, 1 - (t - 0.48) / 0.04) : 1;
-    svg.style.opacity = lineOpacity;
-
-    var hp = getHeadProgress(t);
-    var rp = getRetractProgress(t);
-
-    for (var i = 0; i < LINE_COUNT; i++) {
-      var stag     = i * 0.02;
-      var totalLen = totalLens[i];
-      var ds       = descentStarts[i];
-
-      var headT   = ease(clamp01((hp - stag) / (1 - stag)));
-      var drawEnd = headT * totalLen;
-
-      var retractT  = ease(clamp01((rp - stag) / (1 - stag)));
-      var drawStart = retractT * ds;
-
-      var visible = Math.max(0, drawEnd - drawStart);
-      if (visible <= 0) {
-        pathEls[i].style.strokeDasharray = '0 ' + totalLen;
-      } else {
-        pathEls[i].style.strokeDasharray = '0 ' + drawStart + ' ' + visible + ' ' + totalLen;
-      }
-      pathEls[i].style.strokeDashoffset = '0';
+    // Eye image reveal
+    if(eyeImg){
+      var er=eyeImg.getBoundingClientRect();
+      eyeImg.classList.toggle('visible',er.top<H*0.85);
     }
 
-    // Section reveal (animated orange sections)
-    sectionEls.forEach(function(el) {
-      var rect = el.getBoundingClientRect();
-      el.classList.toggle('visible', rect.top < H * 0.82);
+    // Fade-in dark sections
+    document.querySelectorAll('.fade-in').forEach(function(el){
+      var rect=el.getBoundingClientRect();
+      if(rect.top<H*0.85) el.classList.add('visible');
     });
 
-    // Fade-in for dark sections
-    document.querySelectorAll('.fade-in').forEach(function(el) {
-      var rect = el.getBoundingClientRect();
-      if (rect.top < H * 0.85) el.classList.add('visible');
+    // Card elevation
+    document.querySelectorAll('.payoff-card,.expiry-summary').forEach(function(el){
+      var rect=el.getBoundingClientRect();
+      el.classList.toggle('elevated',rect.top<H*0.78&&rect.bottom>0);
     });
 
-    // Card elevation + orange glow
-    document.querySelectorAll('.payoff-card, .expiry-summary').forEach(function(el) {
-      var rect = el.getBoundingClientRect();
-      el.classList.toggle('elevated', rect.top < H * 0.78 && rect.bottom > 0);
-    });
-
-    // CLOB flow steps — scroll-driven during freeze phase
-    if (t > PE1 && t <= PE2 && clobOffset > 0) {
-      var clobT = (t - PE1) / (PE2 - PE1);
-      var activeStep = Math.min(3, Math.floor(clobT * 4));
-      document.querySelectorAll('.flow-step').forEach(function(el, idx) {
-        el.classList.toggle('active', idx <= activeStep);
+    // CLOB flow — one step at a time
+    if(t>PE1&&t<=PE2&&clobOffset>0){
+      var clobT=(t-PE1)/(PE2-PE1);
+      var activeStep=Math.min(3,Math.floor(clobT*4));
+      document.querySelectorAll('.flow-step').forEach(function(el,idx){
+        el.classList.toggle('active',idx===activeStep);
       });
-    } else if (t <= PE1) {
-      document.querySelectorAll('.flow-step').forEach(function(el) {
-        el.classList.remove('active');
-      });
+    }else if(t<=PE1){
+      document.querySelectorAll('.flow-step').forEach(function(el){el.classList.remove('active');});
     }
 
-    // Init charts when approaching dark sections
-    if (!chartsDrawn && t > 0.42) {
-      chartsDrawn = true;
-      setTimeout(initCharts, 100);
-    }
-
-    // Start orderbook when approaching CLOB
-    if (!bookStarted && t > 0.55) {
-      bookStarted = true;
-      renderBook();
-      setInterval(simulateBook, 1200);
-    }
+    if(!chartsDrawn&&t>0.42){chartsDrawn=true;setTimeout(initCharts,100);}
+    if(!bookStarted&&t>0.55){bookStarted=true;renderBook();setInterval(simulateBook,1200);}
   }
 
-  // ═══════════════════════════════════════════
-  // PAYOFF CHARTS
-  // ═══════════════════════════════════════════
-  var var_green = '#22c55e';
-  var var_bg_dark = '#0a0a0a';
+  // ═══ PAYOFF CHARTS ═══
+  var vg='#22c55e',vbg='#0a0a0a';
 
-  function drawPayoff(canvasId, type) {
-    var canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var dpr = window.devicePixelRatio || 1;
-    var rect = canvas.parentElement.getBoundingClientRect();
-    if (rect.width === 0) return;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-    var CW = rect.width, CH = rect.height;
+  function drawPayoff(canvasId,type){
+    var canvas=document.getElementById(canvasId);if(!canvas)return;
+    var ctx=canvas.getContext('2d');var dpr=window.devicePixelRatio||1;
+    var rect=canvas.parentElement.getBoundingClientRect();if(rect.width===0)return;
+    canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;ctx.scale(dpr,dpr);
+    var CW=rect.width,CH=rect.height;
+    var pad={top:20,right:20,bottom:30,left:50};
+    var cw=CW-pad.left-pad.right,ch=CH-pad.top-pad.bottom;
+    var strike=2500,premium=320,collateral=5000,contracts=5;
+    function px(p){return pad.left+((p-1800)/1400)*cw;}
+    function py(pnl){return pad.top+ch/2-(pnl/2000)*(ch/2);}
 
-    var pad = { top: 20, right: 20, bottom: 30, left: 50 };
-    var cw = CW - pad.left - pad.right;
-    var ch = CH - pad.top - pad.bottom;
+    ctx.strokeStyle='rgba(232,224,212,0.04)';ctx.lineWidth=1;
+    for(var p=1800;p<=3200;p+=200){ctx.beginPath();ctx.moveTo(px(p),pad.top);ctx.lineTo(px(p),CH-pad.bottom);ctx.stroke();}
+    ctx.strokeStyle='rgba(232,224,212,0.1)';ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(pad.left,py(0));ctx.lineTo(CW-pad.right,py(0));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(232,224,212,0.25)';ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';
+    for(p=2000;p<=3200;p+=400)ctx.fillText('$'+p,px(p),CH-pad.bottom+16);
+    ctx.textAlign='right';ctx.fillText('+$2k',pad.left-6,py(2000)+3);ctx.fillText('$0',pad.left-6,py(0)+3);ctx.fillText('-$2k',pad.left-6,py(-2000)+3);
+    ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
 
-    var strike = 2500, premium = 320, collateral = 5000, contracts = 5;
-    function priceToX(p) { return pad.left + ((p - 1800) / 1400) * cw; }
-    function pnlToY(pnl) { return pad.top + ch/2 - (pnl / 2000) * (ch/2); }
-
-    ctx.strokeStyle = 'rgba(232,224,212,0.04)';
-    ctx.lineWidth = 1;
-    for (var p = 1800; p <= 3200; p += 200) {
-      ctx.beginPath(); ctx.moveTo(priceToX(p), pad.top); ctx.lineTo(priceToX(p), CH - pad.bottom); ctx.stroke();
+    if(type==='option'){
+      ctx.beginPath();for(p=1800;p<=3200;p+=5){var pnl=p<=strike?-premium:(p-strike)-premium;var s=pnl/premium*320;if(p===1800)ctx.moveTo(px(p),py(s));else ctx.lineTo(px(p),py(s));}
+      ctx.lineTo(px(3200),py(0));ctx.lineTo(px(1800),py(0));ctx.closePath();
+      var gr=ctx.createLinearGradient(0,py(1500),0,py(-500));gr.addColorStop(0,'rgba(34,197,94,0.08)');gr.addColorStop(0.5,'rgba(34,197,94,0)');gr.addColorStop(1,'rgba(239,68,68,0.06)');ctx.fillStyle=gr;ctx.fill();
+      ctx.beginPath();for(p=1800;p<=3200;p+=5){pnl=p<=strike?-premium:(p-strike)-premium;s=pnl/premium*320;if(p===1800)ctx.moveTo(px(p),py(s));else ctx.lineTo(px(p),py(s));}ctx.strokeStyle='#ef4444';ctx.stroke();
+      ctx.fillStyle='rgba(239,68,68,0.4)';ctx.font='9px "JetBrains Mono"';ctx.textAlign='center';ctx.fillText('premium lost',px(2150),py(-320)-8);
+    }else{
+      ctx.beginPath();for(p=1800;p<=3200;p+=5){pnl=Math.max(-collateral,Math.min(collateral,(p-strike)*contracts));if(p===1800)ctx.moveTo(px(p),py(pnl));else ctx.lineTo(px(p),py(pnl));}
+      ctx.lineTo(px(3200),py(0));ctx.lineTo(px(1800),py(0));ctx.closePath();
+      gr=ctx.createLinearGradient(0,py(2000),0,py(-2000));gr.addColorStop(0,'rgba(34,197,94,0.1)');gr.addColorStop(0.5,'transparent');gr.addColorStop(1,'rgba(239,68,68,0.08)');ctx.fillStyle=gr;ctx.fill();
+      ctx.beginPath();for(p=1800;p<=3200;p+=5){pnl=Math.max(-collateral,Math.min(collateral,(p-strike)*contracts));if(p===1800)ctx.moveTo(px(p),py(pnl));else ctx.lineTo(px(p),py(pnl));}ctx.strokeStyle=vg;ctx.stroke();
+      ctx.fillStyle='rgba(255,69,0,0.5)';ctx.font='9px "JetBrains Mono"';ctx.textAlign='center';ctx.fillText('entry $2,500',px(2500),py(0)-10);
     }
-    ctx.strokeStyle = 'rgba(232,224,212,0.1)';
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath(); ctx.moveTo(pad.left, pnlToY(0)); ctx.lineTo(CW - pad.right, pnlToY(0)); ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = 'rgba(232,224,212,0.25)';
-    ctx.font = '10px "JetBrains Mono"';
-    ctx.textAlign = 'center';
-    for (p = 2000; p <= 3200; p += 400) ctx.fillText('$' + p, priceToX(p), CH - pad.bottom + 16);
-    ctx.textAlign = 'right';
-    ctx.fillText('+$2k', pad.left - 6, pnlToY(2000) + 3);
-    ctx.fillText('$0', pad.left - 6, pnlToY(0) + 3);
-    ctx.fillText('-$2k', pad.left - 6, pnlToY(-2000) + 3);
-
-    ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-
-    if (type === 'option') {
-      ctx.beginPath();
-      for (p = 1800; p <= 3200; p += 5) {
-        var pnl = p <= strike ? -premium : (p - strike) - premium;
-        var scaled = pnl / premium * 320;
-        if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(scaled)); else ctx.lineTo(priceToX(p), pnlToY(scaled));
-      }
-      ctx.lineTo(priceToX(3200), pnlToY(0)); ctx.lineTo(priceToX(1800), pnlToY(0)); ctx.closePath();
-      var grad = ctx.createLinearGradient(0, pnlToY(1500), 0, pnlToY(-500));
-      grad.addColorStop(0, 'rgba(34,197,94,0.08)'); grad.addColorStop(0.5, 'rgba(34,197,94,0)'); grad.addColorStop(1, 'rgba(239,68,68,0.06)');
-      ctx.fillStyle = grad; ctx.fill();
-
-      ctx.beginPath();
-      for (p = 1800; p <= 3200; p += 5) {
-        pnl = p <= strike ? -premium : (p - strike) - premium;
-        scaled = pnl / premium * 320;
-        if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(scaled)); else ctx.lineTo(priceToX(p), pnlToY(scaled));
-      }
-      ctx.strokeStyle = '#ef4444'; ctx.stroke();
-      ctx.fillStyle = 'rgba(239,68,68,0.4)'; ctx.font = '9px "JetBrains Mono"'; ctx.textAlign = 'center';
-      ctx.fillText('premium lost', priceToX(2150), pnlToY(-320) - 8);
-    } else {
-      ctx.beginPath();
-      for (p = 1800; p <= 3200; p += 5) {
-        pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
-        if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(pnl)); else ctx.lineTo(priceToX(p), pnlToY(pnl));
-      }
-      ctx.lineTo(priceToX(3200), pnlToY(0)); ctx.lineTo(priceToX(1800), pnlToY(0)); ctx.closePath();
-      grad = ctx.createLinearGradient(0, pnlToY(2000), 0, pnlToY(-2000));
-      grad.addColorStop(0, 'rgba(34,197,94,0.1)'); grad.addColorStop(0.5, 'transparent'); grad.addColorStop(1, 'rgba(239,68,68,0.08)');
-      ctx.fillStyle = grad; ctx.fill();
-
-      ctx.beginPath();
-      for (p = 1800; p <= 3200; p += 5) {
-        pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
-        if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(pnl)); else ctx.lineTo(priceToX(p), pnlToY(pnl));
-      }
-      ctx.strokeStyle = var_green; ctx.stroke();
-      ctx.fillStyle = 'rgba(255,69,0,0.5)'; ctx.font = '9px "JetBrains Mono"'; ctx.textAlign = 'center';
-      ctx.fillText('entry $2,500', priceToX(2500), pnlToY(0) - 10);
-    }
-
-    ctx.setLineDash([3, 3]); ctx.strokeStyle = 'rgba(255,69,0,0.3)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(priceToX(strike), pad.top); ctx.lineTo(priceToX(strike), CH - pad.bottom); ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(255,69,0,0.3)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(px(strike),pad.top);ctx.lineTo(px(strike),CH-pad.bottom);ctx.stroke();ctx.setLineDash([]);
   }
 
-  function drawInteractive(settlement) {
-    var canvas = document.getElementById('chartInteractive');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var dpr = window.devicePixelRatio || 1;
-    var rect = canvas.parentElement.getBoundingClientRect();
-    if (rect.width === 0) return;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-    var CW = rect.width, CH = rect.height;
+  function drawInteractive(settlement){
+    var canvas=document.getElementById('chartInteractive');if(!canvas)return;
+    var ctx=canvas.getContext('2d');var dpr=window.devicePixelRatio||1;
+    var rect=canvas.parentElement.getBoundingClientRect();if(rect.width===0)return;
+    canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;ctx.scale(dpr,dpr);
+    var CW=rect.width,CH=rect.height;
+    var pad={top:20,right:20,bottom:30,left:50};
+    var cw=CW-pad.left-pad.right,ch=CH-pad.top-pad.bottom;
+    var strike=2500,contracts=5,collateral=5000,totalPremium=1600;
+    function px(p){return pad.left+((p-1800)/1400)*cw;}
+    function py(pnl){return pad.top+ch/2-(pnl/2000)*(ch/2);}
 
-    var pad = { top: 20, right: 20, bottom: 30, left: 50 };
-    var cw = CW - pad.left - pad.right;
-    var ch = CH - pad.top - pad.bottom;
-    var strike = 2500, contracts = 5, collateral = 5000, premium = 320, totalPremium = 1600;
+    ctx.strokeStyle='rgba(232,224,212,0.04)';ctx.lineWidth=1;
+    for(var p=1800;p<=3200;p+=200){ctx.beginPath();ctx.moveTo(px(p),pad.top);ctx.lineTo(px(p),CH-pad.bottom);ctx.stroke();}
+    ctx.strokeStyle='rgba(232,224,212,0.08)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(pad.left,py(0));ctx.lineTo(CW-pad.right,py(0));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(232,224,212,0.25)';ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';
+    for(p=2000;p<=3200;p+=400)ctx.fillText('$'+p,px(p),CH-pad.bottom+16);
 
-    function priceToX(p) { return pad.left + ((p - 1800) / 1400) * cw; }
-    function pnlToY(pnl) { return pad.top + ch/2 - (pnl / 2000) * (ch/2); }
+    // Option line
+    ctx.beginPath();ctx.lineWidth=2;ctx.globalAlpha=0.6;
+    for(p=1800;p<=3200;p+=5){var oP=(p<=strike?0:(p-strike)*contracts)-totalPremium;if(p===1800)ctx.moveTo(px(p),py(oP));else ctx.lineTo(px(p),py(oP));}
+    ctx.strokeStyle='#ef4444';ctx.stroke();ctx.globalAlpha=1;
 
-    // Grid
-    ctx.strokeStyle = 'rgba(232,224,212,0.04)'; ctx.lineWidth = 1;
-    for (var p = 1800; p <= 3200; p += 200) {
-      ctx.beginPath(); ctx.moveTo(priceToX(p), pad.top); ctx.lineTo(priceToX(p), CH - pad.bottom); ctx.stroke();
-    }
-    ctx.strokeStyle = 'rgba(232,224,212,0.08)'; ctx.setLineDash([4,4]);
-    ctx.beginPath(); ctx.moveTo(pad.left, pnlToY(0)); ctx.lineTo(CW-pad.right, pnlToY(0)); ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = 'rgba(232,224,212,0.25)'; ctx.font = '10px "JetBrains Mono"'; ctx.textAlign = 'center';
-    for (p = 2000; p <= 3200; p += 400) ctx.fillText('$'+p, priceToX(p), CH-pad.bottom+16);
-
-    // Option payoff line
-    ctx.beginPath(); ctx.lineWidth = 2; ctx.globalAlpha = 0.6;
-    for (p = 1800; p <= 3200; p += 5) {
-      var optPnl = (p <= strike ? 0 : (p - strike) * contracts) - totalPremium;
-      if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(optPnl)); else ctx.lineTo(priceToX(p), pnlToY(optPnl));
-    }
-    ctx.strokeStyle = '#ef4444'; ctx.stroke(); ctx.globalAlpha = 1;
-
-    // Forward payoff
-    var pnlFwd = Math.max(-collateral, Math.min(collateral, (settlement - strike) * contracts));
-    var optSettlePnl = (settlement <= strike ? 0 : (settlement - strike) * contracts) - totalPremium;
+    var fPnl=Math.max(-collateral,Math.min(collateral,(settlement-strike)*contracts));
+    var oPnl=(settlement<=strike?0:(settlement-strike)*contracts)-totalPremium;
 
     // Forward fill
-    ctx.beginPath();
-    for (p = 1800; p <= settlement; p += 5) {
-      var fPnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
-      if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(fPnl)); else ctx.lineTo(priceToX(p), pnlToY(fPnl));
-    }
-    ctx.lineTo(priceToX(settlement), pnlToY(0)); ctx.lineTo(priceToX(1800), pnlToY(0)); ctx.closePath();
-    ctx.fillStyle = pnlFwd >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'; ctx.fill();
+    ctx.beginPath();for(p=1800;p<=settlement;p+=5){var fp=Math.max(-collateral,Math.min(collateral,(p-strike)*contracts));if(p===1800)ctx.moveTo(px(p),py(fp));else ctx.lineTo(px(p),py(fp));}
+    ctx.lineTo(px(settlement),py(0));ctx.lineTo(px(1800),py(0));ctx.closePath();
+    ctx.fillStyle=fPnl>=0?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)';ctx.fill();
 
     // Forward line
-    ctx.beginPath(); ctx.lineWidth = 2.5;
-    for (p = 1800; p <= 3200; p += 5) {
-      fPnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
-      if (p === 1800) ctx.moveTo(priceToX(p), pnlToY(fPnl)); else ctx.lineTo(priceToX(p), pnlToY(fPnl));
-    }
-    ctx.strokeStyle = var_green; ctx.stroke();
+    ctx.beginPath();ctx.lineWidth=2.5;
+    for(p=1800;p<=3200;p+=5){fp=Math.max(-collateral,Math.min(collateral,(p-strike)*contracts));if(p===1800)ctx.moveTo(px(p),py(fp));else ctx.lineTo(px(p),py(fp));}
+    ctx.strokeStyle=vg;ctx.stroke();
 
     // Settlement vertical
-    var sx = priceToX(settlement);
-    ctx.setLineDash([3,3]); ctx.strokeStyle = 'rgba(255,69,0,0.5)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(sx, pad.top); ctx.lineTo(sx, CH - pad.bottom); ctx.stroke();
-    ctx.setLineDash([]);
+    var sx=px(settlement);
+    ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(255,69,0,0.5)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(sx,pad.top);ctx.lineTo(sx,CH-pad.bottom);ctx.stroke();ctx.setLineDash([]);
 
-    // Forward dot + label
-    var syFwd = pnlToY(pnlFwd);
-    ctx.beginPath(); ctx.arc(sx, syFwd, 6, 0, Math.PI*2);
-    ctx.fillStyle = pnlFwd >= 0 ? var_green : '#ef4444'; ctx.fill();
-    ctx.strokeStyle = var_bg_dark; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = pnlFwd >= 0 ? var_green : '#ef4444';
-    ctx.font = 'bold 11px "JetBrains Mono"'; ctx.textAlign = 'left';
-    var fSign = pnlFwd >= 0 ? '+' : '';
-    ctx.fillText('FWD ' + fSign + '$' + pnlFwd.toLocaleString(), sx + 12, syFwd - 4);
+    // Forward dot+label
+    var syF=py(fPnl);ctx.beginPath();ctx.arc(sx,syF,6,0,Math.PI*2);ctx.fillStyle=fPnl>=0?vg:'#ef4444';ctx.fill();ctx.strokeStyle=vbg;ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle=fPnl>=0?vg:'#ef4444';ctx.font='bold 11px "JetBrains Mono"';ctx.textAlign='left';
+    ctx.fillText('FWD '+(fPnl>=0?'+':'')+('$'+fPnl.toLocaleString()),sx+12,syF-4);
 
-    // Option dot + label
-    var syOpt = pnlToY(optSettlePnl);
-    ctx.beginPath(); ctx.arc(sx, syOpt, 5, 0, Math.PI*2);
-    ctx.fillStyle = optSettlePnl >= 0 ? var_green : '#ef4444'; ctx.fill();
-    ctx.strokeStyle = var_bg_dark; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = optSettlePnl >= 0 ? var_green : '#ef4444';
-    ctx.font = 'bold 11px "JetBrains Mono"'; ctx.textAlign = 'left';
-    var oSign = optSettlePnl >= 0 ? '+' : '';
-    ctx.fillText('OPT ' + oSign + '$' + optSettlePnl.toLocaleString(), sx + 12, syOpt + 14);
+    // Option dot+label
+    var syO=py(oPnl);ctx.beginPath();ctx.arc(sx,syO,5,0,Math.PI*2);ctx.fillStyle=oPnl>=0?vg:'#ef4444';ctx.fill();ctx.strokeStyle=vbg;ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle=oPnl>=0?vg:'#ef4444';ctx.font='bold 11px "JetBrains Mono"';ctx.textAlign='left';
+    ctx.fillText('OPT '+(oPnl>=0?'+':'')+('$'+oPnl.toLocaleString()),sx+12,syO+14);
 
-    // Legend
-    ctx.font = '9px "JetBrains Mono"'; ctx.textAlign = 'left';
-    ctx.fillStyle = '#ef4444'; ctx.globalAlpha = 0.6;
-    ctx.fillText('-- Option payoff', pad.left + 5, pad.top + 12);
-    ctx.globalAlpha = 1; ctx.fillStyle = var_green;
-    ctx.fillText('-- Forward payoff', pad.left + 5, pad.top + 24);
+    ctx.font='9px "JetBrains Mono"';ctx.textAlign='left';
+    ctx.fillStyle='#ef4444';ctx.globalAlpha=0.6;ctx.fillText('-- Option payoff',pad.left+5,pad.top+12);
+    ctx.globalAlpha=1;ctx.fillStyle=vg;ctx.fillText('-- Forward payoff',pad.left+5,pad.top+24);
   }
 
-  // ═══════════════════════════════════════════
-  // ORDERBOOK
-  // ═══════════════════════════════════════════
-  var baseAsks = [
-    { price: 2512, size: 3.2 }, { price: 2510, size: 5.8 },
-    { price: 2508, size: 8.1 }, { price: 2506, size: 2.4 }, { price: 2504, size: 4.5 }
-  ];
-  var baseBids = [
-    { price: 2501, size: 6.2 }, { price: 2499, size: 3.8 },
-    { price: 2497, size: 9.1 }, { price: 2495, size: 4.4 }, { price: 2493, size: 2.9 }
-  ];
+  // ═══ ORDERBOOK ═══
+  var baseAsks=[{price:2512,size:3.2},{price:2510,size:5.8},{price:2508,size:8.1},{price:2506,size:2.4},{price:2504,size:4.5}];
+  var baseBids=[{price:2501,size:6.2},{price:2499,size:3.8},{price:2497,size:9.1},{price:2495,size:4.4},{price:2493,size:2.9}];
+  var asks=JSON.parse(JSON.stringify(baseAsks)),bids=JSON.parse(JSON.stringify(baseBids)),matchPhase=false;
 
-  var asks = JSON.parse(JSON.stringify(baseAsks));
-  var bids = JSON.parse(JSON.stringify(baseBids));
-  var matchPhase = false;
-
-  function renderBook() {
-    var maxSize = Math.max.apply(null, asks.map(function(a){return a.size;}).concat(bids.map(function(b){return b.size;})));
-    var asksDiv = document.getElementById('asks');
-    var bidsDiv = document.getElementById('bids');
-    if (!asksDiv || !bidsDiv) return;
-
-    asksDiv.innerHTML = asks.map(function(a, i) {
-      var total = asks.slice(i).reduce(function(s,x){return s+x.size;}, 0);
-      var depth = (a.size / maxSize * 100);
-      return '<div class="ob-row ask"><div class="ob-match"></div><div class="depth-bar" style="width:'+depth+'%"></div><span>'+a.size.toFixed(1)+'</span><span>'+a.price.toFixed(2)+'</span><span>'+total.toFixed(1)+'</span></div>';
-    }).join('');
-
-    bidsDiv.innerHTML = bids.map(function(b, i) {
-      var total = bids.slice(0, i+1).reduce(function(s,x){return s+x.size;}, 0);
-      var depth = (b.size / maxSize * 100);
-      return '<div class="ob-row bid"><div class="ob-match"></div><div class="depth-bar" style="width:'+depth+'%"></div><span>'+b.size.toFixed(1)+'</span><span>'+b.price.toFixed(2)+'</span><span>'+total.toFixed(1)+'</span></div>';
-    }).join('');
-
-    var spread = asks[asks.length - 1].price - bids[0].price;
-    document.getElementById('spreadDisplay').textContent = 'Spread: $' + spread.toFixed(2);
+  function renderBook(){
+    var maxSize=Math.max.apply(null,asks.map(function(a){return a.size;}).concat(bids.map(function(b){return b.size;})));
+    var ad=document.getElementById('asks'),bd=document.getElementById('bids');if(!ad||!bd)return;
+    ad.innerHTML=asks.map(function(a,i){var total=asks.slice(i).reduce(function(s,x){return s+x.size;},0);var d=(a.size/maxSize*100);return'<div class="ob-row ask"><div class="ob-match"></div><div class="depth-bar" style="width:'+d+'%"></div><span>'+a.size.toFixed(1)+'</span><span>'+a.price.toFixed(2)+'</span><span>'+total.toFixed(1)+'</span></div>';}).join('');
+    bd.innerHTML=bids.map(function(b,i){var total=bids.slice(0,i+1).reduce(function(s,x){return s+x.size;},0);var d=(b.size/maxSize*100);return'<div class="ob-row bid"><div class="ob-match"></div><div class="depth-bar" style="width:'+d+'%"></div><span>'+b.size.toFixed(1)+'</span><span>'+b.price.toFixed(2)+'</span><span>'+total.toFixed(1)+'</span></div>';}).join('');
+    var spread=asks[asks.length-1].price-bids[0].price;document.getElementById('spreadDisplay').textContent='Spread: $'+spread.toFixed(2);
   }
 
-  function simulateBook() {
-    asks.forEach(function(a) { a.size = Math.max(0.5, a.size + (Math.random()-0.5)*1.5); });
-    bids.forEach(function(b) { b.size = Math.max(0.5, b.size + (Math.random()-0.5)*1.5); });
-
-    if (Math.random() < 0.12 && !matchPhase) {
-      matchPhase = true;
-      var origPrice = asks[asks.length-1].price;
-      asks[asks.length-1].price = bids[0].price;
-      renderBook();
-
-      setTimeout(function() {
-        var askRows = document.querySelectorAll('#asks .ob-row');
-        var bidRows = document.querySelectorAll('#bids .ob-row');
-        if (askRows.length) askRows[askRows.length-1].classList.add('matched');
-        if (bidRows.length) bidRows[0].classList.add('matched');
-      }, 100);
-
-      setTimeout(function() {
-        asks[asks.length-1].price = origPrice;
-        matchPhase = false;
-        renderBook();
-      }, 1500);
-      return;
+  function simulateBook(){
+    asks.forEach(function(a){a.size=Math.max(0.5,a.size+(Math.random()-0.5)*1.5);});
+    bids.forEach(function(b){b.size=Math.max(0.5,b.size+(Math.random()-0.5)*1.5);});
+    if(Math.random()<0.12&&!matchPhase){
+      matchPhase=true;var orig=asks[asks.length-1].price;asks[asks.length-1].price=bids[0].price;renderBook();
+      setTimeout(function(){var ar=document.querySelectorAll('#asks .ob-row'),br=document.querySelectorAll('#bids .ob-row');if(ar.length)ar[ar.length-1].classList.add('matched');if(br.length)br[0].classList.add('matched');},100);
+      setTimeout(function(){asks[asks.length-1].price=orig;matchPhase=false;renderBook();},1500);return;
     }
     renderBook();
   }
 
-  // ═══════════════════════════════════════════
-  // EXPIRY COMPARISON (replaces Alice/Bob)
-  // ═══════════════════════════════════════════
-  function updateExpiry(price) {
-    var entry = 2500, contracts = 5, totalPremium = 1600;
-
-    var fwdPnl = (price - entry) * contracts;
-    var intrinsic = Math.max(0, price - entry) * contracts;
-    var optPnl = intrinsic - totalPremium;
-    var advantage = fwdPnl - optPnl;
-
-    document.getElementById('expiryReadout').textContent = '$' + price.toLocaleString();
-
-    // Forward
-    var fSign = fwdPnl >= 0 ? '+' : '';
-    document.getElementById('fwdExpiryBadge').textContent = fSign + '$' + fwdPnl.toLocaleString();
-    document.getElementById('fwdExpiryBadge').className = 'card-badge ' + (fwdPnl >= 0 ? 'badge-forward' : 'badge-option');
-    document.getElementById('fwdPnl').textContent = fSign + '$' + Math.abs(fwdPnl).toLocaleString();
-    document.getElementById('fwdPnl').className = 'stat-value ' + (fwdPnl >= 0 ? 'stat-green' : 'stat-red');
-    document.getElementById('fwdReturn').textContent = fSign + '$' + Math.abs(fwdPnl).toLocaleString();
-    document.getElementById('fwdReturn').className = 'stat-value ' + (fwdPnl >= 0 ? 'stat-green' : 'stat-red');
-
-    // Option
-    var oSign = optPnl >= 0 ? '+' : '';
-    document.getElementById('optExpiryBadge').textContent = oSign + '$' + Math.abs(optPnl).toLocaleString();
-    document.getElementById('optExpiryBadge').className = 'card-badge ' + (optPnl >= 0 ? 'badge-forward' : 'badge-option');
-    document.getElementById('optIntrinsic').textContent = '$' + intrinsic.toLocaleString();
-    document.getElementById('optPnl').textContent = oSign + '$' + Math.abs(optPnl).toLocaleString();
-    document.getElementById('optPnl').className = 'stat-value ' + (optPnl >= 0 ? 'stat-green' : 'stat-red');
-    document.getElementById('optReturn').textContent = oSign + '$' + Math.abs(optPnl).toLocaleString();
-    document.getElementById('optReturn').className = 'stat-value ' + (optPnl >= 0 ? 'stat-green' : 'stat-red');
-
-    // Advantage
-    var aSign = advantage >= 0 ? '+' : '';
-    var advColor = advantage >= 0 ? 'var(--green)' : 'var(--red)';
-    document.getElementById('advantageText').innerHTML = 'Forward advantage: <span style="color:' + advColor + ';">' + aSign + '$' + Math.abs(advantage).toLocaleString() + '</span> vs option';
+  // ═══ EXPIRY ═══
+  function updateExpiry(price){
+    var entry=2500,contracts=5,tp=1600;
+    var fP=(price-entry)*contracts;var intr=Math.max(0,price-entry)*contracts;var oP=intr-tp;var adv=fP-oP;
+    document.getElementById('expiryReadout').textContent='$'+price.toLocaleString();
+    var fs=fP>=0?'+':'';document.getElementById('fwdExpiryBadge').textContent=fs+'$'+Math.abs(fP).toLocaleString();document.getElementById('fwdExpiryBadge').className='card-badge '+(fP>=0?'badge-forward':'badge-option');
+    document.getElementById('fwdPnl').textContent=fs+'$'+Math.abs(fP).toLocaleString();document.getElementById('fwdPnl').className='stat-value '+(fP>=0?'stat-green':'stat-red');
+    document.getElementById('fwdReturn').textContent=fs+'$'+Math.abs(fP).toLocaleString();document.getElementById('fwdReturn').className='stat-value '+(fP>=0?'stat-green':'stat-red');
+    var os=oP>=0?'+':'-';document.getElementById('optExpiryBadge').textContent=os+'$'+Math.abs(oP).toLocaleString();document.getElementById('optExpiryBadge').className='card-badge '+(oP>=0?'badge-forward':'badge-option');
+    document.getElementById('optIntrinsic').textContent='$'+intr.toLocaleString();
+    document.getElementById('optPnl').textContent=os+'$'+Math.abs(oP).toLocaleString();document.getElementById('optPnl').className='stat-value '+(oP>=0?'stat-green':'stat-red');
+    document.getElementById('optReturn').textContent=os+'$'+Math.abs(oP).toLocaleString();document.getElementById('optReturn').className='stat-value '+(oP>=0?'stat-green':'stat-red');
+    var as=adv>=0?'+':'-';var ac=adv>=0?'var(--green)':'var(--red)';
+    document.getElementById('advantageText').innerHTML='Forward advantage: <span style="color:'+ac+';">'+as+'$'+Math.abs(adv).toLocaleString()+'</span> vs option';
   }
 
-  // ═══════════════════════════════════════════
-  // INIT
-  // ═══════════════════════════════════════════
-  function initCharts() {
-    drawPayoff('chartOption', 'option');
-    drawPayoff('chartForward', 'forward');
-    drawInteractive(2500);
-    updateExpiry(2800);
-
-    document.getElementById('priceSlider').addEventListener('input', function() {
-      var v = parseInt(this.value);
-      document.getElementById('priceReadout').textContent = '$' + v.toLocaleString();
-      var fPnl = (v - 2500) * 5;
-      var oPnl = (v <= 2500 ? 0 : (v - 2500) * 5) - 1600;
-      var fBadge = document.getElementById('pnlBadgeFwd');
-      var oBadge = document.getElementById('pnlBadgeOpt');
-      fBadge.textContent = 'Forward: ' + (fPnl >= 0 ? '+' : '') + '$' + fPnl.toLocaleString();
-      fBadge.className = 'card-badge ' + (fPnl >= 0 ? 'badge-forward' : 'badge-option');
-      oBadge.textContent = 'Option: ' + (oPnl >= 0 ? '+' : '') + '$' + oPnl.toLocaleString();
-      oBadge.className = 'card-badge ' + (oPnl >= 0 ? 'badge-forward' : 'badge-option');
+  // ═══ INIT ═══
+  function initCharts(){
+    drawPayoff('chartOption','option');drawPayoff('chartForward','forward');
+    drawInteractive(2500);updateExpiry(2800);
+    document.getElementById('priceSlider').addEventListener('input',function(){
+      var v=parseInt(this.value);document.getElementById('priceReadout').textContent='$'+v.toLocaleString();
+      var fP=(v-2500)*5,oP=(v<=2500?0:(v-2500)*5)-1600;
+      var fb=document.getElementById('pnlBadgeFwd'),ob=document.getElementById('pnlBadgeOpt');
+      fb.textContent='Forward: '+(fP>=0?'+':'')+('$'+fP.toLocaleString());fb.className='card-badge '+(fP>=0?'badge-forward':'badge-option');
+      ob.textContent='Option: '+(oP>=0?'+':'')+('$'+oP.toLocaleString());ob.className='card-badge '+(oP>=0?'badge-forward':'badge-option');
       drawInteractive(v);
     });
-
-    document.getElementById('expirySlider').addEventListener('input', function() {
-      updateExpiry(parseInt(this.value));
-    });
+    document.getElementById('expirySlider').addEventListener('input',function(){updateExpiry(parseInt(this.value));});
   }
 
-  // ═══════════════════════════════════════════
-  // BOOT
-  // ═══════════════════════════════════════════
-  buildLines();
-  update();
-
-  window.addEventListener('scroll', function() { requestAnimationFrame(update); }, { passive: true });
-  window.addEventListener('resize', function() {
-    buildLines();
-    update();
-    if (chartsDrawn) {
-      drawPayoff('chartOption', 'option');
-      drawPayoff('chartForward', 'forward');
-      drawInteractive(parseInt(document.getElementById('priceSlider').value));
-    }
-  });
+  buildLines();update();
+  window.addEventListener('scroll',function(){requestAnimationFrame(update);},{passive:true});
+  window.addEventListener('resize',function(){buildLines();update();if(chartsDrawn){drawPayoff('chartOption','option');drawPayoff('chartForward','forward');drawInteractive(parseInt(document.getElementById('priceSlider').value));}});
 })();
 </script>
 </body>
