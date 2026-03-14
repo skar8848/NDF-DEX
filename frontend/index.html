@@ -140,29 +140,33 @@
   .section-split {
     display: flex;
     align-items: center;
-    gap: 4rem;
+    gap: 2rem;
     width: 100%;
-    max-width: 1100px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
+    position: relative;
   }
   .section-split .section-inner {
-    flex: 1;
+    flex: 0 0 auto;
     text-align: left;
-    max-width: 480px;
+    max-width: 520px;
+    z-index: 2;
   }
   .section-split .eye-img {
-    flex: 2;
-    max-width: 900px;
+    position: absolute;
+    right: -8vw;
+    top: 50%;
+    transform: translateY(-50%) translateX(60px);
+    width: clamp(400px, 50vw, 750px);
     border-radius: 20px;
     opacity: 0;
-    transform: translateX(40px);
     transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
-    mask-image: radial-gradient(ellipse 90% 85% at center, black 50%, transparent 100%);
-    -webkit-mask-image: radial-gradient(ellipse 90% 85% at center, black 50%, transparent 100%);
+    mask-image: radial-gradient(ellipse 85% 80% at center, black 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 85% 80% at center, black 40%, transparent 100%);
   }
   .section-split .eye-img.visible {
-    opacity: 0.7;
-    transform: translateX(0);
+    opacity: 0.6;
+    transform: translateY(-50%) translateX(0);
   }
 
   h1 {
@@ -445,8 +449,7 @@
     .dark-section { padding: 3rem 1.5rem; }
     .nav-bar { padding: 1rem 1.2rem; }
     .btn-launch { padding: 0.5rem 1rem; font-size: 0.75rem; }
-    .section-split { flex-direction: column; gap: 2rem; }
-    .section-split .eye-img { max-width: 100%; }
+    .section-split .eye-img { width: clamp(250px, 60vw, 400px); right: -4vw; }
     .footer-inner { flex-direction: column; text-align: center; }
   }
 </style>
