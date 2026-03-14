@@ -225,7 +225,9 @@ export default function Trade() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background overflow-hidden">
+    <div className="h-full flex bg-background overflow-hidden">
+      {/* Left: top bar + chart/book/bottom */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
       {/* Top bar: Market selector + info */}
       <div className="flex items-center gap-5 px-3 py-1 border-b border-border bg-surface shrink-0">
         <MarketSelector
@@ -319,10 +321,8 @@ export default function Trade() {
         )}
       </div>
 
-      {/* Main content: left section + trade form */}
+      {/* Main content */}
       <div className="flex-1 flex min-h-0">
-        {/* Left: Chart + OrderBook + Bottom panel */}
-        <div className="flex-1 flex flex-col min-h-0 min-w-0">
           {/* Chart + OrderBook row */}
           <div className="flex-1 flex min-h-0">
             {/* Price Chart */}
@@ -422,14 +422,14 @@ export default function Trade() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Trade Form - full height right column, scrollable */}
-        <div className="w-[280px] shrink-0 border-l border-border overflow-y-auto no-scrollbar">
-          <div className="px-3 py-1 border-b border-border">
-            <h3 className="text-xs font-semibold text-text">Place Order</h3>
-          </div>
-          <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} bestBid={bestBid} bestAsk={bestAsk} bookDepthAsk={bookDepthAsk} bookDepthBid={bookDepthBid} />
+      {/* Trade Form - full height right column, scrollable */}
+      <div className="w-[280px] shrink-0 border-l border-border overflow-y-auto no-scrollbar">
+        <div className="px-3 py-1 border-b border-border">
+          <h3 className="text-xs font-semibold text-text">Place Order</h3>
         </div>
+        <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} bestBid={bestBid} bestAsk={bestAsk} bookDepthAsk={bookDepthAsk} bookDepthBid={bookDepthBid} />
       </div>
     </div>
   )
