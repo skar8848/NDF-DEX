@@ -5,19 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tenor Protocol — Decentralized Forward Exchange</title>
 <link rel="icon" type="image/png" href="/tenor_logo.png">
-<link href="https://fonts.googleapis.com/css2?family=Monoton&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Monoton&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #FF4500; --fg: #0a0a0a; }
+  :root {
+    --bg: #FF4500;
+    --fg: #0a0a0a;
+    --dark-bg: #0a0a0a;
+    --dark-fg: #e8e0d4;
+    --dim: rgba(232,224,212,0.3);
+    --orange: #FF4500;
+    --orange-dim: rgba(255,69,0,0.15);
+    --green: #22c55e;
+    --red: #ef4444;
+    --green-dim: rgba(34,197,94,0.15);
+    --red-dim: rgba(239,68,68,0.15);
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     background: var(--bg);
     color: var(--fg);
     font-family: 'DM Sans', sans-serif;
-    font-weight: 300;
+    font-weight: 400;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
   }
 
-  .scroll-runway { height: 1000vh; }
+  .scroll-runway { height: 1800vh; }
 
   .frame {
     position: fixed;
@@ -51,6 +64,7 @@
     will-change: transform;
   }
 
+  /* ── ANIMATED SECTIONS (orange bg) ── */
   .section {
     height: 100vh;
     display: flex;
@@ -59,39 +73,34 @@
   }
 
   .section-inner {
-    max-width: 520px;
+    max-width: 580px;
     opacity: 0;
     transform: translateY(50px);
     transition: opacity 0.7s ease, transform 0.7s ease;
   }
   .section-inner.visible { opacity: 1; transform: translateY(0); }
 
-  /* Section 1 — Title, centered */
   .section:nth-child(1) { justify-content: center; }
-  .section:nth-child(1) .section-inner { text-align: center; margin: 0 auto; }
+  .section:nth-child(1) .section-inner { text-align: center; margin: 0 auto; max-width: 700px; }
 
-  /* Section 2 — Right-aligned */
   .section:nth-child(2) { justify-content: flex-end; }
   .section:nth-child(2) .section-inner { text-align: right; margin-right: 8%; }
   .section:nth-child(2) p { margin-left: auto; }
 
-  /* Section 3 — Bottom-left */
   .section:nth-child(3) { justify-content: flex-start; align-items: flex-end; }
   .section:nth-child(3) .section-inner { margin-left: 8%; margin-bottom: 8%; }
 
-  /* Section 4 — Right-aligned */
   .section:nth-child(4) { justify-content: flex-end; }
   .section:nth-child(4) .section-inner { text-align: right; margin-right: 8%; }
   .section:nth-child(4) p { margin-left: auto; }
 
-  /* Section 5 — Centered */
   .section:nth-child(5) { justify-content: center; }
   .section:nth-child(5) .section-inner { text-align: center; margin: 0 auto; }
 
   h1 {
     font-family: 'Instrument Serif', serif;
     font-weight: 400;
-    font-size: clamp(3rem, 6vw, 5.5rem);
+    font-size: clamp(3.5rem, 7vw, 6.5rem);
     line-height: 1.0;
     letter-spacing: -0.03em;
     margin-bottom: 1rem;
@@ -99,22 +108,29 @@
   h1 em { font-style: italic; opacity: 0.6; }
 
   h2 {
-    font-family: 'Instrument Serif', serif;
-    font-weight: 400;
-    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: clamp(2.4rem, 4.5vw, 4rem);
     line-height: 1.1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
     margin-bottom: 0.8rem;
   }
 
-  p { font-size: 1rem; line-height: 1.75; opacity: 0.4; max-width: 400px; }
+  p {
+    font-size: clamp(1.05rem, 1.3vw, 1.2rem);
+    line-height: 1.75;
+    opacity: 0.55;
+    max-width: 460px;
+    font-weight: 400;
+  }
 
   .tag {
     display: inline-block;
-    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    opacity: 0.3;
+    opacity: 0.4;
     margin-bottom: 1.4rem;
     font-weight: 500;
   }
@@ -127,9 +143,10 @@
 
   .subtitle {
     margin-top: 1.2rem;
-    font-size: clamp(0.85rem, 1.2vw, 1.05rem);
-    opacity: 0.35;
-    letter-spacing: 0.04em;
+    font-size: clamp(1rem, 1.4vw, 1.2rem);
+    opacity: 0.45;
+    letter-spacing: 0.02em;
+    font-weight: 400;
   }
 
   .scroll-hint {
@@ -162,10 +179,426 @@
   .progress {
     position: fixed;
     top: 0; left: 0;
-    height: 1px;
+    height: 2px;
     background: var(--fg);
     opacity: 0.3;
     z-index: 100;
+  }
+
+  /* ── DARK SECTIONS ── */
+  .dark-section {
+    min-height: 100vh;
+    background: var(--dark-bg);
+    color: var(--dark-fg);
+    padding: 5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dark-section .section-inner {
+    max-width: 1200px;
+    width: 100%;
+  }
+
+  .dark-transition {
+    height: 100vh;
+    background: linear-gradient(to bottom, var(--bg), var(--dark-bg));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dark-transition .section-inner {
+    text-align: center;
+    margin: 0 auto;
+    max-width: 700px;
+  }
+  .dark-transition h2 { color: var(--dark-fg); }
+  .dark-transition p { color: var(--dark-fg); }
+  .dark-transition .tag { color: var(--dark-fg); }
+
+  .section-header { margin-bottom: 3rem; }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 0.8rem;
+    font-weight: 500;
+  }
+  .section-title {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--dark-fg);
+  }
+  .section-sub {
+    margin-top: 0.8rem;
+    opacity: 0.4;
+    max-width: 550px;
+    line-height: 1.65;
+    font-size: 1rem;
+    color: var(--dark-fg);
+  }
+
+  /* ── PAYOFF CHARTS ── */
+  .payoff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .payoff-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(232,224,212,0.06);
+    border-radius: 12px;
+    padding: 1.8rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .payoff-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--orange);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .payoff-card:hover::before { opacity: 1; }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.2rem;
+  }
+  .card-title {
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    color: var(--dark-fg);
+  }
+  .card-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .badge-option { background: var(--red-dim); color: var(--red); }
+  .badge-forward { background: var(--green-dim); color: var(--green); }
+
+  .chart-container {
+    position: relative;
+    width: 100%;
+    height: 220px;
+  }
+  .chart-container canvas { width: 100%; height: 100%; }
+
+  .card-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(232,224,212,0.06);
+  }
+  .stat-item { display: flex; flex-direction: column; gap: 0.15rem; }
+  .stat-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    opacity: 0.35;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--dark-fg);
+  }
+  .stat-value {
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: -0.01em;
+    color: var(--dark-fg);
+  }
+  .stat-green { color: var(--green) !important; }
+  .stat-red { color: var(--red) !important; }
+
+  /* ── COMPARISON TABLE ── */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 2rem;
+    font-size: 0.88rem;
+  }
+  .compare-table th {
+    text-align: left;
+    padding: 0.8rem 1rem;
+    font-weight: 500;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--orange);
+    border-bottom: 1px solid rgba(232,224,212,0.1);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .compare-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(232,224,212,0.04);
+    line-height: 1.5;
+    color: var(--dark-fg);
+  }
+  .compare-table tr:hover td { background: rgba(255,255,255,0.015); }
+  .compare-table .label-col { opacity: 0.4; font-weight: 400; width: 30%; }
+  .cross { color: var(--red); opacity: 0.7; }
+  .check { color: var(--green); opacity: 0.7; }
+
+  /* ── PRICE SLIDER ── */
+  .price-control {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .price-control label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    opacity: 0.35;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+    color: var(--dark-fg);
+  }
+  .price-control input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    background: rgba(232,224,212,0.1);
+    border-radius: 2px;
+    outline: none;
+  }
+  .price-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: var(--orange);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--dark-bg);
+    box-shadow: 0 0 10px rgba(255,69,0,0.4);
+  }
+  .price-readout {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 0.9rem;
+    min-width: 70px;
+    text-align: right;
+    color: var(--dark-fg);
+  }
+
+  /* ── CLOB ── */
+  .clob-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  .orderbook {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(232,224,212,0.06);
+    border-radius: 12px;
+    padding: 1.5rem;
+    overflow: hidden;
+  }
+  .ob-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--dark-fg);
+  }
+  .ob-title .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 2s ease infinite;
+  }
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .ob-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(232,224,212,0.06);
+    margin-bottom: 0.4rem;
+  }
+  .ob-header span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.3;
+    color: var(--dark-fg);
+  }
+  .ob-header span:last-child { text-align: right; }
+  .ob-header span:nth-child(2) { text-align: center; }
+  .ob-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0.3rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 400;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .ob-row span:last-child { text-align: right; }
+  .ob-row span:nth-child(2) { text-align: center; }
+  .ob-row.ask { color: var(--red); }
+  .ob-row.bid { color: var(--green); }
+  .ob-row .depth-bar {
+    position: absolute;
+    top: 0; bottom: 0;
+    opacity: 0.06;
+    transition: width 0.5s ease;
+  }
+  .ob-row.ask .depth-bar { right: 0; background: var(--red); }
+  .ob-row.bid .depth-bar { left: 0; background: var(--green); }
+  .ob-spread {
+    text-align: center;
+    padding: 0.6rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    opacity: 0.3;
+    border-top: 1px solid rgba(232,224,212,0.04);
+    border-bottom: 1px solid rgba(232,224,212,0.04);
+    margin: 0.3rem 0;
+    color: var(--dark-fg);
+  }
+  .ob-match {
+    position: absolute;
+    inset: 0;
+    background: var(--orange);
+    opacity: 0;
+    border-radius: 3px;
+    transition: opacity 0.15s;
+    pointer-events: none;
+  }
+  .ob-row.matched .ob-match { opacity: 0.15; }
+
+  .clob-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    justify-content: center;
+  }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid rgba(232,224,212,0.04);
+    transition: all 0.4s;
+    opacity: 0.4;
+  }
+  .flow-step.active {
+    opacity: 1;
+    border-color: var(--orange);
+    background: var(--orange-dim);
+  }
+  .flow-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--orange);
+    background: var(--orange-dim);
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .flow-text h4 {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.2rem;
+    color: var(--dark-fg);
+  }
+  .flow-text p {
+    font-size: 0.78rem;
+    opacity: 0.45;
+    line-height: 1.5;
+    color: var(--dark-fg);
+    max-width: none;
+  }
+
+  /* ── SETTLEMENT ── */
+  .settlement-visual {
+    margin-top: 2.5rem;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(232,224,212,0.06);
+    border-radius: 12px;
+    padding: 2rem;
+  }
+  .settlement-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .settlement-pair {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--dark-fg);
+  }
+  .settlement-expiry {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    opacity: 0.35;
+    color: var(--dark-fg);
+  }
+  .pnl-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(232,224,212,0.04);
+    font-size: 0.82rem;
+    color: var(--dark-fg);
+  }
+  .pnl-row:last-child { border-bottom: none; }
+  .pnl-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.5;
+  }
+  .pnl-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .pnl-value { font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── FADE-IN for dark sections ── */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   @media (max-width: 768px) {
@@ -173,6 +606,9 @@
     .section:nth-child(2) .section-inner { margin-right: 4%; }
     .section:nth-child(3) .section-inner { margin-left: 4%; margin-bottom: 4%; }
     .section:nth-child(4) .section-inner { margin-right: 4%; }
+    .payoff-grid { grid-template-columns: 1fr; }
+    .clob-wrapper { grid-template-columns: 1fr; }
+    .dark-section { padding: 3rem 1.5rem; }
   }
 </style>
 </head>
@@ -188,50 +624,270 @@
 
   <div class="content-track" id="track">
 
-    <!-- Section 0 — Title -->
+    <!-- ═══ SECTION 0 — Title ═══ -->
     <section class="section">
       <div class="section-inner">
-        <h1 style="font-family: 'Monoton', cursive; font-size: clamp(3.5rem, 7vw, 7rem); margin-bottom: 1.5rem;">Tenor</h1>
+        <h1 style="font-family: 'Monoton', cursive; font-size: clamp(4rem, 8vw, 8rem); margin-bottom: 1.5rem; letter-spacing: 0.02em;">Tenor Protocol</h1>
         <img src="/tenor_logo.png" alt="Tenor Protocol" class="logo-img" />
         <p class="subtitle">The First Decentralized Forward Exchange on Avalanche</p>
       </div>
     </section>
 
-    <!-- Section 1 — Forward Thinking -->
+    <!-- ═══ SECTION 1 — Why Forwards ═══ -->
     <section class="section">
       <div class="section-inner">
-        <div class="tag">001 — Forward Thinking</div>
-        <h2>The turn</h2>
-        <p>$7 trillion traded daily in forwards. None of it on-chain — until now. Tenor brings non-deliverable forwards to DeFi, fully collateralized and trustless.</p>
+        <div class="tag">001 — The Instrument</div>
+        <h2>Why Forwards,<br>Not Options?</h2>
+        <p>$7 trillion traded daily in forwards. None of it on-chain — until now. No premium to pay, no Greeks to track, no infinite risk for either side.</p>
       </div>
     </section>
 
-    <!-- Section 2 — Settlement -->
+    <!-- ═══ SECTION 2 — Symmetric Risk ═══ -->
     <section class="section">
       <div class="section-inner">
-        <div class="tag">002 — Settlement</div>
-        <h2>Crossing</h2>
-        <p>Pure price exposure. Chainlink oracles settle the difference in USDC at expiry. No physical delivery, no counterparty risk. Just math.</p>
+        <div class="tag">002 — Zero Premium</div>
+        <h2>Symmetric Risk,<br>Pure Exposure</h2>
+        <p>Both sides post collateral. At expiry, Chainlink oracles settle the price difference in USDC. No time decay, no premium lost. Just your position.</p>
       </div>
     </section>
 
-    <!-- Section 3 — Architecture -->
+    <!-- ═══ SECTION 3 — On-Chain CLOB ═══ -->
     <section class="section">
       <div class="section-inner">
         <div class="tag">003 — Architecture</div>
-        <h2>Descent</h2>
-        <p>A fully on-chain order book. Automated keeper bots for liquidation and settlement. An AI-native MCP layer. Every trade verifiable, every settlement trustless.</p>
+        <h2>Fully On-Chain<br>Order Book</h2>
+        <p>A decentralized CLOB with price-time priority. No AMM, no slippage curves. Automated keeper bots handle liquidation and settlement.</p>
       </div>
     </section>
 
-    <!-- Section 4 — CTA -->
+    <!-- ═══ SECTION 4 — CTA / Transition ═══ -->
     <section class="section">
       <div class="section-inner">
         <div class="tag">004</div>
-        <h2><em>Enter the forward curve</em></h2>
-        <p>The future of derivatives is decentralized. Tenor Protocol — live on Avalanche.</p>
+        <h2><em>Enter the<br>forward curve</em></h2>
+        <p>The future of derivatives is decentralized. Scroll to explore the mechanics.</p>
       </div>
     </section>
+
+    <!-- ═══ TRANSITION — Orange → Dark ═══ -->
+    <div class="dark-transition">
+      <div class="section-inner">
+        <div class="tag" style="color: var(--dark-fg);">Deep Dive</div>
+        <h2>How Tenor Works</h2>
+        <p style="margin: 0 auto;">Interactive breakdowns of payoff structure, order matching, and settlement mechanics.</p>
+      </div>
+    </div>
+
+    <!-- ═══ SECTION 6 — Payoff Structure ═══ -->
+    <div class="dark-section" style="padding-top: 4rem;">
+      <div class="section-inner fade-in">
+        <div class="section-header">
+          <div class="section-label">01 — Payoff Structure</div>
+          <div class="section-title">Symmetric vs Asymmetric Risk</div>
+          <p class="section-sub">Options give you asymmetry — but you pay for it with a premium that can expire worthless. Forwards split the risk evenly.</p>
+        </div>
+
+        <div class="payoff-grid">
+          <div class="payoff-card">
+            <div class="card-header">
+              <span class="card-title">Long Call Option</span>
+              <span class="card-badge badge-option">Option</span>
+            </div>
+            <div class="chart-container"><canvas id="chartOption"></canvas></div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <span class="stat-label">Upfront Cost</span>
+                <span class="stat-value stat-red">-$320 premium</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Max Loss</span>
+                <span class="stat-value stat-red">-$320 (premium)</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Breakeven</span>
+                <span class="stat-value">$2,820</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Complexity</span>
+                <span class="stat-value stat-red">Greeks, IV, Theta</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="payoff-card">
+            <div class="card-header">
+              <span class="card-title">Long Forward (NDF)</span>
+              <span class="card-badge badge-forward">Forward</span>
+            </div>
+            <div class="chart-container"><canvas id="chartForward"></canvas></div>
+            <div class="card-stats">
+              <div class="stat-item">
+                <span class="stat-label">Upfront Cost</span>
+                <span class="stat-value stat-green">$0 (collateral returned)</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Max Loss</span>
+                <span class="stat-value">Bounded by collateral</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Breakeven</span>
+                <span class="stat-value">$2,500 (entry price)</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Complexity</span>
+                <span class="stat-value stat-green">None</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive slider -->
+        <div class="payoff-card" style="margin-bottom: 2rem;">
+          <div class="card-header">
+            <span class="card-title">Interactive: drag settlement price</span>
+            <span class="card-badge badge-forward" id="pnlBadge">PnL: $0</span>
+          </div>
+          <div class="chart-container"><canvas id="chartInteractive"></canvas></div>
+          <div class="price-control">
+            <label>Settlement Price</label>
+            <input type="range" id="priceSlider" min="1800" max="3200" value="2500" step="10">
+            <span class="price-readout" id="priceReadout">$2,500</span>
+          </div>
+        </div>
+
+        <!-- Comparison table -->
+        <table class="compare-table">
+          <thead>
+            <tr><th></th><th>Options</th><th>Forwards (Tenor)</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="label-col">Upfront Cost</td>
+              <td><span class="cross">&#10007;</span> Premium paid (lost if OTM)</td>
+              <td><span class="check">&#10003;</span> Collateral only (returned +/- PnL)</td>
+            </tr>
+            <tr>
+              <td class="label-col">Seller Risk</td>
+              <td><span class="cross">&#10007;</span> Potentially unlimited</td>
+              <td><span class="check">&#10003;</span> Bounded by collateral</td>
+            </tr>
+            <tr>
+              <td class="label-col">Time Decay</td>
+              <td><span class="cross">&#10007;</span> Theta eats your position daily</td>
+              <td><span class="check">&#10003;</span> No decay — hold to expiry for free</td>
+            </tr>
+            <tr>
+              <td class="label-col">Pricing Model</td>
+              <td><span class="cross">&#10007;</span> Black-Scholes, IV surface, Greeks</td>
+              <td><span class="check">&#10003;</span> Spot + basis. That's it.</td>
+            </tr>
+            <tr>
+              <td class="label-col">Breakeven</td>
+              <td>Strike + premium paid</td>
+              <td>Entry price (immediate)</td>
+            </tr>
+            <tr>
+              <td class="label-col">Settlement</td>
+              <td>Exercise or expire worthless</td>
+              <td>Automatic cash settlement via Chainlink</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ SECTION 7 — Order Book ═══ -->
+    <div class="dark-section">
+      <div class="section-inner fade-in">
+        <div class="section-header">
+          <div class="section-label">02 — Order Book</div>
+          <div class="section-title">On-Chain CLOB with Price-Time Priority</div>
+          <p class="section-sub">A fully on-chain central limit order book. Orders match when prices cross — no AMM, no slippage curves, no impermanent loss.</p>
+        </div>
+
+        <div class="clob-wrapper">
+          <div class="orderbook" id="orderbook">
+            <div class="ob-title"><span class="dot"></span> ETH/USDC 30-Day Forward</div>
+            <div class="ob-header">
+              <span>Size</span><span>Price</span><span>Total</span>
+            </div>
+            <div id="asks"></div>
+            <div class="ob-spread" id="spreadDisplay">Spread: $3.00</div>
+            <div id="bids"></div>
+          </div>
+
+          <div class="clob-flow" id="flowSteps">
+            <div class="flow-step" data-step="0">
+              <div class="flow-num">1</div>
+              <div class="flow-text">
+                <h4>Place Order</h4>
+                <p>Submit a limit order with price, size, and direction. USDC collateral is locked in the smart contract.</p>
+              </div>
+            </div>
+            <div class="flow-step" data-step="1">
+              <div class="flow-num">2</div>
+              <div class="flow-text">
+                <h4>Price-Time Matching</h4>
+                <p>When a bid >= ask, orders match instantly on-chain. Partial fills supported — leftover stays in the book.</p>
+              </div>
+            </div>
+            <div class="flow-step" data-step="2">
+              <div class="flow-num">3</div>
+              <div class="flow-text">
+                <h4>Position Opens</h4>
+                <p>Matched orders become positions. Set TP/SL immediately or let the keeper bot manage risk.</p>
+              </div>
+            </div>
+            <div class="flow-step" data-step="3">
+              <div class="flow-num">4</div>
+              <div class="flow-text">
+                <h4>Oracle Settlement</h4>
+                <p>At expiry, Chainlink delivers the final price. The contract computes PnL and distributes USDC — automatically.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SECTION 8 — Settlement ═══ -->
+    <div class="dark-section" style="padding-bottom: 8rem;">
+      <div class="section-inner fade-in">
+        <div class="section-header">
+          <div class="section-label">03 — Settlement</div>
+          <div class="section-title">Cash Settlement, Zero Delivery</div>
+          <p class="section-sub">No tokens change hands. At expiry, only the price difference is settled in USDC via Chainlink oracle. Collateral is returned.</p>
+        </div>
+
+        <div class="settlement-visual">
+          <div class="settlement-header">
+            <span class="settlement-pair">ETH / USDC — 30 Day</span>
+            <span class="settlement-expiry">Expires in 30d 00h 00m</span>
+          </div>
+
+          <div class="price-control" style="margin-top: 0;">
+            <label>Settlement Price</label>
+            <input type="range" id="settlementSlider" min="2000" max="3000" value="2800" step="10">
+            <span class="price-readout" id="settlementReadout">$2,800</span>
+          </div>
+
+          <div style="margin-top: 2rem;">
+            <div class="pnl-row">
+              <span class="pnl-label"><span class="pnl-dot" style="background: var(--green);"></span> Alice (LONG at $2,500 x 5)</span>
+              <span class="pnl-value" id="alicePnl" style="color: var(--green);">+$1,500</span>
+            </div>
+            <div class="pnl-row">
+              <span class="pnl-label"><span class="pnl-dot" style="background: var(--red);"></span> Bob (SHORT at $2,500 x 5)</span>
+              <span class="pnl-value" id="bobPnl" style="color: var(--red);">-$1,500</span>
+            </div>
+            <div class="pnl-row" style="opacity: 0.4;">
+              <span class="pnl-label">Net (zero-sum)</span>
+              <span class="pnl-value" style="color: var(--dark-fg);">$0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -257,16 +913,6 @@
 
   let W, H;
 
-  // ──────────────────────────────────────────────
-  // PHASES — content layer
-  //
-  // A  (0.00 → 0.05)  Scroll: title → "The turn"
-  // B  (0.05 → 0.27)  Frozen on "The turn"
-  // C  (0.27 → 0.36)  Scroll up: "The turn" → "Crossing"
-  // D  (0.36 → 0.50)  Frozen on "Crossing" (lines descend right)
-  // E  (0.50 → 1.0)   Scroll remaining sections
-  // ──────────────────────────────────────────────
-
   const PA = 0.05;
   const PB = 0.27;
   const PC = 0.36;
@@ -275,7 +921,7 @@
   let scrollUpDistance = 0;
 
   function getContentScroll(t) {
-    const total = 4 * H;
+    const total = track.scrollHeight - H;
     if (t <= PA) return (t / PA) * H;
     if (t <= PB) return H;
     if (t <= PC) {
@@ -306,8 +952,6 @@
     if (t >= E) return 1;
     return (t - S) / (E - S);
   }
-
-  // ─── BUILD ───
 
   let linesGroup;
   let pathEls = [], totalLens = [], descentStarts = [];
@@ -371,6 +1015,9 @@
   }
   function clamp01(v) { return Math.min(1, Math.max(0, v)); }
 
+  // ── Charts drawn? ──
+  let chartsDrawn = false;
+
   function update() {
     const scrollTop = window.scrollY;
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
@@ -379,14 +1026,15 @@
     progressEl.style.width = (t * 100) + '%';
     hint.classList.toggle('hidden', t > 0.015);
 
-    // Content
     track.style.transform = `translateY(${-getContentScroll(t)}px)`;
 
-    // SVG group scroll up
     const gup = ease(getGroupScrollUp(t));
     linesGroup.setAttribute('transform', `translate(0, ${-gup * scrollUpDistance})`);
 
-    // Lines
+    // Hide SVG lines when entering dark sections
+    const lineOpacity = t > 0.48 ? Math.max(0, 1 - (t - 0.48) / 0.04) : 1;
+    svg.style.opacity = lineOpacity;
+
     const hp = getHeadProgress(t);
     const rp = getRetractProgress(t);
 
@@ -410,18 +1058,400 @@
       pathEls[i].style.strokeDashoffset = '0';
     }
 
-    // Sections
+    // Section reveal
     sectionEls.forEach(el => {
       const rect = el.getBoundingClientRect();
       el.classList.toggle('visible', rect.top < H * 0.82);
     });
+
+    // Fade-in for dark sections
+    document.querySelectorAll('.fade-in').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < H * 0.85) el.classList.add('visible');
+    });
+
+    // Draw charts when they become visible
+    if (!chartsDrawn && t > 0.45) {
+      chartsDrawn = true;
+      setTimeout(initCharts, 100);
+    }
   }
 
+  // ═══════════════════════════════════════════
+  // PAYOFF CHARTS
+  // ═══════════════════════════════════════════
+  const var_green = '#22c55e';
+  const var_bg = '#0a0a0a';
+
+  function drawPayoff(canvasId, type) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    if (rect.width === 0) return;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const CW = rect.width, CH = rect.height;
+
+    const pad = { top: 20, right: 20, bottom: 30, left: 50 };
+    const cw = CW - pad.left - pad.right;
+    const ch = CH - pad.top - pad.bottom;
+
+    const strike = 2500, premium = 320, collateral = 5000, contracts = 5;
+    function priceToX(p) { return pad.left + ((p - 1800) / 1400) * cw; }
+    function pnlToY(pnl) { return pad.top + ch/2 - (pnl / 2000) * (ch/2); }
+
+    ctx.strokeStyle = 'rgba(232,224,212,0.04)';
+    ctx.lineWidth = 1;
+    for (let p = 1800; p <= 3200; p += 200) {
+      const x = priceToX(p);
+      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, CH - pad.bottom); ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(232,224,212,0.1)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(pad.left, pnlToY(0)); ctx.lineTo(CW - pad.right, pnlToY(0)); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = 'rgba(232,224,212,0.25)';
+    ctx.font = '10px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    for (let p = 2000; p <= 3200; p += 400) ctx.fillText('$' + p, priceToX(p), CH - pad.bottom + 16);
+    ctx.textAlign = 'right';
+    ctx.fillText('+$2k', pad.left - 6, pnlToY(2000) + 3);
+    ctx.fillText('$0', pad.left - 6, pnlToY(0) + 3);
+    ctx.fillText('-$2k', pad.left - 6, pnlToY(-2000) + 3);
+
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (type === 'option') {
+      ctx.beginPath();
+      for (let p = 1800; p <= 3200; p += 5) {
+        const pnl = p <= strike ? -premium : (p - strike) * contracts / contracts - premium;
+        const scaled = pnl / premium * 320;
+        const x = priceToX(p), y = pnlToY(scaled);
+        if (p === 1800) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.lineTo(priceToX(3200), pnlToY(0));
+      ctx.lineTo(priceToX(1800), pnlToY(0));
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, pnlToY(1500), 0, pnlToY(-500));
+      grad.addColorStop(0, 'rgba(34,197,94,0.08)');
+      grad.addColorStop(0.5, 'rgba(34,197,94,0)');
+      grad.addColorStop(1, 'rgba(239,68,68,0.06)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      ctx.beginPath();
+      for (let p = 1800; p <= 3200; p += 5) {
+        const pnl = p <= strike ? -premium : (p - strike) * contracts / contracts - premium;
+        const scaled = pnl / premium * 320;
+        const x = priceToX(p), y = pnlToY(scaled);
+        if (p === 1800) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#ef4444';
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(239,68,68,0.4)';
+      ctx.font = '9px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('premium lost', priceToX(2150), pnlToY(-premium / premium * 320) - 8);
+    } else {
+      ctx.beginPath();
+      for (let p = 1800; p <= 3200; p += 5) {
+        const pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
+        const x = priceToX(p), y = pnlToY(pnl);
+        if (p === 1800) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.lineTo(priceToX(3200), pnlToY(0));
+      ctx.lineTo(priceToX(1800), pnlToY(0));
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, pnlToY(2000), 0, pnlToY(-2000));
+      grad.addColorStop(0, 'rgba(34,197,94,0.1)');
+      grad.addColorStop(0.5, 'transparent');
+      grad.addColorStop(1, 'rgba(239,68,68,0.08)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      ctx.beginPath();
+      for (let p = 1800; p <= 3200; p += 5) {
+        const pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
+        const x = priceToX(p), y = pnlToY(pnl);
+        if (p === 1800) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = var_green;
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255,69,0,0.5)';
+      ctx.font = '9px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('entry $2,500', priceToX(2500), pnlToY(0) - 10);
+    }
+
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = 'rgba(255,69,0,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(priceToX(strike), pad.top); ctx.lineTo(priceToX(strike), CH - pad.bottom); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawInteractive(settlement) {
+    const canvas = document.getElementById('chartInteractive');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    if (rect.width === 0) return;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const CW = rect.width, CH = rect.height;
+
+    const pad = { top: 20, right: 20, bottom: 30, left: 50 };
+    const cw = CW - pad.left - pad.right;
+    const ch = CH - pad.top - pad.bottom;
+    const strike = 2500, contracts = 5, collateral = 5000, premium = 320;
+
+    function priceToX(p) { return pad.left + ((p - 1800) / 1400) * cw; }
+    function pnlToY(pnl) { return pad.top + ch/2 - (pnl / 2000) * (ch/2); }
+
+    ctx.strokeStyle = 'rgba(232,224,212,0.04)';
+    ctx.lineWidth = 1;
+    for (let p = 1800; p <= 3200; p += 200) {
+      const x = priceToX(p);
+      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, CH - pad.bottom); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(232,224,212,0.08)';
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(pad.left, pnlToY(0)); ctx.lineTo(CW-pad.right, pnlToY(0)); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = 'rgba(232,224,212,0.25)';
+    ctx.font = '10px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    for (let p = 2000; p <= 3200; p += 400) ctx.fillText('$'+p, priceToX(p), CH-pad.bottom+16);
+
+    // Option payoff (dimmed)
+    ctx.beginPath();
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.3;
+    for (let p = 1800; p <= 3200; p += 5) {
+      const pnl = p <= strike ? -premium : (p - strike) * contracts / contracts - premium;
+      const scaled = pnl / premium * 320;
+      const x = priceToX(p), y = pnlToY(scaled);
+      if (p === 1800) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = '#ef4444';
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Forward
+    const pnlFwd = Math.max(-collateral, Math.min(collateral, (settlement - strike) * contracts));
+
+    ctx.beginPath();
+    for (let p = 1800; p <= settlement; p += 5) {
+      const pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
+      const x = priceToX(p), y = pnlToY(pnl);
+      if (p === 1800) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.lineTo(priceToX(settlement), pnlToY(0));
+    ctx.lineTo(priceToX(1800), pnlToY(0));
+    ctx.closePath();
+    const isProfit = pnlFwd >= 0;
+    ctx.fillStyle = isProfit ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.lineWidth = 2.5;
+    for (let p = 1800; p <= 3200; p += 5) {
+      const pnl = Math.max(-collateral, Math.min(collateral, (p - strike) * contracts));
+      const x = priceToX(p), y = pnlToY(pnl);
+      if (p === 1800) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = var_green;
+    ctx.stroke();
+
+    const sx = priceToX(settlement), sy = pnlToY(pnlFwd);
+    ctx.setLineDash([3,3]);
+    ctx.strokeStyle = 'rgba(255,69,0,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(sx, pad.top); ctx.lineTo(sx, CH - pad.bottom); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.arc(sx, sy, 6, 0, Math.PI*2);
+    ctx.fillStyle = isProfit ? var_green : '#ef4444';
+    ctx.fill();
+    ctx.strokeStyle = var_bg;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = isProfit ? var_green : '#ef4444';
+    ctx.font = 'bold 12px "JetBrains Mono"';
+    ctx.textAlign = 'center';
+    const sign = pnlFwd >= 0 ? '+' : '';
+    ctx.fillText(sign + '$' + pnlFwd.toLocaleString(), sx, sy - 14);
+
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#ef4444';
+    ctx.font = '9px "JetBrains Mono"';
+    ctx.textAlign = 'left';
+    ctx.fillText('-- Option payoff', pad.left + 5, pad.top + 12);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = var_green;
+    ctx.fillText('-- Forward payoff', pad.left + 5, pad.top + 24);
+  }
+
+  // ═══════════════════════════════════════════
+  // ORDERBOOK
+  // ═══════════════════════════════════════════
+  const baseAsks = [
+    { price: 2512, size: 3.2 }, { price: 2510, size: 5.8 },
+    { price: 2508, size: 8.1 }, { price: 2506, size: 2.4 }, { price: 2504, size: 4.5 }
+  ];
+  const baseBids = [
+    { price: 2501, size: 6.2 }, { price: 2499, size: 3.8 },
+    { price: 2497, size: 9.1 }, { price: 2495, size: 4.4 }, { price: 2493, size: 2.9 }
+  ];
+
+  let asks = JSON.parse(JSON.stringify(baseAsks));
+  let bids = JSON.parse(JSON.stringify(baseBids));
+  let matchPhase = false;
+
+  function renderBook() {
+    const maxSize = Math.max(...asks.map(a=>a.size), ...bids.map(b=>b.size));
+    const asksDiv = document.getElementById('asks');
+    const bidsDiv = document.getElementById('bids');
+    if (!asksDiv || !bidsDiv) return;
+
+    asksDiv.innerHTML = asks.map((a, i) => {
+      const total = asks.slice(i).reduce((s,x) => s+x.size, 0);
+      const depth = (a.size / maxSize * 100);
+      return '<div class="ob-row ask" data-idx="'+i+'">' +
+        '<div class="ob-match"></div>' +
+        '<div class="depth-bar" style="width:'+depth+'%"></div>' +
+        '<span>'+a.size.toFixed(1)+'</span>' +
+        '<span>'+a.price.toFixed(2)+'</span>' +
+        '<span>'+total.toFixed(1)+'</span></div>';
+    }).join('');
+
+    bidsDiv.innerHTML = bids.map((b, i) => {
+      const total = bids.slice(0, i+1).reduce((s,x) => s+x.size, 0);
+      const depth = (b.size / maxSize * 100);
+      return '<div class="ob-row bid" data-idx="'+i+'">' +
+        '<div class="ob-match"></div>' +
+        '<div class="depth-bar" style="width:'+depth+'%"></div>' +
+        '<span>'+b.size.toFixed(1)+'</span>' +
+        '<span>'+b.price.toFixed(2)+'</span>' +
+        '<span>'+total.toFixed(1)+'</span></div>';
+    }).join('');
+
+    const spread = asks[asks.length - 1].price - bids[0].price;
+    document.getElementById('spreadDisplay').textContent = 'Spread: $' + spread.toFixed(2);
+  }
+
+  function updateFlowSteps(step) {
+    document.querySelectorAll('.flow-step').forEach(function(el, i) {
+      el.classList.toggle('active', i === step);
+    });
+  }
+
+  function simulateBook() {
+    asks.forEach(function(a) { a.size = Math.max(0.5, a.size + (Math.random()-0.5)*1.5); });
+    bids.forEach(function(b) { b.size = Math.max(0.5, b.size + (Math.random()-0.5)*1.5); });
+
+    if (Math.random() < 0.15 && !matchPhase) {
+      matchPhase = true;
+      const origPrice = asks[asks.length-1].price;
+      asks[asks.length-1].price = bids[0].price;
+      updateFlowSteps(1);
+      renderBook();
+
+      setTimeout(function() {
+        var askRows = document.querySelectorAll('#asks .ob-row');
+        var bidRows = document.querySelectorAll('#bids .ob-row');
+        if (askRows.length) askRows[askRows.length-1].classList.add('matched');
+        if (bidRows.length) bidRows[0].classList.add('matched');
+      }, 100);
+
+      setTimeout(function() { updateFlowSteps(2); }, 800);
+      setTimeout(function() { updateFlowSteps(3); }, 1600);
+
+      setTimeout(function() {
+        asks[asks.length-1].price = origPrice;
+        matchPhase = false;
+        updateFlowSteps(0);
+        renderBook();
+      }, 2800);
+      return;
+    }
+    renderBook();
+  }
+
+  // ═══════════════════════════════════════════
+  // SETTLEMENT SLIDER
+  // ═══════════════════════════════════════════
+  function updateSettlement(price) {
+    var entry = 2500, contracts = 5;
+    var pnl = (price - entry) * contracts;
+    document.getElementById('settlementReadout').textContent = '$' + price.toLocaleString();
+    document.getElementById('alicePnl').textContent = (pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toLocaleString();
+    document.getElementById('alicePnl').style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('bobPnl').textContent = (-pnl >= 0 ? '+' : '-') + '$' + Math.abs(pnl).toLocaleString();
+    document.getElementById('bobPnl').style.color = -pnl >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  // ═══════════════════════════════════════════
+  // INIT CHARTS + INTERACTIVE
+  // ═══════════════════════════════════════════
+  function initCharts() {
+    drawPayoff('chartOption', 'option');
+    drawPayoff('chartForward', 'forward');
+    drawInteractive(2500);
+    renderBook();
+    updateFlowSteps(0);
+
+    var slider = document.getElementById('priceSlider');
+    slider.addEventListener('input', function() {
+      var v = parseInt(slider.value);
+      document.getElementById('priceReadout').textContent = '$' + v.toLocaleString();
+      var pnl = (v - 2500) * 5;
+      var badge = document.getElementById('pnlBadge');
+      var s = pnl >= 0 ? '+' : '';
+      badge.textContent = 'PnL: ' + s + '$' + pnl.toLocaleString();
+      badge.className = 'card-badge ' + (pnl >= 0 ? 'badge-forward' : 'badge-option');
+      drawInteractive(v);
+    });
+
+    var sSlider = document.getElementById('settlementSlider');
+    sSlider.addEventListener('input', function() {
+      updateSettlement(parseInt(sSlider.value));
+    });
+
+    setInterval(simulateBook, 1200);
+  }
+
+  // ═══════════════════════════════════════════
+  // BOOT
+  // ═══════════════════════════════════════════
   buildLines();
   update();
 
-  window.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
-  window.addEventListener('resize', () => { buildLines(); update(); });
+  window.addEventListener('scroll', function() { requestAnimationFrame(update); }, { passive: true });
+  window.addEventListener('resize', function() {
+    buildLines();
+    update();
+    if (chartsDrawn) {
+      drawPayoff('chartOption', 'option');
+      drawPayoff('chartForward', 'forward');
+      var v = parseInt(document.getElementById('priceSlider').value);
+      drawInteractive(v);
+    }
+  });
 })();
 </script>
 </body>
