@@ -725,7 +725,7 @@
     if(t<=PR4+0.02) return 4*H;             // frozen text#4 (pathC draws + retracts + pause)
     if(t<=PS) return 4*H+((t-(PR4+0.02))/(PS-(PR4+0.02)))*H; // scroll to dark transition
     // Brief freeze when payoff section enters (scroll resistance)
-    var PPAY=PS+0.03;
+    var PPAY=PS+0.12;
     if(t<=PPAY) return 5*H;
     if(clobOffset>0){
       if(t<=PCL1) return 5*H+((t-PPAY)/(PCL1-PPAY))*(clobOffset-5*H);
