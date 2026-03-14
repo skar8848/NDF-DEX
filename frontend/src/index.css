@@ -7,9 +7,9 @@
   --color-border: #1a1a1a;
   --color-text: #111111;
   --color-text-secondary: #6b7280;
-  --color-primary: #f97316;
-  --color-primary-hover: #fb923c;
-  --color-accent: #ea580c;
+  --color-primary: #FF4500;
+  --color-primary-hover: #ff5a1a;
+  --color-accent: #FF4500;
   --color-success: #10b981;
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
@@ -29,9 +29,9 @@ html.dark {
   --color-border: #ffffff;
   --color-text: #ffffff;
   --color-text-secondary: #999999;
-  --color-primary: #f97316;
-  --color-primary-hover: #fb923c;
-  --color-accent: #ea580c;
+  --color-primary: #FF4500;
+  --color-primary-hover: #ff5a1a;
+  --color-accent: #FF4500;
   --color-success: #10b981;
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
