@@ -227,7 +227,7 @@ export default function Trade() {
   return (
     <div className="h-full flex flex-col bg-background overflow-hidden">
       {/* Top bar: Market selector + info */}
-      <div className="flex items-center gap-5 px-3 py-2 border-b border-border bg-surface shrink-0">
+      <div className="flex items-center gap-5 px-3 py-1 border-b border-border bg-surface shrink-0">
         <MarketSelector
           markets={allMarkets}
           selectedMarketId={marketId}
@@ -425,7 +425,7 @@ export default function Trade() {
 
         {/* Trade Form - full height right column, scrollable */}
         <div className="w-[280px] shrink-0 border-l border-border overflow-y-auto no-scrollbar">
-          <div className="px-3 py-2 border-b border-border">
+          <div className="px-3 py-1 border-b border-border">
             <h3 className="text-xs font-semibold text-text">Place Order</h3>
           </div>
           <TradeForm marketId={marketId} market={market} externalPrice={externalPrice} onExternalPriceConsumed={() => setExternalPrice(null)} bestBid={bestBid} bestAsk={bestAsk} bookDepthAsk={bookDepthAsk} bookDepthBid={bookDepthBid} />

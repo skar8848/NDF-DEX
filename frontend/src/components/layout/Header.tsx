@@ -28,7 +28,7 @@ export function Header() {
       <div className="flex items-center gap-8">
         <a href="/" className="flex items-center gap-2 no-underline">
           <img src="/tenor_logo.png" alt="Tenor" className="w-8 h-8 rounded-lg object-cover" />
-          <span className="text-lg font-bold text-text">Tenor</span>
+          <span style={{ fontFamily: "'Jacquard 24', serif", fontSize: '1.25rem', color: '#FF4500' }}>Tenor</span>
         </a>
 
         <nav className="flex gap-1">
