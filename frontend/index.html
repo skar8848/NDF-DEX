@@ -724,12 +724,15 @@
     if(t<=PG) return 3*H+((t-(PR3+0.02))/(PG-(PR3+0.02)))*H; // scroll to text#4 + pathC
     if(t<=PR4+0.02) return 4*H;             // frozen text#4 (pathC draws + retracts + pause)
     if(t<=PS) return 4*H+((t-(PR4+0.02))/(PS-(PR4+0.02)))*H; // scroll to dark transition
+    // Brief freeze when payoff section enters (scroll resistance)
+    var PPAY=PS+0.03;
+    if(t<=PPAY) return 5*H;
     if(clobOffset>0){
-      if(t<=PCL1) return 5*H+((t-PS)/(PCL1-PS))*(clobOffset-5*H);
+      if(t<=PCL1) return 5*H+((t-PPAY)/(PCL1-PPAY))*(clobOffset-5*H);
       if(t<=PCL2) return clobOffset;
       return clobOffset+((t-PCL2)/(1-PCL2))*(total-clobOffset);
     }
-    return 5*H+((t-PS)/(1-PS))*(total-5*H);
+    return 5*H+((t-PPAY)/(1-PPAY))*(total-5*H);
   }
 
   // SVG group scrolls up in THREE stages (each AFTER retract)
