@@ -27,7 +27,6 @@ export function Header() {
     <header className="border-b border-border bg-surface px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-8">
         <a href="/" className="flex items-center gap-2 no-underline">
-          <img src="/tenor_logo.png" alt="Tenor" className="w-8 h-8 rounded-lg object-cover" />
           <span style={{ fontFamily: "'Jacquard 24', serif", fontSize: '1.25rem', color: '#FF4500' }}>Tenor</span>
         </a>
 
