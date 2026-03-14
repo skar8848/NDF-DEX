@@ -151,8 +151,8 @@
     max-width: 480px;
   }
   .section-split .eye-img {
-    flex: 1.2;
-    max-width: 580px;
+    flex: 2;
+    max-width: 900px;
     border-radius: 20px;
     opacity: 0;
     transform: translateX(40px);
@@ -716,10 +716,10 @@
     if(t<=PC) return H+((t-PR1)/(PC-PR1))*H; // scroll to text#2
     if(t<=PR2) return 2*H;                 // frozen text#2 (draw + retract)
     if(t<=PE) return 2*H+((t-PR2)/(PE-PR2))*H; // scroll to text#3
-    if(t<=PR3) return 3*H;                 // frozen text#3 (draw + retract)
-    if(t<=PG) return 3*H+((t-PR3)/(PG-PR3))*H; // scroll to text#4 + pathC
-    if(t<=PR4) return 4*H;                 // frozen text#4 (pathC draws + retracts)
-    if(t<=PS) return 4*H+((t-PR4)/(PS-PR4))*H; // scroll to dark transition
+    if(t<=PR3+0.02) return 3*H;             // frozen text#3 (draw + retract + brief pause)
+    if(t<=PG) return 3*H+((t-(PR3+0.02))/(PG-(PR3+0.02)))*H; // scroll to text#4 + pathC
+    if(t<=PR4+0.02) return 4*H;             // frozen text#4 (pathC draws + retracts + pause)
+    if(t<=PS) return 4*H+((t-(PR4+0.02))/(PS-(PR4+0.02)))*H; // scroll to dark transition
     if(clobOffset>0){
       if(t<=PCL1) return 5*H+((t-PS)/(PCL1-PS))*(clobOffset-5*H);
       if(t<=PCL2) return clobOffset;
