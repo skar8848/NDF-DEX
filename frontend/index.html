@@ -677,7 +677,17 @@
 
   var LINE_COUNT=3,GAP=32,R=65,WIDTHS=[10,8.5,7],COLORS=['#0a0a0a','#1a1a1a','#2a2a2a'];
   var W,H;
-  var PA=0.05,PB=0.27,PC=0.36,PD=0.50,PE1=0.68,PE2=0.84;
+
+  // ── PHASES ──
+  // A (0→PA):     scroll title → text#1
+  // B (PA→PB):    FROZEN on text#1 (pathA draws: descent + turn + crossing)
+  // C (PB→PC):    scroll text#1 → text#2 (pathA continues toward right edge)
+  // D (PC→PD):    FROZEN on text#2 (pathA exits right, tail retracts)
+  // E (PD→PE):    scroll text#2 → text#3 (SVG scrolls up, pathB enters from left)
+  // F (PE→PF):    FROZEN on text#3 (pathB turns down + descends)
+  // G (PF→1.0):   scroll text#3 → text#4 → dark sections (with CLOB freeze)
+  var PA=0.04,PB=0.18,PC=0.26,PD=0.38,PE=0.46,PF=0.56;
+  var PCL1=0.74,PCL2=0.88; // CLOB freeze within phase G
   var scrollUpDistance=0,clobOffset=0;
 
   function computeOffsets(){
@@ -691,18 +701,22 @@
     if(t<=PB) return H;
     if(t<=PC) return H+((t-PB)/(PC-PB))*H;
     if(t<=PD) return 2*H;
+    if(t<=PE) return 2*H+((t-PD)/(PE-PD))*H;
+    if(t<=PF) return 3*H;
+    // Phase G: scroll text#3 → rest, with CLOB freeze
     if(clobOffset>0){
-      if(t<=PE1) return 2*H+((t-PD)/(PE1-PD))*(clobOffset-2*H);
-      if(t<=PE2) return clobOffset;
-      return clobOffset+((t-PE2)/(1-PE2))*(total-clobOffset);
+      if(t<=PCL1) return 3*H+((t-PF)/(PCL1-PF))*(clobOffset-3*H);
+      if(t<=PCL2) return clobOffset;
+      return clobOffset+((t-PCL2)/(1-PCL2))*(total-clobOffset);
     }
-    return 2*H+((t-PD)/(1-PD))*(total-2*H);
+    return 3*H+((t-PF)/(1-PF))*(total-3*H);
   }
 
+  // SVG group scrolls up during phase E (text#2 → text#3)
   function getGroupScrollUp(t){
-    if(t<=PB) return 0;
-    if(t>=PC) return 1;
-    return(t-PB)/(PC-PB);
+    if(t<=PD) return 0;
+    if(t>=PE) return 1;
+    return(t-PD)/(PE-PD);
   }
 
   // PathA: descend left, turn right, exit right
@@ -755,12 +769,12 @@
   function ease(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
   function clamp01(v){return Math.min(1,Math.max(0,v));}
 
-  // PathA head: 0→1 over t=0→PB
-  function headA(t){if(t<=0)return 0;if(t>=PB)return 1;return t/PB;}
-  // PathA tail retract: 0→1 over t=PB→PC+0.06
-  function retractA(t){var S=PB,E=PC+0.06;if(t<=S)return 0;if(t>=E)return 1;return(t-S)/(E-S);}
-  // PathB head: 0→1 over t=PB→PD
-  function headB(t){if(t<=PB)return 0;if(t>=PD)return 1;return(t-PB)/(PD-PB);}
+  // PathA head: draws through text#1 and text#2, completes at PD
+  function headA(t){if(t<=0)return 0;if(t>=PD)return 1;return t/PD;}
+  // PathA tail retract: starts at PD (text#2→text#3 scroll), done by PE+0.06
+  function retractA(t){var S=PD,E=PE+0.06;if(t<=S)return 0;if(t>=E)return 1;return(t-S)/(E-S);}
+  // PathB head: starts at PD (entering from left), completes at PF (end of frozen-on-text#3)
+  function headB(t){if(t<=PD)return 0;if(t>=PF)return 1;return(t-PD)/(PF-PD);}
 
   var chartsDrawn=false,bookStarted=false;
 
@@ -772,7 +786,7 @@
     progressEl.style.width=(t*100)+'%';
     hint.classList.toggle('hidden',t>0.015);
 
-    var inDark=t>0.48;
+    var inDark=t>0.58;
     navDocs.classList.toggle('nav-link-dark',inDark);
     if(inDark){btnLaunch.classList.add('btn-launch-dark');}
     else{btnLaunch.classList.remove('btn-launch-dark');}
@@ -782,7 +796,7 @@
     var gup=ease(getGroupScrollUp(t));
     linesGroup.setAttribute('transform','translate(0,'+(-gup*scrollUpDistance)+')');
 
-    var lineOpacity=t>0.48?Math.max(0,1-(t-0.48)/0.04):1;
+    var lineOpacity=t>0.58?Math.max(0,1-(t-0.58)/0.04):1;
     svg.style.opacity=lineOpacity;
 
     // Draw lines
@@ -835,18 +849,18 @@
     });
 
     // CLOB flow — one step at a time
-    if(t>PE1&&t<=PE2&&clobOffset>0){
-      var clobT=(t-PE1)/(PE2-PE1);
+    if(t>PCL1&&t<=PCL2&&clobOffset>0){
+      var clobT=(t-PCL1)/(PCL2-PCL1);
       var activeStep=Math.min(3,Math.floor(clobT*4));
       document.querySelectorAll('.flow-step').forEach(function(el,idx){
         el.classList.toggle('active',idx===activeStep);
       });
-    }else if(t<=PE1){
+    }else if(t<=PCL1){
       document.querySelectorAll('.flow-step').forEach(function(el){el.classList.remove('active');});
     }
 
-    if(!chartsDrawn&&t>0.42){chartsDrawn=true;setTimeout(initCharts,100);}
-    if(!bookStarted&&t>0.55){bookStarted=true;renderBook();setInterval(simulateBook,1200);}
+    if(!chartsDrawn&&t>0.55){chartsDrawn=true;setTimeout(initCharts,100);}
+    if(!bookStarted&&t>0.65){bookStarted=true;renderBook();setInterval(simulateBook,1200);}
   }
 
   // ═══ PAYOFF CHARTS ═══
